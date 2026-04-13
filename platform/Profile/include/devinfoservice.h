@@ -26,27 +26,27 @@ extern "C" {
  */
 
 // Device Information Service Parameters
-#define DEVINFO_SYSTEM_ID              0
-#define DEVINFO_MODEL_NUMBER           1
-#define DEVINFO_SERIAL_NUMBER          2
-#define DEVINFO_FIRMWARE_REV           3
-#define DEVINFO_HARDWARE_REV           4
-#define DEVINFO_SOFTWARE_REV           5
-#define DEVINFO_MANUFACTURER_NAME      6
-#define DEVINFO_11073_CERT_DATA        7
-#define DEVINFO_PNP_ID                 8
+#define DEVINFO_SYSTEM_ID           0
+#define DEVINFO_MODEL_NUMBER        1
+#define DEVINFO_SERIAL_NUMBER       2
+#define DEVINFO_FIRMWARE_REV        3
+#define DEVINFO_HARDWARE_REV        4
+#define DEVINFO_SOFTWARE_REV        5
+#define DEVINFO_MANUFACTURER_NAME   6
+#define DEVINFO_11073_CERT_DATA     7
+#define DEVINFO_PNP_ID              8
 
 // IEEE 11073 authoritative body values
-#define DEVINFO_11073_BODY_EMPTY       0
-#define DEVINFO_11073_BODY_IEEE        1
-#define DEVINFO_11073_BODY_CONTINUA    2
-#define DEVINFO_11073_BODY_EXP         254
+#define DEVINFO_11073_BODY_EMPTY    0
+#define DEVINFO_11073_BODY_IEEE     1
+#define DEVINFO_11073_BODY_CONTINUA 2
+#define DEVINFO_11073_BODY_EXP      254
 
 // System ID length
-#define DEVINFO_SYSTEM_ID_LEN          8
+#define DEVINFO_SYSTEM_ID_LEN       8
 
 // PnP ID length
-#define DEVINFO_PNP_ID_LEN             7
+#define DEVINFO_PNP_ID_LEN          7
 
 /*********************************************************************
  * TYPEDEFS

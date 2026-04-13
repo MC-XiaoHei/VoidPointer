@@ -21,12 +21,12 @@
  *
  * @return  none
  */
-void SPI1_MasterDefInit(void)
-{
-    R8_SPI1_CLOCK_DIV = 4; // 主频时钟4分频
+void SPI1_MasterDefInit(void) {
+    R8_SPI1_CLOCK_DIV = 4;  // 主频时钟4分频
     R8_SPI1_CTRL_MOD = RB_SPI_ALL_CLEAR;
     R8_SPI1_CTRL_MOD = RB_SPI_MOSI_OE | RB_SPI_SCK_OE;
-    R8_SPI1_CTRL_CFG |= RB_SPI_AUTO_IF; // 访问BUFFER/FIFO自动清除IF_BYTE_END标志
+    R8_SPI1_CTRL_CFG |=
+        RB_SPI_AUTO_IF;  // 访问BUFFER/FIFO自动清除IF_BYTE_END标志
 }
 
 /*********************************************************************
@@ -38,14 +38,10 @@ void SPI1_MasterDefInit(void)
  *
  * @return  none
  */
-void SPI1_CLKCfg(uint8_t c)
-{
-    if(c == 2)
-    {
+void SPI1_CLKCfg(uint8_t c) {
+    if (c == 2) {
         R8_SPI1_CTRL_CFG |= RB_SPI_MST_DLY_EN;
-    }
-    else
-    {
+    } else {
         R8_SPI1_CTRL_CFG &= ~RB_SPI_MST_DLY_EN;
     }
     R8_SPI1_CLOCK_DIV = c;
@@ -60,10 +56,8 @@ void SPI1_CLKCfg(uint8_t c)
  *
  * @return  none
  */
-void SPI1_DataMode(ModeBitOrderTypeDef m)
-{
-    switch(m)
-    {
+void SPI1_DataMode(ModeBitOrderTypeDef m) {
+    switch (m) {
         case Mode0_LowBitINFront:
             R8_SPI1_CTRL_MOD &= ~RB_SPI_MST_SCK_MOD;
             R8_SPI1_CTRL_CFG |= RB_SPI_BIT_ORDER;
@@ -94,12 +88,11 @@ void SPI1_DataMode(ModeBitOrderTypeDef m)
  *
  * @return  none
  */
-void SPI1_MasterSendByte(uint8_t d)
-{
+void SPI1_MasterSendByte(uint8_t d) {
     R8_SPI1_CTRL_MOD &= ~RB_SPI_FIFO_DIR;
-    R16_SPI1_TOTAL_CNT = 1;         // 设置要发送的数据长度
+    R16_SPI1_TOTAL_CNT = 1;  // 设置要发送的数据长度
     R8_SPI1_FIFO = d;
-    while(!(R8_SPI1_INT_FLAG & RB_SPI_FREE));
+    while (!(R8_SPI1_INT_FLAG & RB_SPI_FREE));
 }
 
 /*********************************************************************
@@ -111,11 +104,10 @@ void SPI1_MasterSendByte(uint8_t d)
  *
  * @return  接收到的字节
  */
-uint8_t SPI1_MasterRecvByte(void)
-{
-    R8_SPI1_CTRL_MOD |= RB_SPI_FIFO_DIR; // 设置数据方向为输入
-    R8_SPI1_BUFFER = 0xFF; // 启动传输
-    while(!(R8_SPI1_INT_FLAG & RB_SPI_FREE));
+uint8_t SPI1_MasterRecvByte(void) {
+    R8_SPI1_CTRL_MOD |= RB_SPI_FIFO_DIR;  // 设置数据方向为输入
+    R8_SPI1_BUFFER = 0xFF;  // 启动传输
+    while (!(R8_SPI1_INT_FLAG & RB_SPI_FREE));
     return (R8_SPI1_BUFFER);
 }
 
@@ -129,24 +121,21 @@ uint8_t SPI1_MasterRecvByte(void)
  *
  * @return  none
  */
-void SPI1_MasterTrans(uint8_t *pbuf, uint16_t len)
-{
+void SPI1_MasterTrans(uint8_t *pbuf, uint16_t len) {
     uint16_t sendlen;
 
     sendlen = len;
-    R8_SPI1_CTRL_MOD &= ~RB_SPI_FIFO_DIR; // 设置数据方向为输出
-    R16_SPI1_TOTAL_CNT = sendlen;         // 设置要发送的数据长度
+    R8_SPI1_CTRL_MOD &= ~RB_SPI_FIFO_DIR;  // 设置数据方向为输出
+    R16_SPI1_TOTAL_CNT = sendlen;  // 设置要发送的数据长度
     R8_SPI1_INT_FLAG = RB_SPI_IF_CNT_END;
-    while(sendlen)
-    {
-        if(R8_SPI1_FIFO_COUNT < SPI_FIFO_SIZE)
-        {
+    while (sendlen) {
+        if (R8_SPI1_FIFO_COUNT < SPI_FIFO_SIZE) {
             R8_SPI1_FIFO = *pbuf;
             pbuf++;
             sendlen--;
         }
     }
-    while(R8_SPI1_FIFO_COUNT != 0); // 等待FIFO中的数据全部发送完成
+    while (R8_SPI1_FIFO_COUNT != 0);  // 等待FIFO中的数据全部发送完成
 }
 
 /*********************************************************************
@@ -159,18 +148,16 @@ void SPI1_MasterTrans(uint8_t *pbuf, uint16_t len)
  *
  * @return  none
  */
-void SPI1_MasterRecv(uint8_t *pbuf, uint16_t len)
-{
+void SPI1_MasterRecv(uint8_t *pbuf, uint16_t len) {
     uint16_t readlen;
 
     readlen = len;
-    R8_SPI1_CTRL_MOD |= RB_SPI_FIFO_DIR; // 设置数据方向为输入
-    R16_SPI1_TOTAL_CNT = len;            // 设置需要接收的数据长度，FIFO方向为输入长度不为0则会启动传输 */
+    R8_SPI1_CTRL_MOD |= RB_SPI_FIFO_DIR;  // 设置数据方向为输入
+    R16_SPI1_TOTAL_CNT =
+        len;  // 设置需要接收的数据长度，FIFO方向为输入长度不为0则会启动传输 */
     R8_SPI1_INT_FLAG = RB_SPI_IF_CNT_END;
-    while(readlen)
-    {
-        if(R8_SPI1_FIFO_COUNT)
-        {
+    while (readlen) {
+        if (R8_SPI1_FIFO_COUNT) {
             *pbuf = R8_SPI1_FIFO;
             pbuf++;
             readlen--;

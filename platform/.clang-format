@@ -1,0 +1,16 @@
+BasedOnStyle: Google
+SortIncludes: false
+IndentWidth: 4
+AllowShortBlocksOnASingleLine: Never
+PointerAlignment: Left
+ReflowComments: false
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignTrailingComments: false

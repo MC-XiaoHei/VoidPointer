@@ -21,17 +21,13 @@
  *
  * @return  none
  */
-void LClk32K_Select(LClk32KTypeDef hc)
-{
+void LClk32K_Select(LClk32KTypeDef hc) {
     uint8_t cfg = R8_CK32K_CONFIG;
 
-    if(hc == Clk32K_LSI)
-    {
+    if (hc == Clk32K_LSI) {
         cfg &= ~RB_CLK_OSC32K_XT;
         LSECFG_Current(LSE_RCur_100);
-    }
-    else
-    {
+    } else {
         cfg |= RB_CLK_OSC32K_XT;
     }
 
@@ -50,29 +46,19 @@ void LClk32K_Select(LClk32KTypeDef hc)
  *
  * @return  none
  */
-void LClk32K_Cfg(LClk32KTypeDef hc, FunctionalState s)
-{
+void LClk32K_Cfg(LClk32KTypeDef hc, FunctionalState s) {
     uint8_t cfg = R8_CK32K_CONFIG;
 
-    if(hc == Clk32K_LSI)
-    {
-        if(s == DISABLE)
-        {
+    if (hc == Clk32K_LSI) {
+        if (s == DISABLE) {
             cfg &= ~RB_CLK_INT32K_PON;
-        }
-        else
-        {
+        } else {
             cfg |= RB_CLK_INT32K_PON;
         }
-    }
-    else
-    {
-        if(s == DISABLE)
-        {
+    } else {
+        if (s == DISABLE) {
             cfg &= ~RB_CLK_XT32K_PON;
-        }
-        else
-        {
+        } else {
             cfg |= RB_CLK_XT32K_PON;
         }
     }
@@ -91,8 +77,7 @@ void LClk32K_Cfg(LClk32KTypeDef hc, FunctionalState s)
  *
  * @return  none
  */
-void HSECFG_Current(HSECurrentTypeDef c)
-{
+void HSECFG_Current(HSECurrentTypeDef c) {
     uint8_t x32M_c;
 
     x32M_c = R8_XT32M_TUNE;
@@ -112,8 +97,7 @@ void HSECFG_Current(HSECurrentTypeDef c)
  *
  * @return  none
  */
-void HSECFG_Capacitance(HSECapTypeDef c)
-{
+void HSECFG_Capacitance(HSECapTypeDef c) {
     uint8_t x32M_c;
 
     x32M_c = R8_XT32M_TUNE;
@@ -133,12 +117,11 @@ void HSECFG_Capacitance(HSECapTypeDef c)
  *
  * @return  none
  */
-void LSICFG_Current(LSICurrentTypeDef c)
-{
+void LSICFG_Current(LSICurrentTypeDef c) {
     uint8_t x32K_c;
 
     x32K_c = R8_XT32K_TUNE;
-    x32K_c = (x32K_c & 0xf3) | ((c<<2) & 0x0C);
+    x32K_c = (x32K_c & 0xf3) | ((c << 2) & 0x0C);
 
     sys_safe_access_enable();
     R8_XT32K_TUNE = x32K_c;
@@ -154,8 +137,7 @@ void LSICFG_Current(LSICurrentTypeDef c)
  *
  * @return  none
  */
-void LSECFG_Current(LSECurrentTypeDef c)
-{
+void LSECFG_Current(LSECurrentTypeDef c) {
     uint8_t x32K_c;
 
     x32K_c = R8_XT32K_TUNE;
@@ -175,8 +157,7 @@ void LSECFG_Current(LSECurrentTypeDef c)
  *
  * @return  none
  */
-void LSECFG_Capacitance(LSECapTypeDef c)
-{
+void LSECFG_Capacitance(LSECapTypeDef c) {
     uint8_t x32K_c;
 
     x32K_c = R8_XT32K_TUNE;
@@ -198,15 +179,14 @@ void LSECFG_Capacitance(LSECapTypeDef c)
  *
  * @return  none
  */
-void Calibration_LSI(Cali_LevelTypeDef cali_Lv)
-{
-    uint64_t i;
+void Calibration_LSI(Cali_LevelTypeDef cali_Lv) {
+    uint64_t  i;
     long long cnt_offset;
-    uint8_t  retry = 0;
-    uint8_t  retry_all = 0;
-    int32_t  freq_sys;
-    uint32_t cnt_32k = 0;
-    uint32_t irqv = 0;
+    uint8_t   retry = 0;
+    uint8_t   retry_all = 0;
+    int32_t   freq_sys;
+    uint32_t  cnt_32k = 0;
+    uint32_t  irqv = 0;
 
     freq_sys = GetSysClock();
 
@@ -215,29 +195,26 @@ void Calibration_LSI(Cali_LevelTypeDef cali_Lv)
     R8_CK32K_CONFIG |= RB_CLK_OSC32K_FILT;
     sys_safe_access_disable();
 
-    while(1)
-    {
+    while (1) {
         // 粗调
         sys_safe_access_enable();
         R8_OSC_CAL_CTRL &= ~RB_OSC_CNT_TOTAL;
         R8_OSC_CAL_CTRL |= 1;
         sys_safe_access_disable();
 
-        while(1)
-        {
+        while (1) {
             sys_safe_access_enable();
             R8_OSC_CAL_CTRL |= RB_OSC_CNT_EN;
             R16_OSC_CAL_CNT |= RB_OSC_CAL_OV_CLR;
             R16_OSC_CAL_CNT |= RB_OSC_CAL_IF;
             sys_safe_access_disable();
-            while( (R8_OSC_CAL_CTRL & RB_OSC_CNT_EN) == 0 )
-            {
+            while ((R8_OSC_CAL_CTRL & RB_OSC_CNT_EN) == 0) {
                 sys_safe_access_enable();
                 R8_OSC_CAL_CTRL |= RB_OSC_CNT_EN;
                 sys_safe_access_disable();
             }
 
-            while(!(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT)); // 用于丢弃
+            while (!(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT));  // 用于丢弃
 
             SYS_DisableAllIrq(&irqv);
             sys_safe_access_enable();
@@ -246,30 +223,37 @@ void Calibration_LSI(Cali_LevelTypeDef cali_Lv)
             R16_OSC_CAL_CNT |= RB_OSC_CAL_OV_CLR;
             R16_OSC_CAL_CNT |= RB_OSC_CAL_IF;
             sys_safe_access_disable();
-            while( (R8_OSC_CAL_CTRL & RB_OSC_CNT_EN) == 0 )
-            {
+            while ((R8_OSC_CAL_CTRL & RB_OSC_CNT_EN) == 0) {
                 sys_safe_access_enable();
                 R8_OSC_CAL_CTRL |= RB_OSC_CNT_EN;
                 sys_safe_access_disable();
             }
 
-            while(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT);
+            while (R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT);
             cnt_32k = RTC_GetCycle32k();
-            while(RTC_GetCycle32k() == cnt_32k);
+            while (RTC_GetCycle32k() == cnt_32k);
             R16_OSC_CAL_CNT |= RB_OSC_CAL_OV_CLR;
             SYS_RecoverIrq(irqv);
-            while(!(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT));
-            i = R16_OSC_CAL_CNT; // 实时校准后采样值
-            cnt_offset = (i & 0x3FFF) + R8_OSC_CAL_OV_CNT * 0x3FFF - 2000 * (freq_sys / 1000) / CAB_LSIFQ;
-            if(((cnt_offset > -35 * (freq_sys / 1000) / 60000) && (cnt_offset < 35 * (freq_sys / 1000) / 60000)) || retry > 2)
-            {
-                if(retry)
-                {
+            while (!(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT));
+            i = R16_OSC_CAL_CNT;  // 实时校准后采样值
+            cnt_offset = (i & 0x3FFF) + R8_OSC_CAL_OV_CNT * 0x3FFF -
+                         2000 * (freq_sys / 1000) / CAB_LSIFQ;
+            if (((cnt_offset > -35 * (freq_sys / 1000) / 60000) &&
+                 (cnt_offset < 35 * (freq_sys / 1000) / 60000)) ||
+                retry > 2) {
+                if (retry) {
                     break;
                 }
             }
             retry++;
-            cnt_offset = (cnt_offset > 0) ? (((cnt_offset * 2) / (70 * (freq_sys/1000) / 60000)) + 1) / 2 : (((cnt_offset * 2) / (70 * (freq_sys/1000) / 60000 )) - 1) / 2;
+            cnt_offset =
+                (cnt_offset > 0)
+                    ? (((cnt_offset * 2) / (70 * (freq_sys / 1000) / 60000)) +
+                       1) /
+                          2
+                    : (((cnt_offset * 2) / (70 * (freq_sys / 1000) / 60000)) -
+                       1) /
+                          2;
             sys_safe_access_enable();
             R16_INT32K_TUNE += cnt_offset;
             sys_safe_access_disable();
@@ -281,8 +265,7 @@ void Calibration_LSI(Cali_LevelTypeDef cali_Lv)
         R8_OSC_CAL_CTRL &= ~RB_OSC_CNT_TOTAL;
         R8_OSC_CAL_CTRL |= cali_Lv;
         sys_safe_access_disable();
-        while( (R8_OSC_CAL_CTRL & RB_OSC_CNT_TOTAL) != cali_Lv )
-        {
+        while ((R8_OSC_CAL_CTRL & RB_OSC_CNT_TOTAL) != cali_Lv) {
             sys_safe_access_enable();
             R8_OSC_CAL_CTRL |= cali_Lv;
             sys_safe_access_disable();
@@ -294,14 +277,13 @@ void Calibration_LSI(Cali_LevelTypeDef cali_Lv)
         R16_OSC_CAL_CNT |= RB_OSC_CAL_OV_CLR;
         R16_OSC_CAL_CNT |= RB_OSC_CAL_IF;
         sys_safe_access_disable();
-        while( (R8_OSC_CAL_CTRL & RB_OSC_CNT_EN) == 0 )
-        {
+        while ((R8_OSC_CAL_CTRL & RB_OSC_CNT_EN) == 0) {
             sys_safe_access_enable();
             R8_OSC_CAL_CTRL |= RB_OSC_CNT_EN;
             sys_safe_access_disable();
         }
 
-        while(!(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT)); // 用于丢弃
+        while (!(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT));  // 用于丢弃
 
         SYS_DisableAllIrq(&irqv);
         sys_safe_access_enable();
@@ -310,66 +292,75 @@ void Calibration_LSI(Cali_LevelTypeDef cali_Lv)
         R16_OSC_CAL_CNT |= RB_OSC_CAL_OV_CLR;
         R16_OSC_CAL_CNT |= RB_OSC_CAL_IF;
         sys_safe_access_disable();
-        while( (R8_OSC_CAL_CTRL & RB_OSC_CNT_EN) == 0 )
-        {
+        while ((R8_OSC_CAL_CTRL & RB_OSC_CNT_EN) == 0) {
             sys_safe_access_enable();
             R8_OSC_CAL_CTRL |= RB_OSC_CNT_EN;
             sys_safe_access_disable();
         }
 
-        while(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT);
+        while (R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT);
         cnt_32k = RTC_GetCycle32k();
-        while(RTC_GetCycle32k() == cnt_32k);
+        while (RTC_GetCycle32k() == cnt_32k);
         R16_OSC_CAL_CNT |= RB_OSC_CAL_OV_CLR;
         SYS_RecoverIrq(irqv);
-        while(!(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT));
+        while (!(R8_OSC_CAL_CTRL & RB_OSC_CNT_HALT));
         sys_safe_access_enable();
         R8_OSC_CAL_CTRL &= ~RB_OSC_CNT_EN;
         sys_safe_access_disable();
-        i = R16_OSC_CAL_CNT; // 实时校准后采样值
-        cnt_offset = (i & 0x3FFF) + R8_OSC_CAL_OV_CNT * 0x3FFF -  4000 * (1 << ((cali_Lv<=Level_128)?cali_Lv:(cali_Lv+2))) * (freq_sys / 100000) / 256 * 100/(CAB_LSIFQ/256);
-        cnt_offset = (cnt_offset > 0) ? ((((cnt_offset * 2*(100 )) / (1141 * ((1 << ((cali_Lv<=Level_128)?cali_Lv:(cali_Lv+2)))/8) * (freq_sys/1000) / 60000)) + 1) / 2) : ((((cnt_offset * 2*(100)) / (1141 * ((1 << ((cali_Lv<=Level_128)?cali_Lv:(cali_Lv+2)))/8) * (freq_sys/1000) / 60000)) - 1) / 2);
-        if((cnt_offset > 0)&&(((R16_INT32K_TUNE>>5)+cnt_offset)>0xFF))
-        {
-            if(retry_all>2)
-            {
+        i = R16_OSC_CAL_CNT;  // 实时校准后采样值
+        cnt_offset =
+            (i & 0x3FFF) + R8_OSC_CAL_OV_CNT * 0x3FFF -
+            4000 * (1 << ((cali_Lv <= Level_128) ? cali_Lv : (cali_Lv + 2))) *
+                (freq_sys / 100000) / 256 * 100 / (CAB_LSIFQ / 256);
+        cnt_offset =
+            (cnt_offset > 0)
+                ? ((((cnt_offset * 2 * (100)) /
+                     (1141 *
+                      ((1 << ((cali_Lv <= Level_128) ? cali_Lv
+                                                     : (cali_Lv + 2))) /
+                       8) *
+                      (freq_sys / 1000) / 60000)) +
+                    1) /
+                   2)
+                : ((((cnt_offset * 2 * (100)) /
+                     (1141 *
+                      ((1 << ((cali_Lv <= Level_128) ? cali_Lv
+                                                     : (cali_Lv + 2))) /
+                       8) *
+                      (freq_sys / 1000) / 60000)) -
+                    1) /
+                   2);
+        if ((cnt_offset > 0) &&
+            (((R16_INT32K_TUNE >> 5) + cnt_offset) > 0xFF)) {
+            if (retry_all > 2) {
                 sys_safe_access_enable();
-                R16_INT32K_TUNE |= (0xFF<<5);
+                R16_INT32K_TUNE |= (0xFF << 5);
                 sys_safe_access_disable();
                 return;
-            }
-            else
-            {
+            } else {
                 sys_safe_access_enable();
-                R16_INT32K_TUNE = (R16_INT32K_TUNE&0x1F)|(0x7F<<5);
+                R16_INT32K_TUNE = (R16_INT32K_TUNE & 0x1F) | (0x7F << 5);
                 sys_safe_access_disable();
             }
-        }
-        else if((cnt_offset < 0)&&((R16_INT32K_TUNE>>5)<(-cnt_offset)))
-        {
-            if(retry_all>2)
-            {
+        } else if ((cnt_offset < 0) &&
+                   ((R16_INT32K_TUNE >> 5) < (-cnt_offset))) {
+            if (retry_all > 2) {
                 sys_safe_access_enable();
                 R16_INT32K_TUNE &= 0x1F;
                 sys_safe_access_disable();
                 return;
-            }
-            else
-            {
+            } else {
                 sys_safe_access_enable();
-                R16_INT32K_TUNE = (R16_INT32K_TUNE&0x1F)|(0x7F<<5);
+                R16_INT32K_TUNE = (R16_INT32K_TUNE & 0x1F) | (0x7F << 5);
                 sys_safe_access_disable();
             }
-        }
-        else
-        {
+        } else {
             sys_safe_access_enable();
-            R16_INT32K_TUNE += (cnt_offset<<5);
+            R16_INT32K_TUNE += (cnt_offset << 5);
             sys_safe_access_disable();
             return;
         }
         retry_all++;
-
     }
 }
 
@@ -387,8 +378,8 @@ void Calibration_LSI(Cali_LevelTypeDef cali_Lv)
  *
  * @return  none
  */
-void RTC_InitTime(uint16_t y, uint16_t mon, uint16_t d, uint16_t h, uint16_t m, uint16_t s)
-{
+void RTC_InitTime(uint16_t y, uint16_t mon, uint16_t d, uint16_t h, uint16_t m,
+                  uint16_t s) {
     uint32_t         t;
     uint16_t         year, month, day, sec2, t32k;
     volatile uint8_t clk_pin;
@@ -396,13 +387,11 @@ void RTC_InitTime(uint16_t y, uint16_t mon, uint16_t d, uint16_t h, uint16_t m, 
     year = y;
     month = mon;
     day = 0;
-    while(year > BEGYEAR)
-    {
+    while (year > BEGYEAR) {
         day += YearLength(year - 1);
         year--;
     }
-    while(month > 1)
-    {
+    while (month > 1) {
         day += monthLength(IsLeapYear(y), month - 2);
         month--;
     }
@@ -413,18 +402,14 @@ void RTC_InitTime(uint16_t y, uint16_t mon, uint16_t d, uint16_t h, uint16_t m, 
     t = sec2;
     t = t << 16 | t32k;
 
-    do
-    {
+    do {
         clk_pin = (R8_CK32K_CONFIG & RB_32K_CLK_PIN);
-    } while(clk_pin != (R8_CK32K_CONFIG & RB_32K_CLK_PIN));
-    if(!clk_pin)
-    {
-        while(!clk_pin)
-        {
-            do
-            {
+    } while (clk_pin != (R8_CK32K_CONFIG & RB_32K_CLK_PIN));
+    if (!clk_pin) {
+        while (!clk_pin) {
+            do {
                 clk_pin = (R8_CK32K_CONFIG & RB_32K_CLK_PIN);
-            } while(clk_pin != (R8_CK32K_CONFIG & RB_32K_CLK_PIN));
+            } while (clk_pin != (R8_CK32K_CONFIG & RB_32K_CLK_PIN));
         }
     }
 
@@ -432,7 +417,7 @@ void RTC_InitTime(uint16_t y, uint16_t mon, uint16_t d, uint16_t h, uint16_t m, 
     R32_RTC_TRIG = day;
     R8_RTC_MODE_CTRL |= RB_RTC_LOAD_HI;
     sys_safe_access_disable();
-    while((R32_RTC_TRIG & 0x3FFF) != (R32_RTC_CNT_DAY & 0x3FFF));
+    while ((R32_RTC_TRIG & 0x3FFF) != (R32_RTC_CNT_DAY & 0x3FFF));
     sys_safe_access_enable();
     R32_RTC_TRIG = t;
     R8_RTC_MODE_CTRL |= RB_RTC_LOAD_LO;
@@ -453,8 +438,8 @@ void RTC_InitTime(uint16_t y, uint16_t mon, uint16_t d, uint16_t h, uint16_t m, 
  *
  * @return  none
  */
-void RTC_GetTime(uint16_t *py, uint16_t *pmon, uint16_t *pd, uint16_t *ph, uint16_t *pm, uint16_t *ps)
-{
+void RTC_GetTime(uint16_t *py, uint16_t *pmon, uint16_t *pd, uint16_t *ph,
+                 uint16_t *pm, uint16_t *ps) {
     uint32_t t;
     uint16_t day, sec2, t32k;
 
@@ -465,15 +450,13 @@ void RTC_GetTime(uint16_t *py, uint16_t *pmon, uint16_t *pd, uint16_t *ph, uint1
     t = sec2 * 2 + ((t32k < 0x8000) ? 0 : 1);
 
     *py = BEGYEAR;
-    while(day >= YearLength(*py))
-    {
+    while (day >= YearLength(*py)) {
         day -= YearLength(*py);
         (*py)++;
     }
 
     *pmon = 0;
-    while(day >= monthLength(IsLeapYear(*py), *pmon))
-    {
+    while (day >= monthLength(IsLeapYear(*py), *pmon)) {
         day -= monthLength(IsLeapYear(*py), *pmon);
         (*pmon)++;
     }
@@ -493,14 +476,12 @@ void RTC_GetTime(uint16_t *py, uint16_t *pmon, uint16_t *pd, uint16_t *ph, uint1
  *
  * @return  none
  */
-void RTC_SetCycle32k(uint32_t cyc)
-{
+void RTC_SetCycle32k(uint32_t cyc) {
     volatile uint8_t clk_pin;
 
-    do
-    {
+    do {
         clk_pin = (R8_CK32K_CONFIG & RB_32K_CLK_PIN);
-    } while((clk_pin != (R8_CK32K_CONFIG & RB_32K_CLK_PIN)) || (!clk_pin));
+    } while ((clk_pin != (R8_CK32K_CONFIG & RB_32K_CLK_PIN)) || (!clk_pin));
 
     sys_safe_access_enable();
     R32_RTC_TRIG = cyc;
@@ -518,14 +499,12 @@ void RTC_SetCycle32k(uint32_t cyc)
  * @return  当前周期数，MAX_CYC = 0xA8BFFFFF = 2831155199
  */
 __HIGH_CODE
-uint32_t RTC_GetCycle32k(void)
-{
+uint32_t RTC_GetCycle32k(void) {
     volatile uint32_t i;
 
-    do
-    {
+    do {
         i = R32_RTC_CNT_32K;
-    } while(i != R32_RTC_CNT_32K);
+    } while (i != R32_RTC_CNT_32K);
 
     return (i);
 }
@@ -538,8 +517,7 @@ uint32_t RTC_GetCycle32k(void)
  *
  * @return  none
  */
-void RTC_TMRFunCfg(RTC_TMRCycTypeDef t)
-{
+void RTC_TMRFunCfg(RTC_TMRCycTypeDef t) {
     sys_safe_access_enable();
     R8_RTC_MODE_CTRL &= ~(RB_RTC_TMR_EN | RB_RTC_TMR_MODE);
     sys_safe_access_disable();
@@ -557,13 +535,11 @@ void RTC_TMRFunCfg(RTC_TMRCycTypeDef t)
  *
  * @return  none
  */
-void RTC_TRIGFunCfg(uint32_t cyc)
-{
+void RTC_TRIGFunCfg(uint32_t cyc) {
     uint32_t t;
 
     t = RTC_GetCycle32k() + cyc;
-    if(t > RTC_MAX_COUNT)
-    {
+    if (t > RTC_MAX_COUNT) {
         t -= RTC_MAX_COUNT;
     }
 
@@ -582,16 +558,12 @@ void RTC_TRIGFunCfg(uint32_t cyc)
  *
  * @return  none
  */
-void RTC_ModeFunDisable(RTC_MODETypeDef m)
-{
+void RTC_ModeFunDisable(RTC_MODETypeDef m) {
     uint8_t i = 0;
 
-    if(m == RTC_TRIG_MODE)
-    {
+    if (m == RTC_TRIG_MODE) {
         i |= RB_RTC_TRIG_EN;
-    }
-    else if(m == RTC_TMR_MODE)
-    {
+    } else if (m == RTC_TMR_MODE) {
         i |= RB_RTC_TMR_EN;
     }
 
@@ -609,14 +581,10 @@ void RTC_ModeFunDisable(RTC_MODETypeDef m)
  *
  * @return  中断标志状态
  */
-uint8_t RTC_GetITFlag(RTC_EVENTTypeDef f)
-{
-    if(f == RTC_TRIG_EVENT)
-    {
+uint8_t RTC_GetITFlag(RTC_EVENTTypeDef f) {
+    if (f == RTC_TRIG_EVENT) {
         return (R8_RTC_FLAG_CTRL & RB_RTC_TRIG_FLAG);
-    }
-    else
-    {
+    } else {
         return (R8_RTC_FLAG_CTRL & RB_RTC_TMR_FLAG);
     }
 }
@@ -630,10 +598,8 @@ uint8_t RTC_GetITFlag(RTC_EVENTTypeDef f)
  *
  * @return  none
  */
-void RTC_ClearITFlag(RTC_EVENTTypeDef f)
-{
-    switch(f)
-    {
+void RTC_ClearITFlag(RTC_EVENTTypeDef f) {
+    switch (f) {
         case RTC_TRIG_EVENT:
             R8_RTC_FLAG_CTRL = RB_RTC_TRIG_CLR;
             break;

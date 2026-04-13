@@ -21,25 +21,24 @@
  *
  * @return  偏差
  */
-signed short ADC_DataCalib_Rough(void) // 采样数据粗调,获取偏差值
+signed short ADC_DataCalib_Rough(void)  // 采样数据粗调,获取偏差值
 {
     uint16_t i;
     uint32_t sum = 0;
-    uint8_t  ch = 0;   // 备份通道
-    uint8_t  cfg = 0;   // 备份
+    uint8_t  ch = 0;  // 备份通道
+    uint8_t  cfg = 0;  // 备份
 
     ch = R8_ADC_CHANNEL;
     cfg = R8_ADC_CFG;
 
-    R8_ADC_CFG |= RB_ADC_OFS_TEST; // 进入测试模式
-    R8_ADC_CFG &= ~RB_ADC_DIFF_EN; // 关闭差分
+    R8_ADC_CFG |= RB_ADC_OFS_TEST;  // 进入测试模式
+    R8_ADC_CFG &= ~RB_ADC_DIFF_EN;  // 关闭差分
 
     R8_ADC_CONVERT |= RB_ADC_START;
-    while(R8_ADC_CONVERT & RB_ADC_START);
-    for(i = 0; i < 16; i++)
-    {
+    while (R8_ADC_CONVERT & RB_ADC_START);
+    for (i = 0; i < 16; i++) {
         R8_ADC_CONVERT |= RB_ADC_START;
-        while(R8_ADC_CONVERT & RB_ADC_START);
+        while (R8_ADC_CONVERT & RB_ADC_START);
         sum += (~R16_ADC_DATA) & RB_ADC_DATA;
     }
     sum = (sum + 8) >> 4;
@@ -60,16 +59,13 @@ signed short ADC_DataCalib_Rough(void) // 采样数据粗调,获取偏差值
  *
  * @return  none
  */
-void ADC_ExtSingleChSampInit(ADC_SampClkTypeDef sp, ADC_SignalPGATypeDef ga)
-{
+void ADC_ExtSingleChSampInit(ADC_SampClkTypeDef sp, ADC_SignalPGATypeDef ga) {
     R8_TKEY_CFG &= ~RB_TKEY_PWR_ON;
-    R8_ADC_CFG = RB_ADC_POWER_ON | RB_ADC_BUF_EN | (sp << 6) | ((ga&0xF) << 4);
-    if( ga & ADC_PGA_2_ )
-    {
+    R8_ADC_CFG =
+        RB_ADC_POWER_ON | RB_ADC_BUF_EN | (sp << 6) | ((ga & 0xF) << 4);
+    if (ga & ADC_PGA_2_) {
         R8_ADC_CONVERT |= RB_ADC_PGA_GAIN2;
-    }
-    else
-    {
+    } else {
         R8_ADC_CONVERT &= ~RB_ADC_PGA_GAIN2;
     }
 }
@@ -84,16 +80,13 @@ void ADC_ExtSingleChSampInit(ADC_SampClkTypeDef sp, ADC_SignalPGATypeDef ga)
  *
  * @return  none
  */
-void ADC_ExtDiffChSampInit(ADC_SampClkTypeDef sp, ADC_SignalPGATypeDef ga)
-{
+void ADC_ExtDiffChSampInit(ADC_SampClkTypeDef sp, ADC_SignalPGATypeDef ga) {
     R8_TKEY_CFG &= ~RB_TKEY_PWR_ON;
-    R8_ADC_CFG = RB_ADC_POWER_ON | RB_ADC_DIFF_EN | (sp << 6) | ((ga&0xF) << 4);
-    if( ga & ADC_PGA_2_ )
-    {
+    R8_ADC_CFG =
+        RB_ADC_POWER_ON | RB_ADC_DIFF_EN | (sp << 6) | ((ga & 0xF) << 4);
+    if (ga & ADC_PGA_2_) {
         R8_ADC_CONVERT |= RB_ADC_PGA_GAIN2;
-    }
-    else
-    {
+    } else {
         R8_ADC_CONVERT &= ~RB_ADC_PGA_GAIN2;
     }
 }
@@ -107,8 +100,7 @@ void ADC_ExtDiffChSampInit(ADC_SampClkTypeDef sp, ADC_SignalPGATypeDef ga)
  *
  * @return  none
  */
-void ADC_InterTSSampInit(void)
-{
+void ADC_InterTSSampInit(void) {
     R8_TKEY_CFG &= ~RB_TKEY_PWR_ON;
     R8_TEM_SENSOR = RB_TEM_SEN_PWR_ON;
     R8_ADC_CHANNEL = CH_INTE_VTEMP;
@@ -125,11 +117,10 @@ void ADC_InterTSSampInit(void)
  *
  * @return  none
  */
-void ADC_InterBATSampInit(void)
-{
+void ADC_InterBATSampInit(void) {
     R8_TKEY_CFG &= ~RB_TKEY_PWR_ON;
     R8_ADC_CHANNEL = CH_INTE_VBAT;
-    R8_ADC_CFG = RB_ADC_POWER_ON | RB_ADC_BUF_EN | (0 << 4); // 使用-12dB模式
+    R8_ADC_CFG = RB_ADC_POWER_ON | RB_ADC_BUF_EN | (0 << 4);  // 使用-12dB模式
     R8_ADC_CONVERT &= ~RB_ADC_PGA_GAIN2;
 }
 
@@ -142,9 +133,9 @@ void ADC_InterBATSampInit(void)
  *
  * @return  none
  */
-void TouchKey_ChSampInit(void)
-{
-    R8_ADC_CFG = RB_ADC_POWER_ON | RB_ADC_BUF_EN | (ADC_PGA_0 << 4) | (SampleFreq_8_or_4 << 6);
+void TouchKey_ChSampInit(void) {
+    R8_ADC_CFG = RB_ADC_POWER_ON | RB_ADC_BUF_EN | (ADC_PGA_0 << 4) |
+                 (SampleFreq_8_or_4 << 6);
     R8_ADC_CONVERT &= ~RB_ADC_PGA_GAIN2;
     R8_TKEY_CFG = RB_TKEY_PWR_ON | RB_TKEY_CURRENT;
 }
@@ -158,11 +149,10 @@ void TouchKey_ChSampInit(void)
  *
  * @return  ADC转换后的数据
  */
-uint16_t ADC_ExcutSingleConver(void)
-{
+uint16_t ADC_ExcutSingleConver(void) {
     R8_ADC_CONVERT |= RB_ADC_START;
-    while(R8_ADC_CONVERT & RB_ADC_START);
-    while(R8_ADC_CONVERT & RB_ADC_EOC_X);
+    while (R8_ADC_CONVERT & RB_ADC_START);
+    while (R8_ADC_CONVERT & RB_ADC_EOC_X);
 
     return (R16_ADC_DATA & RB_ADC_DATA);
 }
@@ -177,11 +167,10 @@ uint16_t ADC_ExcutSingleConver(void)
  *
  * @return  当前TouchKey等效数据
  */
-uint16_t TouchKey_ExcutSingleConver(uint8_t charg, uint8_t disch)
-{
+uint16_t TouchKey_ExcutSingleConver(uint8_t charg, uint8_t disch) {
     R8_TKEY_COUNT = (disch << 5) | (charg & 0x1f);
     R8_TKEY_CONVERT = RB_TKEY_START;
-    while(R8_TKEY_CONVERT & RB_TKEY_START);
+    while (R8_TKEY_CONVERT & RB_TKEY_START);
     return (R16_ADC_DATA & RB_ADC_DATA);
 }
 
@@ -194,10 +183,7 @@ uint16_t TouchKey_ExcutSingleConver(uint8_t charg, uint8_t disch)
  *
  * @return  none
  */
-void ADC_AutoConverCycle(uint8_t cycle)
-{
-    R8_ADC_AUTO_CYCLE = cycle;
-}
+void ADC_AutoConverCycle(uint8_t cycle) { R8_ADC_AUTO_CYCLE = cycle; }
 
 /*********************************************************************
  * @fn      ADC_DMACfg
@@ -211,22 +197,17 @@ void ADC_AutoConverCycle(uint8_t cycle)
  *
  * @return  none
  */
-void ADC_DMACfg(uint8_t s, uint32_t startAddr, uint32_t endAddr, ADC_DMAModeTypeDef m)
-{
-    if(s == DISABLE)
-    {
+void ADC_DMACfg(uint8_t s, uint32_t startAddr, uint32_t endAddr,
+                ADC_DMAModeTypeDef m) {
+    if (s == DISABLE) {
         R8_ADC_CTRL_DMA &= ~(RB_ADC_DMA_ENABLE | RB_ADC_IE_DMA_END);
-    }
-    else
-    {
-        R32_ADC_DMA_BEG = startAddr&0x1FFFF;
-        R32_ADC_DMA_END = endAddr&0x1FFFF;
-        if(m)
-        {
-            R8_ADC_CTRL_DMA |= RB_ADC_DMA_LOOP | RB_ADC_IE_DMA_END | RB_ADC_DMA_ENABLE;
-        }
-        else
-        {
+    } else {
+        R32_ADC_DMA_BEG = startAddr & 0x1FFFF;
+        R32_ADC_DMA_END = endAddr & 0x1FFFF;
+        if (m) {
+            R8_ADC_CTRL_DMA |=
+                RB_ADC_DMA_LOOP | RB_ADC_IE_DMA_END | RB_ADC_DMA_ENABLE;
+        } else {
             R8_ADC_CTRL_DMA &= ~RB_ADC_DMA_LOOP;
             R8_ADC_CTRL_DMA |= RB_ADC_IE_DMA_END | RB_ADC_DMA_ENABLE;
         }
@@ -243,16 +224,15 @@ void ADC_DMACfg(uint8_t s, uint32_t startAddr, uint32_t endAddr, ADC_DMAModeType
  * @return  temperature (Celsius)
  */
 
-int adc_to_temperature_celsius(uint16_t adc_val)
-{
+int adc_to_temperature_celsius(uint16_t adc_val) {
     uint32_t C25 = 0;
     int      temp;
 
     C25 = (*((uint32_t*)ROM_CFG_TMP_25C));
 
-    /* current temperature = standard temperature + (adc deviation * adc linearity coefficient) */ 
-    temp = (((C25 >> 16) & 0xFFFF) ? ((C25 >> 16) & 0xFFFF) : 25) + \
-        (adc_val - ((int)(C25 & 0xFFFF))) * 100 / 283;
+    /* current temperature = standard temperature + (adc deviation * adc linearity coefficient) */
+    temp = (((C25 >> 16) & 0xFFFF) ? ((C25 >> 16) & 0xFFFF) : 25) +
+           (adc_val - ((int)(C25 & 0xFFFF))) * 100 / 283;
 
     return (temp);
 }
@@ -266,9 +246,8 @@ int adc_to_temperature_celsius(uint16_t adc_val)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverSignalPGA_MINUS_12dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+256)/512 - 3*1050);
+int ADC_VoltConverSignalPGA_MINUS_12dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 256) / 512 - 3 * 1050);
 }
 
 /*********************************************************************
@@ -280,9 +259,8 @@ int ADC_VoltConverSignalPGA_MINUS_12dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverSignalPGA_MINUS_6dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+512)/1024 - 1*1050);
+int ADC_VoltConverSignalPGA_MINUS_6dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 512) / 1024 - 1 * 1050);
 }
 
 /*********************************************************************
@@ -294,9 +272,8 @@ int ADC_VoltConverSignalPGA_MINUS_6dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverSignalPGA_0dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+1024)/2048);
+int ADC_VoltConverSignalPGA_0dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 1024) / 2048);
 }
 
 /*********************************************************************
@@ -308,9 +285,8 @@ int ADC_VoltConverSignalPGA_0dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverSignalPGA_6dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+2048)/4096 + 525);
+int ADC_VoltConverSignalPGA_6dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 2048) / 4096 + 525);
 }
 
 /*********************************************************************
@@ -322,9 +298,8 @@ int ADC_VoltConverSignalPGA_6dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverSignalPGA_12dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050)/8192 + 788);  //787.5
+int ADC_VoltConverSignalPGA_12dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050) / 8192 + 788);  //787.5
 }
 
 /*********************************************************************
@@ -336,9 +311,8 @@ int ADC_VoltConverSignalPGA_12dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverSignalPGA_18dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+4096)/16384 + 919);  //918.75
+int ADC_VoltConverSignalPGA_18dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 4096) / 16384 + 919);  //918.75
 }
 
 /*********************************************************************
@@ -350,9 +324,8 @@ int ADC_VoltConverSignalPGA_18dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverSignalPGA_24dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+28672)/32768 + 984);  //984.375
+int ADC_VoltConverSignalPGA_24dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 28672) / 32768 + 984);  //984.375
 }
 
 /*********************************************************************
@@ -364,9 +337,8 @@ int ADC_VoltConverSignalPGA_24dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverDiffPGA_MINUS_12dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+256)/512 - 4*1050);
+int ADC_VoltConverDiffPGA_MINUS_12dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 256) / 512 - 4 * 1050);
 }
 
 /*********************************************************************
@@ -378,9 +350,8 @@ int ADC_VoltConverDiffPGA_MINUS_12dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverDiffPGA_MINUS_6dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+512)/1024 - 2*1050);
+int ADC_VoltConverDiffPGA_MINUS_6dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 512) / 1024 - 2 * 1050);
 }
 
 /*********************************************************************
@@ -392,9 +363,8 @@ int ADC_VoltConverDiffPGA_MINUS_6dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverDiffPGA_0dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+1024)/2048 - 1*1050);
+int ADC_VoltConverDiffPGA_0dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 1024) / 2048 - 1 * 1050);
 }
 
 /*********************************************************************
@@ -406,9 +376,8 @@ int ADC_VoltConverDiffPGA_0dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverDiffPGA_6dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+2048)/4096 - 525);
+int ADC_VoltConverDiffPGA_6dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 2048) / 4096 - 525);
 }
 
 /*********************************************************************
@@ -420,9 +389,8 @@ int ADC_VoltConverDiffPGA_6dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverDiffPGA_12dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050)/8192 - 262);  //262.5
+int ADC_VoltConverDiffPGA_12dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050) / 8192 - 262);  //262.5
 }
 
 /*********************************************************************
@@ -434,9 +402,8 @@ int ADC_VoltConverDiffPGA_12dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverDiffPGA_18dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+4096)/16384 - 131);  //131.25
+int ADC_VoltConverDiffPGA_18dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 4096) / 16384 - 131);  //131.25
 }
 
 /*********************************************************************
@@ -448,7 +415,6 @@ int ADC_VoltConverDiffPGA_18dB(uint16_t adc_data)
  *
  * @return  电压(mV)
  */
-int ADC_VoltConverDiffPGA_24dB(uint16_t adc_data)
-{
-    return (((int)adc_data*1050+28672)/32768 - 66);  //65.625
+int ADC_VoltConverDiffPGA_24dB(uint16_t adc_data) {
+    return (((int)adc_data * 1050 + 28672) / 32768 - 66);  //65.625
 }

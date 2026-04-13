@@ -17,45 +17,45 @@
 extern "C" {
 #endif
 
-#define ROM_CFG_ADR_HW       0x7F00C            // config address for hardware config for LDO&OSC and etc
+#define ROM_CFG_ADR_HW \
+    0x7F00C  // config address for hardware config for LDO&OSC and etc
 
 /**
  * @brief	Peripher CLK control bit define
  */
-#define BIT_SLP_CLK_TMR0     (0x00000001) /*!< TMR0 peripher clk bit */
-#define BIT_SLP_CLK_TMR1     (0x00000002) /*!< TMR1 peripher clk bit */
-#define BIT_SLP_CLK_TMR2     (0x00000004) /*!< TMR2 peripher clk bit */
-#define BIT_SLP_CLK_TMR3     (0x00000008) /*!< TMR3 peripher clk bit */
-#define BIT_SLP_CLK_UART0    (0x00000010) /*!< UART0 peripher clk bit */
-#define BIT_SLP_CLK_UART1    (0x00000020) /*!< UART1 peripher clk bit */
-#define BIT_SLP_CLK_UART2    (0x00000040) /*!< UART2 peripher clk bit */
-#define BIT_SLP_CLK_UART3    (0x00000080) /*!< UART3 peripher clk bit */
-#define BIT_SLP_CLK_SPI0     (0x00000100) /*!< SPI0 peripher clk bit */
+#define BIT_SLP_CLK_TMR0  (0x00000001) /*!< TMR0 peripher clk bit */
+#define BIT_SLP_CLK_TMR1  (0x00000002) /*!< TMR1 peripher clk bit */
+#define BIT_SLP_CLK_TMR2  (0x00000004) /*!< TMR2 peripher clk bit */
+#define BIT_SLP_CLK_TMR3  (0x00000008) /*!< TMR3 peripher clk bit */
+#define BIT_SLP_CLK_UART0 (0x00000010) /*!< UART0 peripher clk bit */
+#define BIT_SLP_CLK_UART1 (0x00000020) /*!< UART1 peripher clk bit */
+#define BIT_SLP_CLK_UART2 (0x00000040) /*!< UART2 peripher clk bit */
+#define BIT_SLP_CLK_UART3 (0x00000080) /*!< UART3 peripher clk bit */
+#define BIT_SLP_CLK_SPI0  (0x00000100) /*!< SPI0 peripher clk bit */
 //#define BIT_SLP_CLK_SPI1     (0x00000200)  /*!< SPI1 peripher clk bit */
-#define BIT_SLP_CLK_PWMX     (0x00000400) /*!< PWMX peripher clk bit */
+#define BIT_SLP_CLK_PWMX  (0x00000400) /*!< PWMX peripher clk bit */
 //#define BIT_SLP_CLK_LCD      (0x00000800)  /*!< LCD peripher clk bit */
-#define BIT_SLP_CLK_USB      (0x00001000) /*!< USB peripher clk bit */
+#define BIT_SLP_CLK_USB   (0x00001000) /*!< USB peripher clk bit */
 //#define BIT_SLP_CLK_ETH      (0x00002000)  /*!< ETH peripher clk bit */
 //#define BIT_SLP_CLK_LED      (0x00004000)  /*!< LED peripher clk bit */
-#define BIT_SLP_CLK_BLE      (0x00008000) /*!< BLE peripher clk bit */
+#define BIT_SLP_CLK_BLE   (0x00008000) /*!< BLE peripher clk bit */
 
-#define BIT_SLP_CLK_RAMX     (0x10000000) /*!< main SRAM RAM16K peripher clk bit */
-#define BIT_SLP_CLK_RAM2K    (0x20000000) /*!< RAM2K peripher clk bit */
-#define BIT_SLP_CLK_ALL      (0x3000FFFF) /*!< All peripher clk bit */
+#define BIT_SLP_CLK_RAMX  (0x10000000) /*!< main SRAM RAM16K peripher clk bit */
+#define BIT_SLP_CLK_RAM2K (0x20000000) /*!< RAM2K peripher clk bit */
+#define BIT_SLP_CLK_ALL   (0x3000FFFF) /*!< All peripher clk bit */
 
 /**
  * @brief  unit of controllable power supply
  */
-#define UNIT_SYS_LSE         RB_CLK_XT32K_PON   // 外部32K 时钟振荡
-#define UNIT_SYS_LSI         RB_CLK_INT32K_PON  // 内部32K 时钟振荡
-#define UNIT_SYS_HSE         RB_CLK_XT32M_PON   // 外部32M 时钟振荡
-#define UNIT_SYS_PLL         RB_CLK_PLL_PON     // PLL 时钟振荡
+#define UNIT_SYS_LSE      RB_CLK_XT32K_PON  // 外部32K 时钟振荡
+#define UNIT_SYS_LSI      RB_CLK_INT32K_PON  // 内部32K 时钟振荡
+#define UNIT_SYS_HSE      RB_CLK_XT32M_PON  // 外部32M 时钟振荡
+#define UNIT_SYS_PLL      RB_CLK_PLL_PON  // PLL 时钟振荡
 
 /**
  * @brief  wakeup mode define
  */
-typedef enum
-{
+typedef enum {
     Short_Delay = 0,
     Long_Delay,
 
@@ -64,13 +64,12 @@ typedef enum
 /**
  * @brief  wakeup mode define
  */
-typedef enum
-{
+typedef enum {
     /* 下面等级将使用高精度监控，210uA消耗 */
-    HALevel_1V9 = 0, // 1.7-1.95
-    HALevel_2V1,     // 1.9-2.15
-    HALevel_2V3,     // 2.1-2.35
-    HALevel_2V5,     // 2.3-2.55
+    HALevel_1V9 = 0,  // 1.7-1.95
+    HALevel_2V1,  // 1.9-2.15
+    HALevel_2V3,  // 2.1-2.35
+    HALevel_2V5,  // 2.3-2.55
 
     /* 下面等级将使用低功耗监控，1uA消耗 */
     LPLevel_1V7 = 0x80,
@@ -126,7 +125,8 @@ void PWR_PeriphClkCfg(FunctionalState s, uint16_t perph);
  *                    RB_SLP_BAT_WAKE   -  BAT 为唤醒源
  * @param   mode    - refer to WakeUP_ModeypeDef
  */
-void PWR_PeriphWakeUpCfg(FunctionalState s, uint8_t perph, WakeUP_ModeypeDef mode);
+void PWR_PeriphWakeUpCfg(FunctionalState s, uint8_t perph,
+                         WakeUP_ModeypeDef mode);
 
 /**
  * @brief   电源监控
@@ -192,4 +192,4 @@ void LowPower_Shutdown(uint16_t rm);
 }
 #endif
 
-#endif // __CH58x_PWR_H__
+#endif  // __CH58x_PWR_H__

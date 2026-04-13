@@ -21,10 +21,10 @@
  *
  * @return  none
  */
-void UART1_DefInit(void)
-{
+void UART1_DefInit(void) {
     UART1_BaudRateCfg(115200);
-    R8_UART1_FCR = (2 << 6) | RB_FCR_TX_FIFO_CLR | RB_FCR_RX_FIFO_CLR | RB_FCR_FIFO_EN; // FIFO打开，触发点4字节
+    R8_UART1_FCR = (2 << 6) | RB_FCR_TX_FIFO_CLR | RB_FCR_RX_FIFO_CLR |
+                   RB_FCR_FIFO_EN;  // FIFO打开，触发点4字节
     R8_UART1_LCR = RB_LCR_WORD_SZ;
     R8_UART1_IER = RB_IER_TXD_EN;
     R8_UART1_DIV = 1;
@@ -39,8 +39,7 @@ void UART1_DefInit(void)
  *
  * @return  none
  */
-void UART1_BaudRateCfg(uint32_t baudrate)
-{
+void UART1_BaudRateCfg(uint32_t baudrate) {
     uint32_t x;
 
     x = 10 * GetSysClock() / 8 / baudrate;
@@ -57,8 +56,7 @@ void UART1_BaudRateCfg(uint32_t baudrate)
  *
  * @return  none
  */
-void UART1_ByteTrigCfg(UARTByteTRIGTypeDef b)
-{
+void UART1_ByteTrigCfg(UARTByteTRIGTypeDef b) {
     R8_UART1_FCR = (R8_UART1_FCR & ~RB_FCR_FIFO_TRIG) | (b << 6);
 }
 
@@ -76,15 +74,11 @@ void UART1_ByteTrigCfg(UARTByteTRIGTypeDef b)
  *
  * @return  none
  */
-void UART1_INTCfg(FunctionalState s, uint8_t i)
-{
-    if(s)
-    {
+void UART1_INTCfg(FunctionalState s, uint8_t i) {
+    if (s) {
         R8_UART1_IER |= i;
         R8_UART1_MCR |= RB_MCR_INT_OE;
-    }
-    else
-    {
+    } else {
         R8_UART1_IER &= ~i;
     }
 }
@@ -98,10 +92,7 @@ void UART1_INTCfg(FunctionalState s, uint8_t i)
  *
  * @return  none
  */
-void UART1_Reset(void)
-{
-    R8_UART1_IER = RB_IER_RESET;
-}
+void UART1_Reset(void) { R8_UART1_IER = RB_IER_RESET; }
 
 /*********************************************************************
  * @fn      UART1_SendString
@@ -113,14 +104,11 @@ void UART1_Reset(void)
  *
  * @return  none
  */
-void UART1_SendString(uint8_t *buf, uint16_t l)
-{
+void UART1_SendString(uint8_t *buf, uint16_t l) {
     uint16_t len = l;
 
-    while(len)
-    {
-        if(R8_UART1_TFC != UART_FIFO_SIZE)
-        {
+    while (len) {
+        if (R8_UART1_TFC != UART_FIFO_SIZE) {
             R8_UART1_THR = *buf++;
             len--;
         }
@@ -136,12 +124,10 @@ void UART1_SendString(uint8_t *buf, uint16_t l)
  *
  * @return  读取数据长度
  */
-uint16_t UART1_RecvString(uint8_t *buf)
-{
+uint16_t UART1_RecvString(uint8_t *buf) {
     uint16_t len = 0;
 
-    while(R8_UART1_RFC)
-    {
+    while (R8_UART1_RFC) {
         *buf++ = R8_UART1_RBR;
         len++;
     }

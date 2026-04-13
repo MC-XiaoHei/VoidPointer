@@ -34,24 +34,24 @@
  * GLOBAL VARIABLES
  */
 // HID service
-const uint8_t hidServUUID[ATT_BT_UUID_SIZE] = {
-    LO_UINT16(HID_SERV_UUID), HI_UINT16(HID_SERV_UUID)};
+const uint8_t hidServUUID[ATT_BT_UUID_SIZE] = {LO_UINT16(HID_SERV_UUID),
+                                               HI_UINT16(HID_SERV_UUID)};
 
 // HID Information characteristic
-const uint8_t hidInfoUUID[ATT_BT_UUID_SIZE] = {
-    LO_UINT16(HID_INFORMATION_UUID), HI_UINT16(HID_INFORMATION_UUID)};
+const uint8_t hidInfoUUID[ATT_BT_UUID_SIZE] = {LO_UINT16(HID_INFORMATION_UUID),
+                                               HI_UINT16(HID_INFORMATION_UUID)};
 
 // HID Report Map characteristic
-const uint8_t hidReportMapUUID[ATT_BT_UUID_SIZE] = {
-    LO_UINT16(REPORT_MAP_UUID), HI_UINT16(REPORT_MAP_UUID)};
+const uint8_t hidReportMapUUID[ATT_BT_UUID_SIZE] = {LO_UINT16(REPORT_MAP_UUID),
+                                                    HI_UINT16(REPORT_MAP_UUID)};
 
 // HID Control Point characteristic
 const uint8_t hidControlPointUUID[ATT_BT_UUID_SIZE] = {
     LO_UINT16(HID_CTRL_PT_UUID), HI_UINT16(HID_CTRL_PT_UUID)};
 
 // HID Report characteristic
-const uint8_t hidReportUUID[ATT_BT_UUID_SIZE] = {
-    LO_UINT16(REPORT_UUID), HI_UINT16(REPORT_UUID)};
+const uint8_t hidReportUUID[ATT_BT_UUID_SIZE] = {LO_UINT16(REPORT_UUID),
+                                                 HI_UINT16(REPORT_UUID)};
 
 // HID Protocol Mode characteristic
 const uint8_t hidProtocolModeUUID[ATT_BT_UUID_SIZE] = {
@@ -71,37 +71,37 @@ const uint8_t hidProtocolModeUUID[ATT_BT_UUID_SIZE] = {
 
 // HID Information characteristic value
 static const uint8_t hidInfo[HID_INFORMATION_LEN] = {
-    LO_UINT16(0x0111), HI_UINT16(0x0111), // bcdHID (USB HID version)
-    0x00,                                 // bCountryCode
-    HID_FEATURE_FLAGS                     // Flags
+    LO_UINT16(0x0111), HI_UINT16(0x0111),  // bcdHID (USB HID version)
+    0x00,  // bCountryCode
+    HID_FEATURE_FLAGS  // Flags
 };
 
 // HID Report Map characteristic value
 static const uint8_t hidReportMap[] = {
-    0x05, 0x01, // USAGE_PAGE (Generic Desktop)
-    0x09, 0x02, // USAGE (Mouse)
-    0xa1, 0x01, // COLLECTION (Application)
-    0x09, 0x01, //   USAGE (Pointer)
-    0xa1, 0x00, //   COLLECTION (Physical)
-    0x05, 0x09, //     USAGE_PAGE (Button)
-    0x19, 0x01, //     USAGE_MINIMUM (Button 1)
-    0x29, 0x03, //     USAGE_MAXIMUM (Button 3)
-    0x15, 0x00, //     LOGICAL_MINIMUM (0)
-    0x25, 0x01, //     LOGICAL_MAXIMUM (1)
-    0x75, 0x01, //     REPORT_SIZE (1)
-    0x95, 0x08, //     REPORT_COUNT (8)
-    0x81, 0x02, //     INPUT (Data,Var,Abs)
-    0x05, 0x01, //     USAGE_PAGE (Generic Desktop)
-    0x09, 0x30, //     USAGE (X)
-    0x09, 0x31, //     USAGE (Y)
-    0x09, 0x38, //     USAGE (Wheel)
-    0x15, 0x81, //     LOGICAL_MINIMUM (-127)
-    0x25, 0x7f, //     LOGICAL_MAXIMUM (127)
-    0x75, 0x08, //     REPORT_SIZE (8)
-    0x95, 0x03, //     REPORT_COUNT (3)
-    0x81, 0x06, //     INPUT (Data,Var,Rel)
-    0xc0,       //     END_COLLECTION
-    0xc0        // END_COLLECTION
+    0x05, 0x01,  // USAGE_PAGE (Generic Desktop)
+    0x09, 0x02,  // USAGE (Mouse)
+    0xa1, 0x01,  // COLLECTION (Application)
+    0x09, 0x01,  //   USAGE (Pointer)
+    0xa1, 0x00,  //   COLLECTION (Physical)
+    0x05, 0x09,  //     USAGE_PAGE (Button)
+    0x19, 0x01,  //     USAGE_MINIMUM (Button 1)
+    0x29, 0x03,  //     USAGE_MAXIMUM (Button 3)
+    0x15, 0x00,  //     LOGICAL_MINIMUM (0)
+    0x25, 0x01,  //     LOGICAL_MAXIMUM (1)
+    0x75, 0x01,  //     REPORT_SIZE (1)
+    0x95, 0x08,  //     REPORT_COUNT (8)
+    0x81, 0x02,  //     INPUT (Data,Var,Abs)
+    0x05, 0x01,  //     USAGE_PAGE (Generic Desktop)
+    0x09, 0x30,  //     USAGE (X)
+    0x09, 0x31,  //     USAGE (Y)
+    0x09, 0x38,  //     USAGE (Wheel)
+    0x15, 0x81,  //     LOGICAL_MINIMUM (-127)
+    0x25, 0x7f,  //     LOGICAL_MAXIMUM (127)
+    0x75, 0x08,  //     REPORT_SIZE (8)
+    0x95, 0x03,  //     REPORT_COUNT (3)
+    0x81, 0x06,  //     INPUT (Data,Var,Rel)
+    0xc0,  //     END_COLLECTION
+    0xc0  // END_COLLECTION
 };
 
 // HID report map length
@@ -127,8 +127,8 @@ static uint8_t hidInfoProps = GATT_PROP_READ;
 static uint8_t hidReportMapProps = GATT_PROP_READ;
 
 // HID External Report Reference Descriptor
-static uint8_t hidExtReportRefDesc[ATT_BT_UUID_SIZE] =
-    {LO_UINT16(BATT_LEVEL_UUID), HI_UINT16(BATT_LEVEL_UUID)};
+static uint8_t hidExtReportRefDesc[ATT_BT_UUID_SIZE] = {
+    LO_UINT16(BATT_LEVEL_UUID), HI_UINT16(BATT_LEVEL_UUID)};
 
 // HID Control Point characteristic
 static uint8_t hidControlPointProps = GATT_PROP_WRITE_NO_RSP;
@@ -144,16 +144,16 @@ static uint8_t       hidReportMouseIn;
 static gattCharCfg_t hidReportMouseInClientCharCfg[GATT_MAX_NUM_CONN];
 
 // HID Report Reference characteristic descriptor, mouse input
-static uint8_t hidReportRefMouseIn[HID_REPORT_REF_LEN] =
-    {HID_RPT_ID_MOUSE_IN, HID_REPORT_TYPE_INPUT};
+static uint8_t hidReportRefMouseIn[HID_REPORT_REF_LEN] = {
+    HID_RPT_ID_MOUSE_IN, HID_REPORT_TYPE_INPUT};
 
 // Feature Report
 static uint8_t hidReportFeatureProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint8_t hidReportFeature;
 
 // HID Report Reference characteristic descriptor, Feature
-static uint8_t hidReportRefFeature[HID_REPORT_REF_LEN] =
-    {HID_RPT_ID_FEATURE, HID_REPORT_TYPE_FEATURE};
+static uint8_t hidReportRefFeature[HID_REPORT_REF_LEN] = {
+    HID_RPT_ID_FEATURE, HID_REPORT_TYPE_FEATURE};
 
 /*********************************************************************
  * Profile Attributes - Table
@@ -163,154 +163,130 @@ static gattAttribute_t hidAttrTbl[] = {
     // HID Service
     {
         {ATT_BT_UUID_SIZE, primaryServiceUUID}, /* type */
-        GATT_PERMIT_READ,                       /* permissions */
-        0,                                      /* handle */
-        (uint8_t *)&hidService                  /* pValue */
+        GATT_PERMIT_READ, /* permissions */
+        0, /* handle */
+        (uint8_t *)&hidService /* pValue */
     },
 
     // Included service (battery)
-    {
-        {ATT_BT_UUID_SIZE, includeUUID},
-        GATT_PERMIT_READ,
-        0,
-        (uint8_t *)&include},
+    {{ATT_BT_UUID_SIZE, includeUUID}, GATT_PERMIT_READ, 0, (uint8_t *)&include},
 
     // HID Information characteristic declaration
-    {
-        {ATT_BT_UUID_SIZE, characterUUID},
-        GATT_PERMIT_READ,
-        0,
-        &hidInfoProps},
+    {{ATT_BT_UUID_SIZE, characterUUID}, GATT_PERMIT_READ, 0, &hidInfoProps},
 
     // HID Information characteristic
-    {
-        {ATT_BT_UUID_SIZE, hidInfoUUID},
-        GATT_PERMIT_ENCRYPT_READ,
-        0,
-        (uint8_t *)hidInfo},
+    {{ATT_BT_UUID_SIZE, hidInfoUUID},
+     GATT_PERMIT_ENCRYPT_READ,
+     0,
+     (uint8_t *)hidInfo},
 
     // HID Control Point characteristic declaration
-    {
-        {ATT_BT_UUID_SIZE, characterUUID},
-        GATT_PERMIT_READ,
-        0,
-        &hidControlPointProps},
+    {{ATT_BT_UUID_SIZE, characterUUID},
+     GATT_PERMIT_READ,
+     0,
+     &hidControlPointProps},
 
     // HID Control Point characteristic
-    {
-        {ATT_BT_UUID_SIZE, hidControlPointUUID},
-        GATT_PERMIT_ENCRYPT_WRITE,
-        0,
-        &hidControlPoint},
+    {{ATT_BT_UUID_SIZE, hidControlPointUUID},
+     GATT_PERMIT_ENCRYPT_WRITE,
+     0,
+     &hidControlPoint},
 
     // HID Protocol Mode characteristic declaration
-    {
-        {ATT_BT_UUID_SIZE, characterUUID},
-        GATT_PERMIT_READ,
-        0,
-        &hidProtocolModeProps},
+    {{ATT_BT_UUID_SIZE, characterUUID},
+     GATT_PERMIT_READ,
+     0,
+     &hidProtocolModeProps},
 
     // HID Protocol Mode characteristic
-    {
-        {ATT_BT_UUID_SIZE, hidProtocolModeUUID},
-        GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE,
-        0,
-        &hidProtocolMode},
+    {{ATT_BT_UUID_SIZE, hidProtocolModeUUID},
+     GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE,
+     0,
+     &hidProtocolMode},
 
     // HID Report Map characteristic declaration
-    {
-        {ATT_BT_UUID_SIZE, characterUUID},
-        GATT_PERMIT_READ,
-        0,
-        &hidReportMapProps},
+    {{ATT_BT_UUID_SIZE, characterUUID},
+     GATT_PERMIT_READ,
+     0,
+     &hidReportMapProps},
 
     // HID Report Map characteristic
-    {
-        {ATT_BT_UUID_SIZE, hidReportMapUUID},
-        GATT_PERMIT_ENCRYPT_READ,
-        0,
-        (uint8_t *)hidReportMap},
+    {{ATT_BT_UUID_SIZE, hidReportMapUUID},
+     GATT_PERMIT_ENCRYPT_READ,
+     0,
+     (uint8_t *)hidReportMap},
 
     // HID External Report Reference Descriptor
-    {
-        {ATT_BT_UUID_SIZE, extReportRefUUID},
-        GATT_PERMIT_READ,
-        0,
-        hidExtReportRefDesc
+    {{ATT_BT_UUID_SIZE, extReportRefUUID},
+     GATT_PERMIT_READ,
+     0,
+     hidExtReportRefDesc
 
     },
 
     // HID Report characteristic, mouse input declaration
-    {
-        {ATT_BT_UUID_SIZE, characterUUID},
-        GATT_PERMIT_READ,
-        0,
-        &hidReportMouseInProps},
+    {{ATT_BT_UUID_SIZE, characterUUID},
+     GATT_PERMIT_READ,
+     0,
+     &hidReportMouseInProps},
 
     // HID Report characteristic, mouse input
-    {
-        {ATT_BT_UUID_SIZE, hidReportUUID},
-        GATT_PERMIT_ENCRYPT_READ,
-        0,
-        &hidReportMouseIn},
+    {{ATT_BT_UUID_SIZE, hidReportUUID},
+     GATT_PERMIT_ENCRYPT_READ,
+     0,
+     &hidReportMouseIn},
 
     // HID Report characteristic client characteristic configuration
-    {
-        {ATT_BT_UUID_SIZE, clientCharCfgUUID},
-        GATT_PERMIT_READ | GATT_PERMIT_ENCRYPT_WRITE,
-        0,
-        (uint8_t *)&hidReportMouseInClientCharCfg},
+    {{ATT_BT_UUID_SIZE, clientCharCfgUUID},
+     GATT_PERMIT_READ | GATT_PERMIT_ENCRYPT_WRITE,
+     0,
+     (uint8_t *)&hidReportMouseInClientCharCfg},
 
     // HID Report Reference characteristic descriptor, mouse input
-    {
-        {ATT_BT_UUID_SIZE, reportRefUUID},
-        GATT_PERMIT_READ,
-        0,
-        hidReportRefMouseIn},
+    {{ATT_BT_UUID_SIZE, reportRefUUID},
+     GATT_PERMIT_READ,
+     0,
+     hidReportRefMouseIn},
 
     // Feature Report declaration
-    {
-        {ATT_BT_UUID_SIZE, characterUUID},
-        GATT_PERMIT_READ,
-        0,
-        &hidReportFeatureProps},
+    {{ATT_BT_UUID_SIZE, characterUUID},
+     GATT_PERMIT_READ,
+     0,
+     &hidReportFeatureProps},
 
     // Feature Report
-    {
-        {ATT_BT_UUID_SIZE, hidReportUUID},
-        GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE,
-        0,
-        &hidReportFeature},
+    {{ATT_BT_UUID_SIZE, hidReportUUID},
+     GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE,
+     0,
+     &hidReportFeature},
 
     // HID Report Reference characteristic descriptor, feature
-    {
-        {ATT_BT_UUID_SIZE, reportRefUUID},
-        GATT_PERMIT_READ,
-        0,
-        hidReportRefFeature},
+    {{ATT_BT_UUID_SIZE, reportRefUUID},
+     GATT_PERMIT_READ,
+     0,
+     hidReportRefFeature},
 };
 
 // Attribute index enumeration-- these indexes match array elements above
-enum
-{
-    HID_SERVICE_IDX,              // HID Service
-    HID_INCLUDED_SERVICE_IDX,     // Included Service
-    HID_INFO_DECL_IDX,            // HID Information characteristic declaration
-    HID_INFO_IDX,                 // HID Information characteristic
-    HID_CONTROL_POINT_DECL_IDX,   // HID Control Point characteristic declaration
-    HID_CONTROL_POINT_IDX,        // HID Control Point characteristic
-    HID_PROTOCOL_MODE_DECL_IDX,   // HID Protocol Mode characteristic declaration
-    HID_PROTOCOL_MODE_IDX,        // HID Protocol Mode characteristic
-    HID_REPORT_MAP_DECL_IDX,      // HID Report Map characteristic declaration
-    HID_REPORT_MAP_IDX,           // HID Report Map characteristic
+enum {
+    HID_SERVICE_IDX,  // HID Service
+    HID_INCLUDED_SERVICE_IDX,  // Included Service
+    HID_INFO_DECL_IDX,  // HID Information characteristic declaration
+    HID_INFO_IDX,  // HID Information characteristic
+    HID_CONTROL_POINT_DECL_IDX,  // HID Control Point characteristic declaration
+    HID_CONTROL_POINT_IDX,  // HID Control Point characteristic
+    HID_PROTOCOL_MODE_DECL_IDX,  // HID Protocol Mode characteristic declaration
+    HID_PROTOCOL_MODE_IDX,  // HID Protocol Mode characteristic
+    HID_REPORT_MAP_DECL_IDX,  // HID Report Map characteristic declaration
+    HID_REPORT_MAP_IDX,  // HID Report Map characteristic
     HID_EXT_REPORT_REF_DESC_IDX,  // HID External Report Reference Descriptor
-    HID_REPORT_MOUSE_IN_DECL_IDX, // HID Report characteristic, mouse input declaration
-    HID_REPORT_MOUSE_IN_IDX,      // HID Report characteristic, mouse input
-    HID_REPORT_MOUSE_IN_CCCD_IDX, // HID Report characteristic client characteristic configuration
+    HID_REPORT_MOUSE_IN_DECL_IDX,  // HID Report characteristic, mouse input declaration
+    HID_REPORT_MOUSE_IN_IDX,  // HID Report characteristic, mouse input
+    HID_REPORT_MOUSE_IN_CCCD_IDX,  // HID Report characteristic client characteristic configuration
     HID_REPORT_REF_MOUSE_IN_IDX,  // HID Report Reference characteristic descriptor, mouse input
-    HID_FEATURE_DECL_IDX,         // Feature Report declaration
-    HID_FEATURE_IDX,              // Feature Report
-    HID_REPORT_REF_FEATURE_IDX    // HID Report Reference characteristic descriptor, feature
+    HID_FEATURE_DECL_IDX,  // Feature Report declaration
+    HID_FEATURE_IDX,  // Feature Report
+    HID_REPORT_REF_FEATURE_IDX  // HID Report Reference characteristic descriptor, feature
 };
 
 /*********************************************************************
@@ -324,8 +300,8 @@ enum
 // Service Callbacks
 gattServiceCBs_t hidCBs = {
     HidDev_ReadAttrCB,  // Read callback function pointer
-    HidDev_WriteAttrCB, // Write callback function pointer
-    NULL                // Authorization callback function pointer
+    HidDev_WriteAttrCB,  // Write callback function pointer
+    NULL  // Authorization callback function pointer
 };
 
 /*********************************************************************
@@ -340,19 +316,20 @@ gattServiceCBs_t hidCBs = {
  *
  * @return  Success or Failure
  */
-bStatus_t Hid_AddService(void)
-{
+bStatus_t Hid_AddService(void) {
     uint8_t status = SUCCESS;
 
     // Initialize Client Characteristic Configuration attributes
     GATTServApp_InitCharCfg(INVALID_CONNHANDLE, hidReportMouseInClientCharCfg);
 
     // Register GATT attribute list and CBs with GATT Server App
-    status = GATTServApp_RegisterService(hidAttrTbl, GATT_NUM_ATTRS(hidAttrTbl), GATT_MAX_ENCRYPT_KEY_SIZE, &hidCBs);
+    status = GATTServApp_RegisterService(hidAttrTbl, GATT_NUM_ATTRS(hidAttrTbl),
+                                         GATT_MAX_ENCRYPT_KEY_SIZE, &hidCBs);
 
     // Set up included service
-    Batt_GetParameter(BATT_PARAM_SERVICE_HANDLE,
-                      &GATT_INCLUDED_HANDLE(hidAttrTbl, HID_INCLUDED_SERVICE_IDX));
+    Batt_GetParameter(
+        BATT_PARAM_SERVICE_HANDLE,
+        &GATT_INCLUDED_HANDLE(hidAttrTbl, HID_INCLUDED_SERVICE_IDX));
 
     // Construct map of reports to characteristic handles
     // Each report is uniquely identified via its ID and type
@@ -396,26 +373,19 @@ bStatus_t Hid_AddService(void)
  *
  * @return  GATT status code.
  */
-uint8_t Hid_SetParameter(uint8_t id, uint8_t type, uint16_t uuid, uint8_t len, void *pValue)
-{
+uint8_t Hid_SetParameter(uint8_t id, uint8_t type, uint16_t uuid, uint8_t len,
+                         void *pValue) {
     bStatus_t ret = SUCCESS;
 
-    switch(uuid)
-    {
+    switch (uuid) {
         case REPORT_UUID:
-            if(type == HID_REPORT_TYPE_FEATURE)
-            {
-                if(len == 1)
-                {
+            if (type == HID_REPORT_TYPE_FEATURE) {
+                if (len == 1) {
                     hidReportFeature = *((uint8_t *)pValue);
-                }
-                else
-                {
+                } else {
                     ret = ATT_ERR_INVALID_VALUE_SIZE;
                 }
-            }
-            else
-            {
+            } else {
                 ret = ATT_ERR_ATTR_NOT_FOUND;
             }
             break;
@@ -444,18 +414,14 @@ uint8_t Hid_SetParameter(uint8_t id, uint8_t type, uint16_t uuid, uint8_t len, v
  *
  * @return  GATT status code.
  */
-uint8_t Hid_GetParameter(uint8_t id, uint8_t type, uint16_t uuid, uint16_t *pLen, void *pValue)
-{
-    switch(uuid)
-    {
+uint8_t Hid_GetParameter(uint8_t id, uint8_t type, uint16_t uuid,
+                         uint16_t *pLen, void *pValue) {
+    switch (uuid) {
         case REPORT_UUID:
-            if(type == HID_REPORT_TYPE_FEATURE)
-            {
+            if (type == HID_REPORT_TYPE_FEATURE) {
                 *((uint8_t *)pValue) = hidReportFeature;
                 *pLen = 1;
-            }
-            else
-            {
+            } else {
                 *pLen = 0;
             }
             break;

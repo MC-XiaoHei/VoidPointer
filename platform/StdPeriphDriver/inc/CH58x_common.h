@@ -10,36 +10,34 @@
  * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 
-
 #ifndef __CH58x_COMM_H__
 #define __CH58x_COMM_H__
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
-
-#ifndef  NULL
-#define  NULL     0
+#ifndef NULL
+#define NULL 0
 #endif
-#define  ALL			0xFFFF
+#define ALL 0xFFFF
 
 #ifndef __HIGH_CODE
-#define __HIGH_CODE   __attribute__((section(".highcode")))
+#define __HIGH_CODE __attribute__((section(".highcode")))
 #endif
 
 #ifndef __INTERRUPT
 #ifdef INT_SOFT
-#define __INTERRUPT   __attribute__((interrupt()))
+#define __INTERRUPT __attribute__((interrupt()))
 #else
-#define __INTERRUPT   __attribute__((interrupt("WCH-Interrupt-fast")))
+#define __INTERRUPT __attribute__((interrupt("WCH-Interrupt-fast")))
 #endif
 #endif
 
-#define Debug_UART0        0
-#define Debug_UART1        1
-#define Debug_UART2        2
-#define Debug_UART3        3
+#define Debug_UART0 0
+#define Debug_UART1 1
+#define Debug_UART2 2
+#define Debug_UART3 3
 
 #ifdef DEBUG
 #include <stdio.h>
@@ -64,37 +62,37 @@
 #include "CH58x_usbhost.h"
 #include "ISP585.h"
 
- /**
+/**
   * @brief  系统主频时钟（Hz）
   */
-#ifndef  SYSCLK_FREQ
-#define  SYSCLK_FREQ    CLK_SOURCE_HSE_PLL_62_4MHz
+#ifndef SYSCLK_FREQ
+#define SYSCLK_FREQ CLK_SOURCE_HSE_PLL_62_4MHz
 #endif
-#ifndef	 FREQ_SYS
-#define  FREQ_SYS       62400000
+#ifndef FREQ_SYS
+#define FREQ_SYS 62400000
 #endif
 
-#ifndef  SAFEOPERATE
-#define  SAFEOPERATE   asm volatile("fence.i")
+#ifndef SAFEOPERATE
+#define SAFEOPERATE asm volatile("fence.i")
 #endif
 
 /**
  * @brief  32K时钟（Hz）
  */
 #ifdef CLK_OSC32K
-#if ( CLK_OSC32K == 1 )
-#define CAB_LSIFQ       32000
+#if (CLK_OSC32K == 1)
+#define CAB_LSIFQ 32000
 #else
-#define CAB_LSIFQ       32768
+#define CAB_LSIFQ 32768
 #endif
 #else
-#define CAB_LSIFQ       32000
+#define CAB_LSIFQ 32000
 #endif
 
 #define DelayMs(x)      mDelaymS(x)
 #define DelayUs(x)      mDelayuS(x)
 
-#define ROM_CFG_VERISON    0x7F010
+#define ROM_CFG_VERISON 0x7F010
 
 extern uint32_t chip_info;
 
@@ -103,4 +101,3 @@ extern uint32_t chip_info;
 #endif
 
 #endif  // __CH58x_COMM_H__
-

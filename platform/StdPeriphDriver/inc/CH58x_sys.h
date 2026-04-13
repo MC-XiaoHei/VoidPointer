@@ -22,67 +22,63 @@ typedef void (*MachineMode_Call_func)(void);
 /**
  * @brief  rtc interrupt event define
  */
-typedef enum
-{
-    RST_STATUS_SW = 0, // 软件复位
-    RST_STATUS_RPOR,   // 上电复位
-    RST_STATUS_WTR,    // 看门狗超时复位
-    RST_STATUS_MR,     // 外部手动复位
-    RST_STATUS_LRM0,   // 唤醒复位-软复位引起
+typedef enum {
+    RST_STATUS_SW = 0,  // 软件复位
+    RST_STATUS_RPOR,  // 上电复位
+    RST_STATUS_WTR,  // 看门狗超时复位
+    RST_STATUS_MR,  // 外部手动复位
+    RST_STATUS_LRM0,  // 唤醒复位-软复位引起
     RST_STATUS_GPWSM,  // 下电模式唤醒复位
-    RST_STATUS_LRM1,   //	唤醒复位-看门狗引起
-    RST_STATUS_LRM2,   //	唤醒复位-手动复位引起
+    RST_STATUS_LRM1,  //	唤醒复位-看门狗引起
+    RST_STATUS_LRM2,  //	唤醒复位-手动复位引起
 
 } SYS_ResetStaTypeDef;
 
 /**
  * @brief  rtc interrupt event define
  */
-typedef enum
-{
-    INFO_ROM_READ = 0, // FlashROM 代码和数据区 是否可读
-    INFO_RESET_EN = 2, // RST#外部手动复位输入功能是否开启
-    INFO_BOOT_EN,      // 系统引导程序 BootLoader 是否开启
-    INFO_DEBUG_EN,     // 系统仿真调试接口是否开启
-    INFO_LOADER,       // 当前系统是否处于Bootloader 区
-    STA_SAFEACC_ACT,   // 当前系统是否处于安全访问状态，否则RWA属性区域不可访问
+typedef enum {
+    INFO_ROM_READ = 0,  // FlashROM 代码和数据区 是否可读
+    INFO_RESET_EN = 2,  // RST#外部手动复位输入功能是否开启
+    INFO_BOOT_EN,  // 系统引导程序 BootLoader 是否开启
+    INFO_DEBUG_EN,  // 系统仿真调试接口是否开启
+    INFO_LOADER,  // 当前系统是否处于Bootloader 区
+    STA_SAFEACC_ACT,  // 当前系统是否处于安全访问状态，否则RWA属性区域不可访问
 
 } SYS_InfoStaTypeDef;
 
 /**
  * @brief  IWDG_KR_Key
  */
-typedef enum
-{
-    KEY_UNPROTECT = 0x5555,        //解除保护
+typedef enum {
+    KEY_UNPROTECT = 0x5555,  //解除保护
     KEY_RELOADING_COUNT = 0xAAAA,  //重装载计数值
-    KEY_START_IWDG = 0xCCCC        //启动看门狗
+    KEY_START_IWDG = 0xCCCC  //启动看门狗
 } IWDG_KR_Key;
 
 /**
  * @brief  IWDG Prescaler factor
  */
-typedef enum
-{
-    IWDG_PR_4 = 0, // 4分频
-    IWDG_PR_8,     // 8分频
-    IWDG_PR_16,    // 16分频
-    IWDG_PR_32,    // 32分频
-    IWDG_PR_64,    // 64分频
-    IWDG_PR_128,   // 128分频
-    IWDG_PR_256,   // 256分频
-    IWDG_PR_512    // 512分频
+typedef enum {
+    IWDG_PR_4 = 0,  // 4分频
+    IWDG_PR_8,  // 8分频
+    IWDG_PR_16,  // 16分频
+    IWDG_PR_32,  // 32分频
+    IWDG_PR_64,  // 64分频
+    IWDG_PR_128,  // 128分频
+    IWDG_PR_256,  // 256分频
+    IWDG_PR_512  // 512分频
 } IWDG_32K_PR;
 
 /**
  * @brief  获取芯片ID类，一般为固定值
  */
-#define SYS_GetChipID()      R8_CHIP_ID
+#define SYS_GetChipID()   R8_CHIP_ID
 
 /**
  * @brief  获取安全访问ID，一般为固定值
  */
-#define SYS_GetAccessID()    R8_SAFE_ACCESS_ID
+#define SYS_GetAccessID() R8_SAFE_ACCESS_ID
 
 /**
  * @brief   配置系统运行时钟
@@ -124,7 +120,7 @@ uint8_t SYS_GetInfoSta(SYS_InfoStaTypeDef i);
  *
  * @return  refer to SYS_ResetStaTypeDef
  */
-#define SYS_GetLastResetSta()    (R8_RESET_STATUS & RB_RESET_FLAG)
+#define SYS_GetLastResetSta() (R8_RESET_STATUS & RB_RESET_FLAG)
 
 /**
  * @brief   执行系统软件复位
@@ -136,7 +132,7 @@ void SYS_ResetExecute(void);
  *
  * @param   i       - refer to SYS_InfoStaTypeDef
  */
-#define SYS_ResetKeepBuf(d)    (R8_GLOB_RESET_KEEP = d)
+#define SYS_ResetKeepBuf(d) (R8_GLOB_RESET_KEEP = d)
 
 /**
  * @brief   关闭所有中断，并保留当前中断值
@@ -164,7 +160,7 @@ uint32_t SYS_GetSysTickCnt(void);
  *
  * @param   c       - 看门狗计数初值
  */
-#define WWDG_SetCounter(c)    (R8_WDOG_COUNT = c)
+#define WWDG_SetCounter(c) (R8_WDOG_COUNT = c)
 
 /**
  * @brief   看门狗定时器溢出中断使能
@@ -185,7 +181,7 @@ void WWDG_ResetCfg(FunctionalState s);
  *
  * @return  看门狗定时器溢出标志
  */
-#define WWDG_GetFlowFlag()    (R8_RST_WDOG_CTRL & RB_WDOG_INT_FLAG)
+#define WWDG_GetFlowFlag() (R8_RST_WDOG_CTRL & RB_WDOG_INT_FLAG)
 
 /**
  * @brief   清除看门狗中断标志，重新加载计数值也可清除
@@ -211,21 +207,21 @@ void mDelaymS(uint16_t t);
  *
  * @return  1:禁止操作相应字段; 0:解除保护
  */
-#define  IWDG_WR_Protect()       (R32_IWDG_CFG >> 30 & 0x01)
+#define IWDG_WR_Protect() (R32_IWDG_CFG >> 30 & 0x01)
 
 /**
  * @brief   获取看门狗计数器
  *
  * @return  COUNT
  */
-#define  IWDG_Count_Get()        ((R32_IWDG_CFG >> 16) & 0xFFF)
+#define IWDG_Count_Get()  ((R32_IWDG_CFG >> 16) & 0xFFF)
 
 /**
  * @brief   获取配置寄存器更新标志，关闭写保护位生效
  *
  * @return  1:寄存器更新; 0:寄存器不更新
  */
-#define  IWDG_PVU_Get()          (R32_IWDG_CFG >> 15 & 0x01)
+#define IWDG_PVU_Get()    (R32_IWDG_CFG >> 15 & 0x01)
 
 /**
  * @brief   启动看门狗/解除读保护/喂狗/重装载计数值
@@ -280,13 +276,24 @@ void IWDG_Feed(void);
  *  if sys_safe_access_enable() is called,
  *  you must call sys_safe_access_disable() before call sys_safe_access_enable() again.
  */
-#define sys_safe_access_enable()        do{volatile uint32_t mpie_mie;mpie_mie=__risc_v_disable_irq();SAFEOPERATE;\
-                                        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;SAFEOPERATE;
+#define sys_safe_access_enable()               \
+    do {                                       \
+        volatile uint32_t mpie_mie;            \
+        mpie_mie = __risc_v_disable_irq();     \
+        SAFEOPERATE;                           \
+        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1; \
+        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2; \
+        SAFEOPERATE;
 
-#define sys_safe_access_disable()       R8_SAFE_ACCESS_SIG = 0;__risc_v_enable_irq(mpie_mie);SAFEOPERATE;}while(0)
+#define sys_safe_access_disable()  \
+    R8_SAFE_ACCESS_SIG = 0;        \
+    __risc_v_enable_irq(mpie_mie); \
+    SAFEOPERATE;                   \
+    }                              \
+    while (0)
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __CH58x_SYS_H__
+#endif  // __CH58x_SYS_H__

@@ -23,42 +23,51 @@
 #define __ISP58x_H__
 
 #ifndef EEPROM_PAGE_SIZE
-#define EEPROM_PAGE_SIZE    256                       // Flash-ROM & Data-Flash page size for writing
-#define EEPROM_BLOCK_SIZE   4096                      // Flash-ROM & Data-Flash block size for erasing
-#define EEPROM_MIN_ER_SIZE  EEPROM_PAGE_SIZE          // Data-Flash minimal size for erasing
+#define EEPROM_PAGE_SIZE  256  // Flash-ROM & Data-Flash page size for writing
+#define EEPROM_BLOCK_SIZE 4096  // Flash-ROM & Data-Flash block size for erasing
+#define EEPROM_MIN_ER_SIZE \
+    EEPROM_PAGE_SIZE  // Data-Flash minimal size for erasing
 //#define EEPROM_MIN_ER_SIZE  EEPROM_BLOCK_SIZE         // Flash-ROM  minimal size for erasing
-#define EEPROM_MIN_WR_SIZE  1                         // Data-Flash minimal size for writing
-#define EEPROM_MAX_SIZE     0x8000                    // Data-Flash maximum size, 32KB
+#define EEPROM_MIN_WR_SIZE 1  // Data-Flash minimal size for writing
+#define EEPROM_MAX_SIZE    0x8000  // Data-Flash maximum size, 32KB
 //#define EEPROM_MAX_SIZE     0x80000                   // Data-Flash maximum size for 584X, 512KB
 #endif
 #ifndef FLASH_MIN_WR_SIZE
-#define FLASH_MIN_WR_SIZE   4                         // Flash-ROM minimal size for writing
+#define FLASH_MIN_WR_SIZE 4  // Flash-ROM minimal size for writing
 #endif
 #ifndef FLASH_ROM_MAX_SIZE
-#define FLASH_ROM_MAX_SIZE  0x070000                  // Flash-ROM maximum program size, 448KB
+#define FLASH_ROM_MAX_SIZE 0x070000  // Flash-ROM maximum program size, 448KB
 #endif
 
 #ifndef CMD_FLASH_ROM_SW_RESET
 // CMD_* for caller from FlashROM or RAM, auto execute CMD_FLASH_ROM_SW_RESET before command
 
-#define CMD_FLASH_ROM_START_IO	0x00		// start FlashROM I/O, without parameter
-#define CMD_FLASH_ROM_SW_RESET	0x04		// software reset FlashROM, without parameter
-#define CMD_GET_ROM_INFO		0x06		// get information from FlashROM, parameter @Address,Buffer
-#define CMD_GET_UNIQUE_ID		0x07		// get 64 bit unique ID, parameter @Buffer
-#define CMD_FLASH_ROM_PWR_DOWN	0x0D		// power-down FlashROM, without parameter
-#define CMD_FLASH_ROM_PWR_UP	0x0C		// power-up FlashROM, without parameter
-#define CMD_EEPROM_ERASE		0x09		// erase Data-Flash block, return 0 if success, parameter @StartAddr,Length
-#define CMD_EEPROM_WRITE		0x0A		// write Data-Flash data block, return 0 if success, parameter @StartAddr,Buffer,Length
-#define CMD_EEPROM_READ			0x0B		// read Data-Flash data block, parameter @StartAddr,Buffer,Length
-#define CMD_FLASH_ROM_ERASE		0x01		// erase FlashROM block, return 0 if success, parameter @StartAddr,Length
-#define CMD_FLASH_ROM_WRITE		0x02		// write FlashROM data block, minimal block is dword, return 0 if success, parameter @StartAddr,Buffer,Length
-#define CMD_FLASH_ROM_VERIFY	0x03		// read FlashROM data block, minimal block is dword, return 0 if success, parameter @StartAddr,Buffer,Length
+#define CMD_FLASH_ROM_START_IO 0x00  // start FlashROM I/O, without parameter
+#define CMD_FLASH_ROM_SW_RESET \
+    0x04  // software reset FlashROM, without parameter
+#define CMD_GET_ROM_INFO \
+    0x06  // get information from FlashROM, parameter @Address,Buffer
+#define CMD_GET_UNIQUE_ID      0x07  // get 64 bit unique ID, parameter @Buffer
+#define CMD_FLASH_ROM_PWR_DOWN 0x0D  // power-down FlashROM, without parameter
+#define CMD_FLASH_ROM_PWR_UP   0x0C  // power-up FlashROM, without parameter
+#define CMD_EEPROM_ERASE \
+    0x09  // erase Data-Flash block, return 0 if success, parameter @StartAddr,Length
+#define CMD_EEPROM_WRITE \
+    0x0A  // write Data-Flash data block, return 0 if success, parameter @StartAddr,Buffer,Length
+#define CMD_EEPROM_READ \
+    0x0B  // read Data-Flash data block, parameter @StartAddr,Buffer,Length
+#define CMD_FLASH_ROM_ERASE \
+    0x01  // erase FlashROM block, return 0 if success, parameter @StartAddr,Length
+#define CMD_FLASH_ROM_WRITE \
+    0x02  // write FlashROM data block, minimal block is dword, return 0 if success, parameter @StartAddr,Buffer,Length
+#define CMD_FLASH_ROM_VERIFY \
+    0x03  // read FlashROM data block, minimal block is dword, return 0 if success, parameter @StartAddr,Buffer,Length
 #endif
 
-#define ROM_CFG_MAC_ADDR	0x7F018			// address for MAC address information
-#define ROM_CFG_CHIP_ID     0x7F024
-#define DEF_CHIP_ID_CH584X  0x08
-#define ROM_CFG_BOOT_INFO	0x7DFF8			// address for BOOT information
+#define ROM_CFG_MAC_ADDR   0x7F018  // address for MAC address information
+#define ROM_CFG_CHIP_ID    0x7F024
+#define DEF_CHIP_ID_CH584X 0x08
+#define ROM_CFG_BOOT_INFO  0x7DFF8  // address for BOOT information
 
 /**
  * @brief   execute Flash/EEPROM command, caller from FlashROM or RAM
@@ -70,21 +79,24 @@
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-extern uint32_t FLASH_EEPROM_CMD( uint8_t cmd, uint32_t StartAddr, void *Buffer, uint32_t Length );
+extern uint32_t FLASH_EEPROM_CMD(uint8_t cmd, uint32_t StartAddr, void *Buffer,
+                                 uint32_t Length);
 
 /**
  * @brief   start FlashROM I/O
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define FLASH_ROM_START_IO( )                       FLASH_EEPROM_CMD( CMD_FLASH_ROM_START_IO, 0, NULL, 0 )
+#define FLASH_ROM_START_IO() \
+    FLASH_EEPROM_CMD(CMD_FLASH_ROM_START_IO, 0, NULL, 0)
 
 /**
  * @brief   software reset FlashROM
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define FLASH_ROM_SW_RESET( )                       FLASH_EEPROM_CMD( CMD_FLASH_ROM_SW_RESET, 0, NULL, 0 )
+#define FLASH_ROM_SW_RESET() \
+    FLASH_EEPROM_CMD(CMD_FLASH_ROM_SW_RESET, 0, NULL, 0)
 
 /**
  * @brief   get 6 bytes MAC address
@@ -93,7 +105,8 @@ extern uint32_t FLASH_EEPROM_CMD( uint8_t cmd, uint32_t StartAddr, void *Buffer,
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define GetMACAddress(Buffer)                       FLASH_EEPROM_CMD( CMD_GET_ROM_INFO, ROM_CFG_MAC_ADDR, Buffer, 0 )
+#define GetMACAddress(Buffer) \
+    FLASH_EEPROM_CMD(CMD_GET_ROM_INFO, ROM_CFG_MAC_ADDR, Buffer, 0)
 
 /**
  * @brief   get 8 bytes BOOT information
@@ -102,21 +115,23 @@ extern uint32_t FLASH_EEPROM_CMD( uint8_t cmd, uint32_t StartAddr, void *Buffer,
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define GET_BOOT_INFO(Buffer)                       FLASH_EEPROM_CMD( CMD_GET_ROM_INFO, ROM_CFG_BOOT_INFO, Buffer, 0 )
+#define GET_BOOT_INFO(Buffer) \
+    FLASH_EEPROM_CMD(CMD_GET_ROM_INFO, ROM_CFG_BOOT_INFO, Buffer, 0)
 
 /**
  * @brief   power-down FlashROM
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define FLASH_ROM_PWR_DOWN( )                       FLASH_EEPROM_CMD( CMD_FLASH_ROM_PWR_DOWN, 0, NULL, 0 )
+#define FLASH_ROM_PWR_DOWN() \
+    FLASH_EEPROM_CMD(CMD_FLASH_ROM_PWR_DOWN, 0, NULL, 0)
 
 /**
  * @brief   power-up FlashROM
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define FLASH_ROM_PWR_UP( )                         FLASH_EEPROM_CMD( CMD_FLASH_ROM_PWR_UP, 0, NULL, 0 )
+#define FLASH_ROM_PWR_UP() FLASH_EEPROM_CMD(CMD_FLASH_ROM_PWR_UP, 0, NULL, 0)
 
 /**
  * @brief   read Data-Flash data block
@@ -127,7 +142,8 @@ extern uint32_t FLASH_EEPROM_CMD( uint8_t cmd, uint32_t StartAddr, void *Buffer,
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define EEPROM_READ(StartAddr,Buffer,Length)        FLASH_EEPROM_CMD( CMD_EEPROM_READ, StartAddr, Buffer, Length )
+#define EEPROM_READ(StartAddr, Buffer, Length) \
+    FLASH_EEPROM_CMD(CMD_EEPROM_READ, StartAddr, Buffer, Length)
 
 /**
  *
@@ -136,16 +152,14 @@ extern uint32_t FLASH_EEPROM_CMD( uint8_t cmd, uint32_t StartAddr, void *Buffer,
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-__attribute__((always_inline)) RV_STATIC_INLINE uint32_t EEPROM_ERASE(uint32_t StartAddr, uint32_t Length)
-{
-    if((*((uint32_t*)0x7F024)&0x0F) == 0x08 )
-    {
-        if(Length%EEPROM_BLOCK_SIZE)
-        {
-            while(1);
+__attribute__((always_inline)) RV_STATIC_INLINE uint32_t
+EEPROM_ERASE(uint32_t StartAddr, uint32_t Length) {
+    if ((*((uint32_t *)0x7F024) & 0x0F) == 0x08) {
+        if (Length % EEPROM_BLOCK_SIZE) {
+            while (1);
         }
     }
-    return FLASH_EEPROM_CMD( CMD_EEPROM_ERASE, StartAddr, NULL, Length );
+    return FLASH_EEPROM_CMD(CMD_EEPROM_ERASE, StartAddr, NULL, Length);
 }
 
 /**
@@ -157,7 +171,8 @@ __attribute__((always_inline)) RV_STATIC_INLINE uint32_t EEPROM_ERASE(uint32_t S
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define EEPROM_WRITE(StartAddr,Buffer,Length)       FLASH_EEPROM_CMD( CMD_EEPROM_WRITE, StartAddr, Buffer, Length )
+#define EEPROM_WRITE(StartAddr, Buffer, Length) \
+    FLASH_EEPROM_CMD(CMD_EEPROM_WRITE, StartAddr, Buffer, Length)
 
 /**
  * @brief   erase FlashROM block
@@ -167,7 +182,8 @@ __attribute__((always_inline)) RV_STATIC_INLINE uint32_t EEPROM_ERASE(uint32_t S
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define FLASH_ROM_ERASE(StartAddr,Length)           FLASH_EEPROM_CMD( CMD_FLASH_ROM_ERASE, StartAddr, NULL, Length )
+#define FLASH_ROM_ERASE(StartAddr, Length) \
+    FLASH_EEPROM_CMD(CMD_FLASH_ROM_ERASE, StartAddr, NULL, Length)
 
 /**
  * @brief   write FlashROM data block, minimal block is dword.
@@ -178,7 +194,8 @@ __attribute__((always_inline)) RV_STATIC_INLINE uint32_t EEPROM_ERASE(uint32_t S
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define FLASH_ROM_WRITE(StartAddr,Buffer,Length)    FLASH_EEPROM_CMD( CMD_FLASH_ROM_WRITE, StartAddr, Buffer, Length )
+#define FLASH_ROM_WRITE(StartAddr, Buffer, Length) \
+    FLASH_EEPROM_CMD(CMD_FLASH_ROM_WRITE, StartAddr, Buffer, Length)
 
 /**
  * @brief   verify FlashROM data block, minimal block is dword.
@@ -189,6 +206,7 @@ __attribute__((always_inline)) RV_STATIC_INLINE uint32_t EEPROM_ERASE(uint32_t S
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-#define FLASH_ROM_VERIFY(StartAddr,Buffer,Length)   FLASH_EEPROM_CMD( CMD_FLASH_ROM_VERIFY, StartAddr, Buffer, Length )
+#define FLASH_ROM_VERIFY(StartAddr, Buffer, Length) \
+    FLASH_EEPROM_CMD(CMD_FLASH_ROM_VERIFY, StartAddr, Buffer, Length)
 
 #endif

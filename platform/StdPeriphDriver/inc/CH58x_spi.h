@@ -20,31 +20,30 @@ extern "C" {
 /**
  * @brief  SPI0 interrupt bit define
  */
-#define SPI0_IT_FST_BYTE    RB_SPI_IE_FST_BYTE  // 从机模式的首字节命令模式下，接收到首字节中断
-#define SPI0_IT_FIFO_OV     RB_SPI_IE_FIFO_OV   // FIFO 溢出
-#define SPI0_IT_DMA_END     RB_SPI_IE_DMA_END   // DMA 传输结束
-#define SPI0_IT_FIFO_HF     RB_SPI_IE_FIFO_HF   // FIFO 使用过半
-#define SPI0_IT_BYTE_END    RB_SPI_IE_BYTE_END  // 单字节传输完成
-#define SPI0_IT_CNT_END     RB_SPI_IE_CNT_END   // 全部字节传输完成
+#define SPI0_IT_FST_BYTE \
+    RB_SPI_IE_FST_BYTE  // 从机模式的首字节命令模式下，接收到首字节中断
+#define SPI0_IT_FIFO_OV  RB_SPI_IE_FIFO_OV  // FIFO 溢出
+#define SPI0_IT_DMA_END  RB_SPI_IE_DMA_END  // DMA 传输结束
+#define SPI0_IT_FIFO_HF  RB_SPI_IE_FIFO_HF  // FIFO 使用过半
+#define SPI0_IT_BYTE_END RB_SPI_IE_BYTE_END  // 单字节传输完成
+#define SPI0_IT_CNT_END  RB_SPI_IE_CNT_END  // 全部字节传输完成
 
 /**
  * @brief  Configuration data mode
  */
-typedef enum
-{
-    Mode0_LowBitINFront = 0, // 模式0，低位在前
-    Mode0_HighBitINFront,    // 模式0，高位在前
-    Mode3_LowBitINFront,     // 模式3，低位在前
-    Mode3_HighBitINFront,    // 模式3，高位在前
+typedef enum {
+    Mode0_LowBitINFront = 0,  // 模式0，低位在前
+    Mode0_HighBitINFront,  // 模式0，高位在前
+    Mode3_LowBitINFront,  // 模式3，低位在前
+    Mode3_HighBitINFront,  // 模式3，高位在前
 } ModeBitOrderTypeDef;
 
 /**
  * @brief  Configuration SPI0 slave mode
  */
-typedef enum
-{
-    Mode_DataStream = 0, // 数据流模式
-    Mose_FirstCmd,       // 首字节命令模式
+typedef enum {
+    Mode_DataStream = 0,  // 数据流模式
+    Mose_FirstCmd,  // 首字节命令模式
 } Slave_ModeTypeDef;
 
 /**
@@ -136,7 +135,7 @@ void SPI1_DataMode(ModeBitOrderTypeDef m);
  *
  * @param   d       - 发送字节
  */
-void  SPI1_MasterSendByte(uint8_t d);
+void SPI1_MasterSendByte(uint8_t d);
 
 /**
  * @brief   接收单字节 (buffer)
@@ -171,7 +170,7 @@ void SPI0_SlaveInit(void);
  *
  * @param   d       - 首字节数据内容
  */
-#define SetFirstData(d)    (R8_SPI0_SLAVE_PRE = d)
+#define SetFirstData(d) (R8_SPI0_SLAVE_PRE = d)
 
 /**
  * @brief   从机模式，发送一字节数据
@@ -225,29 +224,31 @@ void SPI0_SlaveDMARecv(uint8_t *pbuf, uint16_t len);
  * @param   s       - 使能/关闭
  * @param   f       - refer to SPI0 interrupt bit define
  */
-#define SPI0_ITCfg(s, f)       ((s) ? (R8_SPI0_INTER_EN |= f) : (R8_SPI0_INTER_EN &= ~f))
+#define SPI0_ITCfg(s, f) \
+    ((s) ? (R8_SPI0_INTER_EN |= f) : (R8_SPI0_INTER_EN &= ~f))
 
 /**
  * @brief   获取中断标志状态，0-未置位，(!0)-触发
  *
  * @param   f       - refer to SPI0 interrupt bit define
  */
-#define SPI0_GetITFlag(f)      (R8_SPI0_INT_FLAG & f)
+#define SPI0_GetITFlag(f)   (R8_SPI0_INT_FLAG & f)
 
 /**
  * @brief   清除当前中断标志
  *
  * @param   f       - refer to SPI0 interrupt bit define
  */
-#define SPI0_ClearITFlag(f)    (R8_SPI0_INT_FLAG = f)
+#define SPI0_ClearITFlag(f) (R8_SPI0_INT_FLAG = f)
 
 /**
  * @brief   关闭SPI0
  */
-#define SPI0_Disable()         (R8_SPI0_CTRL_MOD &= ~(RB_SPI_MOSI_OE | RB_SPI_SCK_OE | RB_SPI_MISO_OE))
+#define SPI0_Disable() \
+    (R8_SPI0_CTRL_MOD &= ~(RB_SPI_MOSI_OE | RB_SPI_SCK_OE | RB_SPI_MISO_OE))
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __CH58x_SPI_H__
+#endif  // __CH58x_SPI_H__

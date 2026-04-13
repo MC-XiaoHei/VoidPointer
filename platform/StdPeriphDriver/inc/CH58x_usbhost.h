@@ -18,34 +18,36 @@ extern "C" {
 #endif
 
 #if DISK_LIB_ENABLE
-  #if DISK_WITHOUT_USB_HUB
-  /* 不使用U盘文件系统库或者U盘挂载USBhub下面，需要关闭下面定义 */
-    #define FOR_ROOT_UDISK_ONLY
-  #endif
-  /* 使用U盘文件系统库，需要开启下面定义, 不使用请关闭 */
-  #define DISK_BASE_BUF_LEN    512  /* 默认的磁盘数据缓冲区大小为512字节,建议选择为2048甚至4096以支持某些大扇区的U盘,为0则禁止在.H文件中定义缓冲区并由应用程序在pDISK_BASE_BUF中指定 */
+#if DISK_WITHOUT_USB_HUB
+/* 不使用U盘文件系统库或者U盘挂载USBhub下面，需要关闭下面定义 */
+#define FOR_ROOT_UDISK_ONLY
+#endif
+/* 使用U盘文件系统库，需要开启下面定义, 不使用请关闭 */
+#define DISK_BASE_BUF_LEN \
+    512 /* 默认的磁盘数据缓冲区大小为512字节,建议选择为2048甚至4096以支持某些大扇区的U盘,为0则禁止在.H文件中定义缓冲区并由应用程序在pDISK_BASE_BUF中指定 */
 #endif
 
 // 各子程序返回状态码
-#define ERR_SUCCESS            0x00  // 操作成功
-#define ERR_USB_CONNECT        0x15  /* 检测到USB设备连接事件,已经连接 */
-#define ERR_USB_DISCON         0x16  /* 检测到USB设备断开事件,已经断开 */
-#define ERR_USB_BUF_OVER       0x17  /* USB传输的数据有误或者数据太多缓冲区溢出 */
-#define ERR_USB_DISK_ERR       0x1F  /* USB存储器操作失败,在初始化时可能是USB存储器不支持,在读写操作中可能是磁盘损坏或者已经断开 */
-#define ERR_USB_TRANSFER       0x20  /* NAK/STALL等更多错误码在0x20~0x2F */
-#define ERR_USB_UNSUPPORT      0xFB  /* 不支持的USB设备*/
-#define ERR_USB_UNKNOWN        0xFE  /* 设备操作出错*/
-#define ERR_AOA_PROTOCOL       0x41  /* 协议版本出错 */
+#define ERR_SUCCESS      0x00  // 操作成功
+#define ERR_USB_CONNECT  0x15 /* 检测到USB设备连接事件,已经连接 */
+#define ERR_USB_DISCON   0x16 /* 检测到USB设备断开事件,已经断开 */
+#define ERR_USB_BUF_OVER 0x17 /* USB传输的数据有误或者数据太多缓冲区溢出 */
+#define ERR_USB_DISK_ERR \
+    0x1F /* USB存储器操作失败,在初始化时可能是USB存储器不支持,在读写操作中可能是磁盘损坏或者已经断开 */
+#define ERR_USB_TRANSFER    0x20 /* NAK/STALL等更多错误码在0x20~0x2F */
+#define ERR_USB_UNSUPPORT   0xFB /* 不支持的USB设备*/
+#define ERR_USB_UNKNOWN     0xFE /* 设备操作出错*/
+#define ERR_AOA_PROTOCOL    0x41 /* 协议版本出错 */
 
 /*USB设备相关信息表,最多支持1个设备*/
-#define ROOT_DEV_DISCONNECT    0
-#define ROOT_DEV_CONNECTED     1
-#define ROOT_DEV_FAILED        2
-#define ROOT_DEV_SUCCESS       3
-#define DEV_TYPE_KEYBOARD      (USB_DEV_CLASS_HID | 0x20)
-#define DEV_TYPE_MOUSE         (USB_DEV_CLASS_HID | 0x30)
-#define DEF_AOA_DEVICE         0xF0
-#define DEV_TYPE_UNKNOW        0xFF
+#define ROOT_DEV_DISCONNECT 0
+#define ROOT_DEV_CONNECTED  1
+#define ROOT_DEV_FAILED     2
+#define ROOT_DEV_SUCCESS    3
+#define DEV_TYPE_KEYBOARD   (USB_DEV_CLASS_HID | 0x20)
+#define DEV_TYPE_MOUSE      (USB_DEV_CLASS_HID | 0x30)
+#define DEF_AOA_DEVICE      0xF0
+#define DEV_TYPE_UNKNOW     0xFF
 
 /*
 约定: USB设备地址分配规则(参考USB_DEVICE_ADDR)
@@ -53,67 +55,69 @@ extern "C" {
 0x02    内置Root-HUB下的USB设备或外部HUB
 0x1x    内置Root-HUB下的外部HUB的端口x下的USB设备,x为1~n
 */
-#define HUB_MAX_PORTS          4
-#define WAIT_USB_TOUT_200US    800   // 等待USB中断超时时间
+#define HUB_MAX_PORTS       4
+#define WAIT_USB_TOUT_200US 800  // 等待USB中断超时时间
 
-typedef struct
-{
-    uint8_t  DeviceStatus;  // 设备状态,0-无设备,1-有设备但尚未初始化,2-有设备但初始化枚举失败,3-有设备且初始化枚举成功
-    uint8_t  DeviceAddress; // 设备被分配的USB地址
-    uint8_t  DeviceSpeed;   // 0为低速,非0为全速
-    uint8_t  DeviceType;    // 设备类型
+typedef struct {
+    uint8_t
+        DeviceStatus;  // 设备状态,0-无设备,1-有设备但尚未初始化,2-有设备但初始化枚举失败,3-有设备且初始化枚举成功
+    uint8_t  DeviceAddress;  // 设备被分配的USB地址
+    uint8_t  DeviceSpeed;  // 0为低速,非0为全速
+    uint8_t  DeviceType;  // 设备类型
     uint16_t DeviceVID;
     uint16_t DevicePID;
-    uint8_t  GpVar[4];     // 通用变量，存放端点
-    uint8_t  GpHUBPortNum; // 通用变量,如果是HUB，表示HUB端口数
+    uint8_t  GpVar[4];  // 通用变量，存放端点
+    uint8_t  GpHUBPortNum;  // 通用变量,如果是HUB，表示HUB端口数
 } _RootHubDev;
 
-typedef struct
-{
-    uint8_t  DeviceStatus;  // 设备状态,0-无设备,1-有设备但尚未初始化,2-有设备但初始化枚举失败,3-有设备且初始化枚举成功
-    uint8_t  DeviceAddress; // 设备被分配的USB地址
-    uint8_t  DeviceSpeed;   // 0为低速,非0为全速
-    uint8_t  DeviceType;    // 设备类型
+typedef struct {
+    uint8_t
+        DeviceStatus;  // 设备状态,0-无设备,1-有设备但尚未初始化,2-有设备但初始化枚举失败,3-有设备且初始化枚举成功
+    uint8_t  DeviceAddress;  // 设备被分配的USB地址
+    uint8_t  DeviceSpeed;  // 0为低速,非0为全速
+    uint8_t  DeviceType;  // 设备类型
     uint16_t DeviceVID;
     uint16_t DevicePID;
-    uint8_t  GpVar[4]; // 通用变量
-} _DevOnHubPort;     // 假定:不超过1个外部HUB,每个外部HUB不超过HUB_MAX_PORTS个端口(多了不管)
+    uint8_t  GpVar[4];  // 通用变量
+} _DevOnHubPort;  // 假定:不超过1个外部HUB,每个外部HUB不超过HUB_MAX_PORTS个端口(多了不管)
 
 extern _RootHubDev   ThisUsbDev;
-extern _DevOnHubPort DevOnHubPort[HUB_MAX_PORTS]; // 假定:不超过1个外部HUB,每个外部HUB不超过HUB_MAX_PORTS个端口(多了不管)
-extern uint8_t       UsbDevEndp0Size;             // USB设备的端点0的最大包尺寸 */
-extern uint8_t       FoundNewDev;
+extern _DevOnHubPort DevOnHubPort
+    [HUB_MAX_PORTS];  // 假定:不超过1个外部HUB,每个外部HUB不超过HUB_MAX_PORTS个端口(多了不管)
+extern uint8_t UsbDevEndp0Size;  // USB设备的端点0的最大包尺寸 */
+extern uint8_t FoundNewDev;
 
 extern uint8_t *pHOST_RX_RAM_Addr;
 extern uint8_t *pHOST_TX_RAM_Addr;
 
 extern _RootHubDev   ThisUsb2Dev;
-extern _DevOnHubPort DevOnU2HubPort[HUB_MAX_PORTS]; // 假定:不超过1个外部HUB,每个外部HUB不超过HUB_MAX_PORTS个端口(多了不管)
-extern uint8_t       Usb2DevEndp0Size;              // USB设备的端点0的最大包尺寸 */
-extern uint8_t       FoundNewU2Dev;
+extern _DevOnHubPort DevOnU2HubPort
+    [HUB_MAX_PORTS];  // 假定:不超过1个外部HUB,每个外部HUB不超过HUB_MAX_PORTS个端口(多了不管)
+extern uint8_t Usb2DevEndp0Size;  // USB设备的端点0的最大包尺寸 */
+extern uint8_t FoundNewU2Dev;
 
 extern uint8_t *pU2HOST_RX_RAM_Addr;
 extern uint8_t *pU2HOST_TX_RAM_Addr;
 
-#define pSetupReq      ((PUSB_SETUP_REQ)pHOST_TX_RAM_Addr)
-#define pU2SetupReq    ((PUSB_SETUP_REQ)pU2HOST_TX_RAM_Addr)
+#define pSetupReq   ((PUSB_SETUP_REQ)pHOST_TX_RAM_Addr)
+#define pU2SetupReq ((PUSB_SETUP_REQ)pU2HOST_TX_RAM_Addr)
 extern uint8_t Com_Buffer[];
 extern uint8_t U2Com_Buffer[];
 
 /* 以下为USB主机请求包 */
-extern const uint8_t SetupGetDevDescr[];     // 获取设备描述符*/
-extern const uint8_t SetupGetCfgDescr[];     // 获取配置描述符*/
-extern const uint8_t SetupSetUsbAddr[];      // 设置USB地址*/
-extern const uint8_t SetupSetUsbConfig[];    // 设置USB配置*/
-extern const uint8_t SetupSetUsbInterface[]; // 设置USB接口配置*/
-extern const uint8_t SetupClrEndpStall[];    // 清除端点STALL*/
+extern const uint8_t SetupGetDevDescr[];  // 获取设备描述符*/
+extern const uint8_t SetupGetCfgDescr[];  // 获取配置描述符*/
+extern const uint8_t SetupSetUsbAddr[];  // 设置USB地址*/
+extern const uint8_t SetupSetUsbConfig[];  // 设置USB配置*/
+extern const uint8_t SetupSetUsbInterface[];  // 设置USB接口配置*/
+extern const uint8_t SetupClrEndpStall[];  // 清除端点STALL*/
 
-extern const uint8_t SetupGetU2DevDescr[];    // 获取设备描述符*/
-extern const uint8_t SetupGetU2CfgDescr[];    // 获取配置描述符*/
-extern const uint8_t SetupSetUsb2Addr[];      // 设置USB地址*/
-extern const uint8_t SetupSetUsb2Config[];    // 设置USB配置*/
-extern const uint8_t SetupSetUsb2Interface[]; // 设置USB接口配置*/
-extern const uint8_t SetupClrU2EndpStall[];   // 清除端点STALL*/
+extern const uint8_t SetupGetU2DevDescr[];  // 获取设备描述符*/
+extern const uint8_t SetupGetU2CfgDescr[];  // 获取配置描述符*/
+extern const uint8_t SetupSetUsb2Addr[];  // 设置USB地址*/
+extern const uint8_t SetupSetUsb2Config[];  // 设置USB配置*/
+extern const uint8_t SetupSetUsb2Interface[];  // 设置USB接口配置*/
+extern const uint8_t SetupClrU2EndpStall[];  // 清除端点STALL*/
 
 /**
  * @brief   关闭ROOT-HUB端口,实际上硬件已经自动关闭,此处只是清除一些结构状态
@@ -249,11 +253,15 @@ uint8_t CtrlSetUsbIntercace(uint8_t cfg);
 /**
  * @brief   USB主机功能初始化
  */
-void USB_HostInit(void);
-uint8_t EnumAllHubPort(void);// 枚举所有ROOT-HUB端口下外部HUB后的二级USB设备
-void SelectHubPort(uint8_t HubPortIndex); // HubPortIndex=0选择操作指定的ROOT-HUB端口,否则选择操作指定的ROOT-HUB端口的外部HUB的指定端口
-uint16_t SearchTypeDevice(uint8_t type); // 在ROOT-HUB以及外部HUB各端口上搜索指定类型的设备所在的端口号,输出端口号为0xFFFF则未搜索到.
-uint8_t SETorOFFNumLock(uint8_t *buf); // NumLock的点灯判断
+void    USB_HostInit(void);
+uint8_t EnumAllHubPort(void);  // 枚举所有ROOT-HUB端口下外部HUB后的二级USB设备
+void    SelectHubPort(
+       uint8_t
+           HubPortIndex);  // HubPortIndex=0选择操作指定的ROOT-HUB端口,否则选择操作指定的ROOT-HUB端口的外部HUB的指定端口
+uint16_t SearchTypeDevice(
+    uint8_t
+        type);  // 在ROOT-HUB以及外部HUB各端口上搜索指定类型的设备所在的端口号,输出端口号为0xFFFF则未搜索到.
+uint8_t SETorOFFNumLock(uint8_t *buf);  // NumLock的点灯判断
 
 /*************************************************************/
 
@@ -311,4 +319,4 @@ uint8_t HubClearPortFeature(uint8_t HubPortIndex, uint8_t FeatureSelt);
 }
 #endif
 
-#endif // __CH58x_USBHOST_H__
+#endif  // __CH58x_USBHOST_H__

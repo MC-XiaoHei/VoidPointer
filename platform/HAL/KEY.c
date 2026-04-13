@@ -34,8 +34,7 @@ static halKeyCBack_t pHalKeyProcessFunction; /* callback function */
  *
  * @return  None
  **************************************************************************************************/
-void HAL_KeyInit(void)
-{
+void HAL_KeyInit(void) {
     /* Initialize previous key to 0 */
     halKeySavedKeys = 0;
     /* Initialize callback function */
@@ -55,11 +54,11 @@ void HAL_KeyInit(void)
  *
  * @return  None
  **************************************************************************************************/
-void HalKeyConfig(halKeyCBack_t cback)
-{
+void HalKeyConfig(halKeyCBack_t cback) {
     /* Register the callback fucntion */
     pHalKeyProcessFunction = cback;
-    tmos_start_task(halTaskID, HAL_KEY_EVENT, HAL_KEY_POLLING_VALUE); /* Kick off polling */
+    tmos_start_task(halTaskID, HAL_KEY_EVENT,
+                    HAL_KEY_POLLING_VALUE); /* Kick off polling */
 }
 
 /**************************************************************************************************
@@ -71,24 +70,19 @@ void HalKeyConfig(halKeyCBack_t cback)
  *
  * @return  keys - current keys status
  **************************************************************************************************/
-uint8_t HalKeyRead(void)
-{
+uint8_t HalKeyRead(void) {
     uint8_t keys = 0;
 
-    if(HAL_PUSH_BUTTON1())
-    { //读按键1
+    if (HAL_PUSH_BUTTON1()) {  //读按键1
         keys |= HAL_KEY_SW_1;
     }
-    if(HAL_PUSH_BUTTON2())
-    { //读按键1
+    if (HAL_PUSH_BUTTON2()) {  //读按键1
         keys |= HAL_KEY_SW_2;
     }
-    if(HAL_PUSH_BUTTON3())
-    { //读按键1
+    if (HAL_PUSH_BUTTON3()) {  //读按键1
         keys |= HAL_KEY_SW_3;
     }
-    if(HAL_PUSH_BUTTON4())
-    { //读按键1
+    if (HAL_PUSH_BUTTON4()) {  //读按键1
         keys |= HAL_KEY_SW_4;
     }
     return keys;
@@ -103,33 +97,27 @@ uint8_t HalKeyRead(void)
  *
  * @return  None
  **************************************************************************************************/
-void HAL_KeyPoll(void)
-{
+void HAL_KeyPoll(void) {
     uint8_t keys = 0;
-    if(HAL_PUSH_BUTTON1())
-    {
+    if (HAL_PUSH_BUTTON1()) {
         keys |= HAL_KEY_SW_1;
     }
-    if(HAL_PUSH_BUTTON2())
-    {
+    if (HAL_PUSH_BUTTON2()) {
         keys |= HAL_KEY_SW_2;
     }
-    if(HAL_PUSH_BUTTON3())
-    {
+    if (HAL_PUSH_BUTTON3()) {
         keys |= HAL_KEY_SW_3;
     }
-    if(HAL_PUSH_BUTTON4())
-    {
+    if (HAL_PUSH_BUTTON4()) {
         keys |= HAL_KEY_SW_4;
     }
-    if(keys == halKeySavedKeys)
-    { /* Exit - since no keys have changed */
+    if (keys == halKeySavedKeys) { /* Exit - since no keys have changed */
         return;
     }
-    halKeySavedKeys = keys; /* Store the current keys for comparation next time */
+    halKeySavedKeys =
+        keys; /* Store the current keys for comparation next time */
     /* Invoke Callback if new keys were depressed */
-    if(keys && (pHalKeyProcessFunction))
-    {
+    if (keys && (pHalKeyProcessFunction)) {
         (pHalKeyProcessFunction)(keys);
     }
 }

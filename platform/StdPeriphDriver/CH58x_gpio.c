@@ -22,10 +22,8 @@
  *
  * @return  none
  */
-void GPIOA_ModeCfg(uint32_t pin, GPIOModeTypeDef mode)
-{
-    switch(mode)
-    {
+void GPIOA_ModeCfg(uint32_t pin, GPIOModeTypeDef mode) {
+    switch (mode) {
         case GPIO_ModeIN_Floating:
             R32_PA_PD_DRV &= ~pin;
             R32_PA_PU &= ~pin;
@@ -69,10 +67,8 @@ void GPIOA_ModeCfg(uint32_t pin, GPIOModeTypeDef mode)
  *
  * @return  none
  */
-void GPIOB_ModeCfg(uint32_t pin, GPIOModeTypeDef mode)
-{
-    switch(mode)
-    {
+void GPIOB_ModeCfg(uint32_t pin, GPIOModeTypeDef mode) {
+    switch (mode) {
         case GPIO_ModeIN_Floating:
             R32_PB_PD_DRV &= ~pin;
             R32_PB_PU &= ~pin;
@@ -116,26 +112,24 @@ void GPIOB_ModeCfg(uint32_t pin, GPIOModeTypeDef mode)
  *
  * @return  none
  */
-void GPIOA_ITModeCfg(uint32_t pin, GPIOITModeTpDef mode)
-{
-    switch(mode)
-    {
-        case GPIO_ITMode_LowLevel: // 低电平触发
+void GPIOA_ITModeCfg(uint32_t pin, GPIOITModeTpDef mode) {
+    switch (mode) {
+        case GPIO_ITMode_LowLevel:  // 低电平触发
             R16_PA_INT_MODE &= ~pin;
             R32_PA_CLR |= pin;
             break;
 
-        case GPIO_ITMode_HighLevel: // 高电平触发
+        case GPIO_ITMode_HighLevel:  // 高电平触发
             R16_PA_INT_MODE &= ~pin;
             R32_PA_OUT |= pin;
             break;
 
-        case GPIO_ITMode_FallEdge: // 下降沿触发
+        case GPIO_ITMode_FallEdge:  // 下降沿触发
             R16_PA_INT_MODE |= pin;
             R32_PA_CLR |= pin;
             break;
 
-        case GPIO_ITMode_RiseEdge: // 上升沿触发
+        case GPIO_ITMode_RiseEdge:  // 上升沿触发
             R16_PA_INT_MODE |= pin;
             R32_PA_OUT |= pin;
             break;
@@ -157,27 +151,25 @@ void GPIOA_ITModeCfg(uint32_t pin, GPIOITModeTpDef mode)
  *
  * @return  none
  */
-void GPIOB_ITModeCfg(uint32_t pin, GPIOITModeTpDef mode)
-{
+void GPIOB_ITModeCfg(uint32_t pin, GPIOITModeTpDef mode) {
     uint32_t Pin = pin | ((pin & (GPIO_Pin_22 | GPIO_Pin_23)) >> 14);
-    switch(mode)
-    {
-        case GPIO_ITMode_LowLevel: // 低电平触发
+    switch (mode) {
+        case GPIO_ITMode_LowLevel:  // 低电平触发
             R16_PB_INT_MODE &= ~Pin;
             R32_PB_CLR |= pin;
             break;
 
-        case GPIO_ITMode_HighLevel: // 高电平触发
+        case GPIO_ITMode_HighLevel:  // 高电平触发
             R16_PB_INT_MODE &= ~Pin;
             R32_PB_OUT |= pin;
             break;
 
-        case GPIO_ITMode_FallEdge: // 下降沿触发
+        case GPIO_ITMode_FallEdge:  // 下降沿触发
             R16_PB_INT_MODE |= Pin;
             R32_PB_CLR |= pin;
             break;
 
-        case GPIO_ITMode_RiseEdge: // 上升沿触发
+        case GPIO_ITMode_RiseEdge:  // 上升沿触发
             R16_PB_INT_MODE |= Pin;
             R32_PB_OUT |= pin;
             break;
@@ -213,14 +205,10 @@ void GPIOB_ITModeCfg(uint32_t pin, GPIOITModeTpDef mode)
  *
  * @return  none
  */
-void GPIOPinRemap(FunctionalState s, uint16_t perph)
-{
-    if(s)
-    {
+void GPIOPinRemap(FunctionalState s, uint16_t perph) {
+    if (s) {
         R16_PIN_ALTERNATE |= perph;
-    }
-    else
-    {
+    } else {
         R16_PIN_ALTERNATE &= ~perph;
     }
 }
@@ -240,18 +228,13 @@ void GPIOPinRemap(FunctionalState s, uint16_t perph)
  *
  * @return  none
  */
-void GPIOAGPPCfg(FunctionalState s, uint16_t perph)
-{
-    if(s)
-    {
+void GPIOAGPPCfg(FunctionalState s, uint16_t perph) {
+    if (s) {
         R16_PIN_CONFIG |= perph;
-    }
-    else
-    {
+    } else {
         R16_PIN_CONFIG &= ~perph;
     }
 }
-
 
 /*********************************************************************
  * @fn      GPIOADigitalCfg
@@ -261,14 +244,10 @@ void GPIOAGPPCfg(FunctionalState s, uint16_t perph)
  * @param   s       - 是否打开对应I/O pin数字功能
  * @param   pin     - PA0-PA15
  */
-void GPIOADigitalCfg(FunctionalState s, uint16_t pin)
-{
-    if(s)
-    {
+void GPIOADigitalCfg(FunctionalState s, uint16_t pin) {
+    if (s) {
         R32_PIN_IN_DIS &= ~pin;
-    }
-    else
-    {
+    } else {
         R32_PIN_IN_DIS |= pin;
     }
 }
@@ -281,33 +260,25 @@ void GPIOADigitalCfg(FunctionalState s, uint16_t pin)
  * @param   s       - 是否打开对应I/O pin数字功能
  * @param   pin     - PB0-PB23
  */
-void GPIOBDigitalCfg(FunctionalState s, uint32_t pin)
-{
+void GPIOBDigitalCfg(FunctionalState s, uint32_t pin) {
     uint32_t dis_pin;
     uint16_t config_pin;
 
     dis_pin = (pin << 16) & 0xffff0000;
     config_pin = (pin >> 8) & 0xff00;
 
-    if(s)
-    {
-        if(dis_pin)
-        {
+    if (s) {
+        if (dis_pin) {
             R32_PIN_IN_DIS &= ~dis_pin;
         }
-        if(config_pin)
-        {
+        if (config_pin) {
             R16_PIN_CONFIG &= ~config_pin;
         }
-    }
-    else
-    {
-        if(dis_pin)
-        {
+    } else {
+        if (dis_pin) {
             R32_PIN_IN_DIS |= dis_pin;
         }
-        if(config_pin)
-        {
+        if (config_pin) {
             R16_PIN_CONFIG |= config_pin;
         }
     }

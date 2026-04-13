@@ -21,10 +21,8 @@
  *
  * @return  none
  */
-void PWMX_CycleCfg(PWMX_CycleTypeDef cyc)
-{
-    switch(cyc)
-    {
+void PWMX_CycleCfg(PWMX_CycleTypeDef cyc) {
+    switch (cyc) {
         case PWMX_Cycle_256:
             R8_PWM_CONFIG = R8_PWM_CONFIG & 0xf0;
             break;
@@ -63,8 +61,7 @@ void PWMX_CycleCfg(PWMX_CycleTypeDef cyc)
  *
  * @return  none
  */
-void PWMX_16bit_CycleCfg(uint16_t cyc)
-{
+void PWMX_16bit_CycleCfg(uint16_t cyc) {
     R8_PWM_CONFIG = (R8_PWM_CONFIG & 0xf0) | (3 << 2);
     R32_PWM_REG_CYCLE = cyc;
 }
@@ -81,28 +78,20 @@ void PWMX_16bit_CycleCfg(uint16_t cyc)
  *
  * @return  none
  */
-void PWMX_16bit_ACTOUT(uint8_t ch, uint16_t da, PWMX_PolarTypeDef pr, FunctionalState s)
-{
+void PWMX_16bit_ACTOUT(uint8_t ch, uint16_t da, PWMX_PolarTypeDef pr,
+                       FunctionalState s) {
     uint8_t i;
 
-    if(s == DISABLE)
-    {
+    if (s == DISABLE) {
         R8_PWM_OUT_EN &= ~(ch);
-    }
-    else
-    {
+    } else {
         (pr) ? (R8_PWM_POLAR |= (ch)) : (R8_PWM_POLAR &= ~(ch));
-        for(i = 0; i < 6; i++)
-        {
-            if((ch >> i) & 1)
-            {
-                if(i<4)
-                {
+        for (i = 0; i < 6; i++) {
+            if ((ch >> i) & 1) {
+                if (i < 4) {
                     *((volatile uint16_t *)((&R16_PWM4_DATA) + i)) = da;
-                }
-                else
-                {
-                    *((volatile uint16_t *)((&R16_PWM8_DATA) + (i-4))) = da;
+                } else {
+                    *((volatile uint16_t *)((&R16_PWM8_DATA) + (i - 4))) = da;
                 }
             }
         }
@@ -122,21 +111,16 @@ void PWMX_16bit_ACTOUT(uint8_t ch, uint16_t da, PWMX_PolarTypeDef pr, Functional
  *
  * @return  none
  */
-void PWMX_ACTOUT(uint8_t ch, uint8_t da, PWMX_PolarTypeDef pr, FunctionalState s)
-{
+void PWMX_ACTOUT(uint8_t ch, uint8_t da, PWMX_PolarTypeDef pr,
+                 FunctionalState s) {
     uint8_t i;
 
-    if(s == DISABLE)
-    {
+    if (s == DISABLE) {
         R8_PWM_OUT_EN &= ~(ch);
-    }
-    else
-    {
+    } else {
         (pr) ? (R8_PWM_POLAR |= (ch)) : (R8_PWM_POLAR &= ~(ch));
-        for(i = 0; i < 8; i++)
-        {
-            if((ch >> i) & 1)
-            {
+        for (i = 0; i < 8; i++) {
+            if ((ch >> i) & 1) {
                 *((volatile uint8_t *)((&R8_PWM4_DATA) + i)) = da;
             }
         }
@@ -158,14 +142,10 @@ void PWMX_ACTOUT(uint8_t ch, uint8_t da, PWMX_PolarTypeDef pr, FunctionalState s
  *
  * @return  none
  */
-void PWMX_AlterOutCfg(uint8_t ch, FunctionalState s)
-{
-    if(s == DISABLE)
-    {
+void PWMX_AlterOutCfg(uint8_t ch, FunctionalState s) {
+    if (s == DISABLE) {
         R8_PWM_CONFIG &= ~(ch);
-    }
-    else
-    {
+    } else {
         R8_PWM_CONFIG |= (ch);
     }
 }

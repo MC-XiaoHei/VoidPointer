@@ -17,9 +17,9 @@
 /*********************************************************************
  * CONSTANTS
  */
-#define RTC_INIT_TIME_HOUR      0
-#define RTC_INIT_TIME_MINUTE    0
-#define RTC_INIT_TIME_SECEND    0
+#define RTC_INIT_TIME_HOUR   0
+#define RTC_INIT_TIME_MINUTE 0
+#define RTC_INIT_TIME_SECEND 0
 
 /***************************************************
  * Global variables
@@ -37,21 +37,17 @@ volatile uint32_t RTCTigFlag;
  */
 __INTERRUPT
 __HIGH_CODE
-void TMR3_IRQHandler(void) // TMR3
+void TMR3_IRQHandler(void)  // TMR3
 {
     uint32_t trig_time;
 
-    TMR3_ClearITFlag(TMR0_3_IT_CYC_END); // 清除中断标志
-    if( !TMOS_TimerIRQHandler( &trig_time )  )
-    {
-        if( trig_time )
-        {
+    TMR3_ClearITFlag(TMR0_3_IT_CYC_END);  // 清除中断标志
+    if (!TMOS_TimerIRQHandler(&trig_time)) {
+        if (trig_time) {
             R32_TMR3_CNT_END = trig_time;
             R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
             R8_TMR3_CTRL_MOD = RB_TMR_COUNT_EN;
-        }
-        else
-        {
+        } else {
             PRINT("!!!!!!!!!!!!!!!!!! warn \n");
         }
     }
@@ -71,20 +67,11 @@ void TMR3_IRQHandler(void) // TMR3
  * @return      None.
  */
 __HIGH_CODE
-static uint32_t SYS_GetClock1Value(void)
-{
-    return SysTick->CNT;
-}
+static uint32_t SYS_GetClock1Value(void) { return SysTick->CNT; }
 __HIGH_CODE
-static void SYS_SetClock1PendingIRQ(void)
-{
-    PFIC_SetPendingIRQ( TMR3_IRQn );
-}
+static void SYS_SetClock1PendingIRQ(void) { PFIC_SetPendingIRQ(TMR3_IRQn); }
 __HIGH_CODE
-static void SYS_SetTignOffest( int32_t val )
-{
-    R32_TMR3_CNT_END += (val);
-}
+static void SYS_SetTignOffest(int32_t val) { R32_TMR3_CNT_END += (val); }
 
 #endif
 
@@ -98,8 +85,7 @@ static void SYS_SetTignOffest( int32_t val )
  * @return  None.
  */
 __HIGH_CODE
-void RTC_SetTignTime(uint32_t time)
-{
+void RTC_SetTignTime(uint32_t time) {
     sys_safe_access_enable();
     R32_RTC_TRIG = time;
     sys_safe_access_disable();
@@ -117,8 +103,7 @@ void RTC_SetTignTime(uint32_t time)
  */
 __INTERRUPT
 __HIGH_CODE
-void RTC_IRQHandler(void)
-{
+void RTC_IRQHandler(void) {
     R8_RTC_FLAG_CTRL = (RB_RTC_TMR_CLR | RB_RTC_TRIG_CLR);
     RTCTigFlag = 1;
 }
@@ -133,22 +118,17 @@ void RTC_IRQHandler(void)
  * @return  None.
  */
 __HIGH_CODE
-static uint32_t SYS_GetClockValue(void)
-{
+static uint32_t SYS_GetClockValue(void) {
     volatile uint32_t i;
 
-    do
-    {
+    do {
         i = R32_RTC_CNT_32K;
-    } while(i != R32_RTC_CNT_32K);
+    } while (i != R32_RTC_CNT_32K);
 
     return (i);
 }
 __HIGH_CODE
-static void SYS_SetPendingIRQ(void)
-{
-    PFIC_SetPendingIRQ( RTC_IRQn );
-}
+static void SYS_SetPendingIRQ(void) { PFIC_SetPendingIRQ(RTC_IRQn); }
 
 /*******************************************************************************
  * @fn      HAL_Time0Init
@@ -159,10 +139,9 @@ static void SYS_SetPendingIRQ(void)
  *
  * @return  None.
  */
-void HAL_TimeInit(void)
-{
+void HAL_TimeInit(void) {
     bleClockConfig_t conf;
-#if(CLK_OSC32K)
+#if (CLK_OSC32K)
     sys_safe_access_enable();
     R8_CK32K_CONFIG &= ~(RB_CLK_OSC32K_XT | RB_CLK_XT32K_PON);
     sys_safe_access_disable();
@@ -179,9 +158,9 @@ void HAL_TimeInit(void)
     R8_CK32K_CONFIG |= RB_CLK_OSC32K_XT | RB_CLK_XT32K_PON;
     sys_safe_access_disable();
 #endif
-    RTC_InitTime(2020, 1, 1, 0, 0, 0); //RTC时钟初始化当前时间
+    RTC_InitTime(2020, 1, 1, 0, 0, 0);  //RTC时钟初始化当前时间
 
-    tmos_memset( &conf, 0, sizeof(bleClockConfig_t) );
+    tmos_memset(&conf, 0, sizeof(bleClockConfig_t));
     conf.ClockAccuracy = CLK_OSC32K ? 1000 : 50;
     conf.ClockFrequency = CAB_LSIFQ;
     conf.ClockMaxCount = RTC_MAX_COUNT;
@@ -190,16 +169,15 @@ void HAL_TimeInit(void)
 
 #if RF_8K
     // rf-8k 通信时间相关配置
-    conf.Clock1Frequency = GetSysClock( )/1000;
+    conf.Clock1Frequency = GetSysClock() / 1000;
     conf.getClock1Value = SYS_GetClock1Value;
     conf.SetClock1PendingIRQ = SYS_SetClock1PendingIRQ;
     conf.SetTign = SYS_SetTignOffest;
-    TMR3_ITCfg(ENABLE, TMR0_3_IT_CYC_END); // 开启中断
+    TMR3_ITCfg(ENABLE, TMR0_3_IT_CYC_END);  // 开启中断
     PFIC_EnableIRQ(TMR3_IRQn);
 #endif
 
-    TMOS_TimerInit( &conf );
-
+    TMOS_TimerInit(&conf);
 }
 
 /******************************** endfile @ time ******************************/

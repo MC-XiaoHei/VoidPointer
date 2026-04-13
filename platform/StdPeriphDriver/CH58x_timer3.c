@@ -21,8 +21,7 @@
  *
  * @return  none
  */
-void TMR3_TimerInit(uint32_t t)
-{
+void TMR3_TimerInit(uint32_t t) {
     R32_TMR3_CNT_END = t;
     R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
     R8_TMR3_CTRL_MOD = RB_TMR_COUNT_EN;
@@ -37,10 +36,10 @@ void TMR3_TimerInit(uint32_t t)
  *
  * @return  none
  */
-void TMR3_EXTSingleCounterInit(CapModeTypeDef cap)
-{
+void TMR3_EXTSingleCounterInit(CapModeTypeDef cap) {
     R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
-    R8_TMR3_CTRL_MOD = RB_TMR_COUNT_EN | RB_TMR_CAP_COUNT | RB_TMR_MODE_IN | (cap << 6);
+    R8_TMR3_CTRL_MOD =
+        RB_TMR_COUNT_EN | RB_TMR_CAP_COUNT | RB_TMR_MODE_IN | (cap << 6);
 }
 
 /*********************************************************************
@@ -53,8 +52,7 @@ void TMR3_EXTSingleCounterInit(CapModeTypeDef cap)
  *
  * @return  none
  */
-void TMR3_PWMInit(PWMX_PolarTypeDef pr, PWM_RepeatTsTypeDef ts)
-{
+void TMR3_PWMInit(PWMX_PolarTypeDef pr, PWM_RepeatTsTypeDef ts) {
     R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
     R8_TMR3_CTRL_MOD = (pr << 4) | (ts << 6);
 }
@@ -68,8 +66,7 @@ void TMR3_PWMInit(PWMX_PolarTypeDef pr, PWM_RepeatTsTypeDef ts)
  *
  * @return  none
  */
-void TMR3_CapInit(CapModeTypeDef cap)
-{
+void TMR3_CapInit(CapModeTypeDef cap) {
     R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
     R8_TMR3_CTRL_MOD = RB_TMR_COUNT_EN | RB_TMR_MODE_IN | (cap << 6);
 }
@@ -86,20 +83,16 @@ void TMR3_CapInit(CapModeTypeDef cap)
  *
  * @return  none
  */
-void TMR3_DMACfg(uint8_t s, uint32_t startAddr, uint32_t endAddr, DMAModeTypeDef m)
-{
-    if(s == DISABLE)
-    {
+void TMR3_DMACfg(uint8_t s, uint32_t startAddr, uint32_t endAddr,
+                 DMAModeTypeDef m) {
+    if (s == DISABLE) {
         R8_TMR3_CTRL_DMA = 0;
-    }
-    else
-    {
+    } else {
         R32_TMR3_DMA_BEG = startAddr & 0x1FFFF;
-        R32_TMR3_DMA_END = endAddr& 0x1FFFF;
-        if(m)
+        R32_TMR3_DMA_END = endAddr & 0x1FFFF;
+        if (m)
             R8_TMR3_CTRL_DMA = RB_TMR_DMA_LOOP | RB_TMR_DMA_ENABLE;
         else
             R8_TMR3_CTRL_DMA = RB_TMR_DMA_ENABLE;
     }
 }
-

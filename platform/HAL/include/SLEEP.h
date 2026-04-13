@@ -21,7 +21,7 @@ extern "C" {
 /*********************************************************************
  * GLOBAL VARIABLES
  */
-typedef void (*pfnLowPowerGapProcessCB_t)( void );
+typedef void (*pfnLowPowerGapProcessCB_t)(void);
 
 /*********************************************************************
  * FUNCTIONS
