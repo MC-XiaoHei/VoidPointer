@@ -98,9 +98,9 @@ static uint8_t hidEmuTaskId = INVALID_TASK_ID;
 
 // GAP Profile - Name attribute for SCAN RSP data
 static uint8_t scanRspData[] = {
-    0x0A,  // length of this data
+    0x0D,  // length of this data
     GAP_ADTYPE_LOCAL_NAME_COMPLETE,  // AD Type = Complete local name
-    'H', 'I', 'D', ' ', 'M', 'o', 'u', 's', 'e',
+    'V', 'o', 'i', 'd', ' ', 'P', 'o', 'i', 'n', 't', 'e', 'r',
     // connection interval range
     0x05,  // length of this data
     GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE,
@@ -133,7 +133,7 @@ static uint8_t advertData[] = {
     HI_UINT16(GAP_APPEARE_HID_MOUSE)};
 
 // Device name attribute value
-static CONST uint8_t attDeviceName[GAP_DEVICE_NAME_LEN] = "HID Mouse";
+static CONST uint8_t attDeviceName[GAP_DEVICE_NAME_LEN] = "Void Pointer";
 
 // HID Dev configuration
 static hidDevCfg_t hidEmuCfg = {
