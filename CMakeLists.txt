@@ -47,6 +47,7 @@ FetchContent_Declare(
 
 set(Rust_CARGO_TARGET "riscv32imac-unknown-none-elf")
 FetchContent_MakeAvailable(Corrosion)
+
 corrosion_import_crate(
         MANIFEST_PATH core/Cargo.toml
         NO_STD
@@ -95,6 +96,7 @@ file(GLOB_RECURSE PLATFORM_SOURCES
         "platform/HAL/*.c"
         "platform/Startup/*.S"
         "platform/LIB/*.S"
+        "platform/Bind/*.c"
 )
 
 add_executable(${TARGET_ARTIFACT} ${PLATFORM_SOURCES})
@@ -110,6 +112,7 @@ target_include_directories(${TARGET_ARTIFACT} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/platform/Ld/"
         "${CMAKE_CURRENT_SOURCE_DIR}/platform/LIB/"
         "${CMAKE_CURRENT_SOURCE_DIR}/platform/RVMSIS/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/platform/Bind/"
 )
 
 target_link_directories(${TARGET_ARTIFACT} PRIVATE
@@ -130,3 +133,18 @@ add_custom_command(TARGET ${TARGET_ARTIFACT} POST_BUILD
         COMMAND ${CMAKE_OBJDUMP} --source --all-headers --demangle -M xw --line-numbers --wide "${TARGET_ARTIFACT}" > "${PROJECT_NAME}.lst"
         COMMAND ${CMAKE_SIZE} --format=berkeley "${TARGET_ARTIFACT}"
 )
+
+get_filename_component(CARGO_MANIFEST_ABS "${CMAKE_CURRENT_SOURCE_DIR}/core/Cargo.toml" ABSOLUTE)
+string(SHA1 CARGO_PATH_HASH "${CARGO_MANIFEST_ABS}")
+string(SUBSTRING "${CARGO_PATH_HASH}" 0 5 CARGO_PATH_HASH)
+set(CORROSION_TARGET_DIR "${CMAKE_BINARY_DIR}/cargo/core_${CARGO_PATH_HASH}")
+
+file(MAKE_DIRECTORY "${CORROSION_TARGET_DIR}")
+
+set(RUST_LOCAL_TARGET "${CMAKE_CURRENT_SOURCE_DIR}/core/target")
+
+if(EXISTS "${RUST_LOCAL_TARGET}" AND NOT IS_SYMLINK "${RUST_LOCAL_TARGET}")
+    message(WARNING "Please delete the existing 'core/target' directory manually so CMake can create a symlink.")
+else()
+    file(CREATE_LINK "${CORROSION_TARGET_DIR}" "${RUST_LOCAL_TARGET}" SYMBOLIC)
+endif()
