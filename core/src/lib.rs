@@ -1,27 +1,43 @@
-#![cfg_attr(not(test), no_std)]
+#![no_std]
 
-#[allow(dead_code)]
-#[allow(non_snake_case)]
-#[allow(non_camel_case_types)]
-#[allow(non_upper_case_globals)]
-pub mod c_bindings {
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+use crate::attitude::get_current_attitude;
+use crate::logger::init_logger;
+use crate::runtime::{RUNTIME, Runtime};
+use log::LevelFilter::Info;
+use log::info;
+
+pub mod attitude;
+pub mod bindings;
+pub mod hid;
+pub mod logger;
+pub mod motion;
+pub mod report;
+pub mod runtime;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn init_core() {
+    init_logger(Info).expect("Failed to initialize logger");
+    unsafe {
+        RUNTIME = Some(Runtime::new());
+    }
+    info!("Core initialized.");
 }
 
-mod imu;
+#[unsafe(no_mangle)]
+pub extern "C" fn tick() {
+    unsafe {
+        let rt_ptr = core::ptr::addr_of_mut!(RUNTIME);
 
-#[no_mangle]
-pub extern "C" fn my_rust_function(x: i32) -> i32 {
-    x * 2
+        if let Some(runtime) = (*rt_ptr).as_mut() {
+            runtime.tick();
+        } else {
+            log::error!("Call tick() before runtime initialize!");
+        }
+    }
 }
 
-#[no_mangle]
-pub extern "C" fn my_rust_function2(x: i32) -> bool {
-    x > 0
-}
-
-#[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    log::error!("{info}");
     loop {}
 }

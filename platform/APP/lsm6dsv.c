@@ -34,6 +34,8 @@ static bool lsm6dsv_write_reg(const uint8_t reg, const uint8_t value) {
     if (!i2c_wait_event(I2C_EVENT_MASTER_BYTE_TRANSMITTED)) return false;
 
     I2C_GenerateSTOP(ENABLE);
+
+    mDelaymS(5);
     return true;
 }
 

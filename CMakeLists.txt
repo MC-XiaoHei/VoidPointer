@@ -45,7 +45,7 @@ FetchContent_Declare(
         GIT_TAG v0.6.1
 )
 
-set(Rust_CARGO_TARGET "riscv32imac-unknown-none-elf")
+set(Rust_CARGO_TARGET "riscv32imc-unknown-none-elf")
 FetchContent_MakeAvailable(Corrosion)
 
 corrosion_import_crate(

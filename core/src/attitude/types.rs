@@ -1,17 +1,24 @@
-use crate::c_bindings::sflp_game_rotation_raw_t;
+use crate::bindings::sflp_game_rotation_raw_t;
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Attitude {
+pub struct AttitudeData {
+    /// radians
     pub roll: f32,
+    /// radians
     pub pitch: f32,
+    /// radians
     pub yaw: f32,
+    /// quaternion scalar part
     pub w: f32,
+    /// quaternion x
     pub x: f32,
+    /// quaternion y
     pub y: f32,
+    /// quaternion z
     pub z: f32,
 }
 
-impl From<sflp_game_rotation_raw_t> for Attitude {
+impl From<sflp_game_rotation_raw_t> for AttitudeData {
     fn from(raw: sflp_game_rotation_raw_t) -> Self {
         let x = f16_bits_to_f32(raw.x);
         let y = f16_bits_to_f32(raw.y);

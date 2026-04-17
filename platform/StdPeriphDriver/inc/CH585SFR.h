@@ -125,7 +125,7 @@ typedef volatile unsigned long long *PUINT64V;
 #endif
 
 #ifdef DEBUG
-#define PRINT(X...) printf(X)
+#define PRINT(X...) {printf("[DEBUG] ");printf(X);}
 #else
 #define PRINT(X...)
 #endif

@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 #define LSM6DSV_I2C_ADDR               (0x6A << 1)
-#define LSM6DSV_I2C_MAX_TIMEOUT        20000
+#define LSM6DSV_I2C_MAX_TIMEOUT        100000
 
 #define LSM6DSV_REG_FUNC_CFG_ACCESS    0x01
 #define LSM6DSV_REG_EMB_FUNC_EN_A      0x04

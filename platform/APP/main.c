@@ -3,6 +3,7 @@
 #include "hiddev.h"
 #include "hidmouse.h"
 #include "lsm6dsv.h"
+#include "rust_api.h"
 
 #include <math.h>
 
@@ -24,6 +25,28 @@ void I2C_Hardware_Init(void) {
     GPIOB_ModeCfg(GPIO_Pin_12 | GPIO_Pin_13, GPIO_ModeIN_PU);
     I2C_Init(I2C_Mode_I2C, 400000, I2C_DutyCycle_16_9, I2C_Ack_Enable,
              I2C_AckAddr_7bit, 0);
+}
+
+#define RUNTIME_TICK_EVT 0x0001
+#define RUNTIME_PERIOD   13
+static tmosTaskID runtime_task_id = 0xFF;
+
+// ReSharper disable once CppParameterNeverUsed
+uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events) {
+    if (events & RUNTIME_TICK_EVT) {
+        tick();
+        return events ^ RUNTIME_TICK_EVT;
+    }
+    return 0;
+}
+
+void RuntimeTask_Init(void) {
+    runtime_task_id = TMOS_ProcessEventRegister(RuntimeTask_ProcessEvent);
+    if (runtime_task_id == 0xFF) {
+        PRINT("Runtime task register failed\n");
+        return;
+    }
+    tmos_start_reload_task(runtime_task_id, RUNTIME_TICK_EVT, RUNTIME_PERIOD);
 }
 
 int main(void) {
@@ -54,11 +77,14 @@ int main(void) {
     HAL_Init();
 
     I2C_Hardware_Init();
-    LSM6DSV_Init();
+    if (!LSM6DSV_Init()) PRINT("IMU init failed\n");
 
     GAPRole_PeripheralInit();
     HidDev_Init();
     HidEmu_Init();
+
+    init_core();
+    RuntimeTask_Init();
 
     Main_Circulation();
 }
