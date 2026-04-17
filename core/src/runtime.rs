@@ -48,8 +48,6 @@ impl Runtime {
                 wheel: 0,
             };
 
-            // info!("{mouse_report:#?}");
-
             match self.hid_sender.send_mouse_report(mouse_report) {
                 HidSendStatus::Sent => {
                     self.report_state.commit_sent(delta);

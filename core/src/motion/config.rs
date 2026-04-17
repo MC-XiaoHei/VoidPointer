@@ -2,6 +2,7 @@
 pub struct MotionConfig {
     pub deadzone_x_rad: f32,
     pub deadzone_y_rad: f32,
+    pub deadzone_speed: f32,
     pub max_angle_rad: f32,
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
@@ -15,6 +16,7 @@ impl Default for MotionConfig {
         Self {
             deadzone_x_rad: 0.1,
             deadzone_y_rad: 0.1,
+            deadzone_speed: 0.1,
             max_angle_rad: 0.5,
             sensitivity_x: 1200.0,
             sensitivity_y: 1200.0,

@@ -29,6 +29,14 @@ impl ReportState {
             return;
         }
 
+        if motion.vx == 0.0 {
+            self.reset_x_fractional();
+        }
+
+        if motion.vy == 0.0 {
+            self.reset_y_fractional();
+        }
+
         self.accum_x += motion.vx / self.cfg.report_hz;
         self.accum_y += motion.vy / self.cfg.report_hz;
 
@@ -58,14 +66,30 @@ impl ReportState {
         self.pending_y -= sent.dy as i32;
     }
 
-    pub fn reset_fractional(&mut self) {
+    pub fn reset_x_fractional(&mut self) {
         self.accum_x = 0.0;
+    }
+
+    pub fn reset_y_fractional(&mut self) {
         self.accum_y = 0.0;
     }
 
-    pub fn clear_pending(&mut self) {
+    pub fn reset_fractional(&mut self) {
+        self.reset_x_fractional();
+        self.reset_y_fractional();
+    }
+
+    pub fn clear_x_pending(&mut self) {
         self.pending_x = 0;
+    }
+
+    pub fn clear_y_pending(&mut self) {
         self.pending_y = 0;
+    }
+
+    pub fn clear_pending(&mut self) {
+        self.clear_x_pending();
+        self.clear_y_pending();
     }
 
     pub fn reset_all(&mut self) {

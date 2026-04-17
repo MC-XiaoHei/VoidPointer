@@ -287,12 +287,6 @@ uint16_t HidEmu_ProcessEvent(uint8_t task_id, uint16_t events) {
 
         return (events ^ START_PHY_UPDATE_EVT);
     }
-
-    if (events & START_REPORT_EVT) {
-        hidEmuSendMouseReport(MOUSE_BUTTON_NONE, 2, 2);
-        tmos_start_task(hidEmuTaskId, START_REPORT_EVT, 800);
-        return (events ^ START_REPORT_EVT);
-    }
     return 0;
 }
 
@@ -430,10 +424,6 @@ static uint8_t hidEmuRptCB(uint8_t id, uint8_t type, uint16_t uuid,
     // read
     else if (oper == HID_DEV_OPER_READ) {
         status = Hid_GetParameter(id, type, uuid, pLen, pData);
-    }
-    // notifications enabled
-    else if (oper == HID_DEV_OPER_ENABLE) {
-        tmos_start_task(hidEmuTaskId, START_REPORT_EVT, 500);
     }
     return status;
 }

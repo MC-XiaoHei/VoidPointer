@@ -1,3 +1,4 @@
+use log::info;
 use crate::bindings::*;
 
 use crate::hid::types::{HidSendStatus, MouseReport};
@@ -27,6 +28,7 @@ impl BleHidSender {
 
 impl HidSender for BleHidSender {
     fn send_mouse_report(&mut self, report: MouseReport) -> HidSendStatus {
+        info!("{} - {}", report.dx, report.dy);
         let status = unsafe {
             c_send_ble_hid_mouse_report(report.buttons, report.dx, report.dy, report.wheel)
         };
