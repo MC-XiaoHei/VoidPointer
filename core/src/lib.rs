@@ -8,7 +8,9 @@ use log::info;
 
 pub mod attitude;
 pub mod bindings;
+pub mod clock;
 pub mod hid;
+pub mod input;
 pub mod logger;
 pub mod motion;
 pub mod report;

@@ -1,18 +1,16 @@
 use crate::attitude::get_current_attitude;
 use crate::attitude::types::AttitudeData;
+use crate::motion::axis::{HW_MAP_X, HW_MAP_Y};
 use crate::motion::config::MotionConfig;
 use crate::motion::state::MotionState;
-
-const ROLL_SIGN: i8 = 1;
-const PITCH_SIGN: i8 = 1;
 
 pub struct TiltMotionSolver {
     cfg: MotionConfig,
     filtered_vx: f32,
     filtered_vy: f32,
 
-    pub center_roll: f32,
-    pub center_pitch: f32,
+    pub center_x_rad: f32,
+    pub center_y_rad: f32,
 }
 
 impl TiltMotionSolver {
@@ -21,8 +19,8 @@ impl TiltMotionSolver {
             cfg,
             filtered_vx: 0.0,
             filtered_vy: 0.0,
-            center_roll: 0.0,
-            center_pitch: 0.0,
+            center_x_rad: 0.0,
+            center_y_rad: 0.0,
         };
 
         let attitude = get_current_attitude().unwrap();
@@ -33,19 +31,16 @@ impl TiltMotionSolver {
     }
 
     pub fn calibrate(&mut self, attitude: AttitudeData) {
-        self.center_roll = attitude.roll;
-        self.center_pitch = attitude.pitch;
+        self.center_x_rad = HW_MAP_X.extract(&attitude);
+        self.center_y_rad = HW_MAP_Y.extract(&attitude);
     }
 
     pub fn update(&mut self, attitude: AttitudeData) -> MotionState {
-        let roll_diff = normalize_angle(attitude.roll - self.center_roll);
-        let pitch_diff = normalize_angle(attitude.pitch - self.center_pitch);
+        let current_x_rad = HW_MAP_X.extract(&attitude);
+        let current_y_rad = HW_MAP_Y.extract(&attitude);
 
-        let roll = roll_diff * ROLL_SIGN as f32;
-        let pitch = pitch_diff * PITCH_SIGN as f32;
-
-        let raw_x = roll;
-        let raw_y = pitch;
+        let raw_x = normalize_angle(current_x_rad - self.center_x_rad);
+        let raw_y = normalize_angle(current_y_rad - self.center_y_rad);
 
         let x = if self.cfg.invert_x { -raw_x } else { raw_x };
         let y = if self.cfg.invert_y { -raw_y } else { raw_y };

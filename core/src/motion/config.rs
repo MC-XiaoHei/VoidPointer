@@ -14,12 +14,12 @@ pub struct MotionConfig {
 impl Default for MotionConfig {
     fn default() -> Self {
         Self {
-            deadzone_x_rad: 0.1,
-            deadzone_y_rad: 0.1,
+            deadzone_x_rad: 0.05,
+            deadzone_y_rad: 0.05,
             deadzone_speed: 0.1,
-            max_angle_rad: 0.5,
-            sensitivity_x: 1200.0,
-            sensitivity_y: 1200.0,
+            max_angle_rad: 1.0,
+            sensitivity_x: 12000.0,
+            sensitivity_y: 12000.0,
             invert_x: false,
             invert_y: false,
             smoothing_alpha: 0.2,

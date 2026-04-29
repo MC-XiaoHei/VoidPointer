@@ -23,4 +23,22 @@ typedef enum {
 hid_send_status_t c_send_ble_hid_mouse_report(uint8_t buttons, int8_t dx,
                                               int8_t dy, int8_t wheel);
 
+typedef struct {
+    bool left;
+    bool right;
+    bool middle;
+    bool light;
+    bool action;
+    bool enc_a;
+    bool enc_b;
+} input_status_t;
+
+input_status_t c_get_input_status();
+
+uint32_t c_get_rtc_tick();
+
+uint32_t c_get_rtc_millis();
+
+uint32_t c_get_rtc_micros();
+
 #endif

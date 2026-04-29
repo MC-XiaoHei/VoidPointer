@@ -1,6 +1,11 @@
 #include "c_api.h"
 
+#include "HAL.h"
+#include "CH58x_common.h"
 #include <CH58xBLE_LIB.h>
+#include "CH58x_gpio.h"
+
+#include "main.h"
 #include <hiddev.h>
 #include <hidmouseservice.h>
 #include <lsm6dsv.h>
@@ -49,4 +54,31 @@ hid_send_status_t c_send_ble_hid_mouse_report(const uint8_t buttons,
         default:
             return HID_SEND_FATAL;
     }
+}
+
+input_status_t c_get_input_status() {
+    const uint32_t portA_data = GPIOA_ReadPort();
+    input_status_t input_status;
+
+    input_status.left = portA_data & LEFT_BTN ? 0 : 1;
+    input_status.right = portA_data & RIGHT_BTN ? 0 : 1;
+    input_status.middle = portA_data & MIDDLE_BTN ? 0 : 1;
+    input_status.action = portA_data & ACTION_BTN ? 0 : 1;
+    input_status.light = portA_data & LIGHT_BTN ? 0 : 1;
+    input_status.enc_a = portA_data & ENC_A ? 0 : 1;
+    input_status.enc_b = portA_data & ENC_B ? 0 : 1;
+
+    return input_status;
+}
+
+uint32_t c_get_rtc_tick() {
+    return RTC_GetCycle32k();
+}
+
+uint32_t c_get_rtc_millis() {
+    return RTC_TO_MS(c_get_rtc_tick());
+}
+
+uint32_t c_get_rtc_micros() {
+    return RTC_TO_US(c_get_rtc_tick());
 }

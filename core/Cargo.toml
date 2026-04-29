@@ -10,6 +10,7 @@ test = false
 bench = false
 
 [dependencies]
+fugit = "0.3"
 heapless = { version = "0.9", default-features = false }
 libm = "0.2"
 log = { version = "0.4", default-features = false }

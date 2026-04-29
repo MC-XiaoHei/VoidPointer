@@ -1,8 +1,9 @@
 use crate::get_current_attitude;
 use crate::hid::sender::BleHidSender;
 use crate::hid::sender::HidSender;
-use crate::hid::types::HidSendStatus;
 use crate::hid::types::MouseReport;
+use crate::hid::types::{HidSendStatus, MouseButtons};
+use crate::input::types::InputManager;
 use crate::motion::config::MotionConfig;
 use crate::motion::resolver::TiltMotionSolver;
 use crate::motion::state::MotionState;
@@ -15,6 +16,7 @@ pub struct Runtime {
     solver: TiltMotionSolver,
     report_state: ReportState,
     hid_sender: BleHidSender,
+    input_manager: InputManager,
 }
 
 impl Runtime {
@@ -23,11 +25,12 @@ impl Runtime {
             solver: TiltMotionSolver::new(MotionConfig::default()),
             report_state: ReportState::new(ReportConfig::default()),
             hid_sender: BleHidSender::new(),
+            input_manager: InputManager::new(),
         }
     }
-
     pub fn tick(&mut self) {
         let attitude_opt = get_current_attitude();
+        let current_input = self.input_manager.get_current_input();
 
         let motion = match attitude_opt {
             Some(attitude) => self.solver.update(attitude),
@@ -39,16 +42,21 @@ impl Runtime {
         };
 
         self.report_state.ingest_motion(motion);
+        let delta_opt = self.report_state.peek_report();
 
-        if let Some(delta) = self.report_state.peek_report() {
+        if let Some(delta) = delta_opt {
             let mouse_report = MouseReport {
-                buttons: 0,
+                buttons: MouseButtons {
+                    left: current_input.left,
+                    right: current_input.right,
+                    middle: current_input.middle,
+                },
                 dx: delta.dx,
                 dy: delta.dy,
-                wheel: 0,
+                wheel: current_input.wheel_delta,
             };
-
-            match self.hid_sender.send_mouse_report(mouse_report) {
+            let send_status = self.hid_sender.send_mouse_report(mouse_report);
+            match send_status {
                 HidSendStatus::Sent => {
                     self.report_state.commit_sent(delta);
                 }

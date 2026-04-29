@@ -1,5 +1,6 @@
 ﻿#include "CONFIG.h"
 #include "HAL.h"
+#include "main.h"
 #include "hiddev.h"
 #include "hidmouse.h"
 #include "lsm6dsv.h"
@@ -21,26 +22,27 @@ __attribute__((noinline)) void Main_Circulation() {
     }
 }
 
-void I2C_Hardware_Init(void) {
-    GPIOB_ModeCfg(GPIO_Pin_12 | GPIO_Pin_13, GPIO_ModeIN_PU);
+void I2C_Hardware_Init() {
+    GPIOB_ModeCfg(I2C_SDA | I2C_SCL, GPIO_ModeIN_PU);
     I2C_Init(I2C_Mode_I2C, 400000, I2C_DutyCycle_16_9, I2C_Ack_Enable,
              I2C_AckAddr_7bit, 0);
 }
 
 #define RUNTIME_TICK_EVT 0x0001
-#define RUNTIME_PERIOD   13
+#define RUNTIME_PERIOD   1
 static tmosTaskID runtime_task_id = 0xFF;
 
 // ReSharper disable once CppParameterNeverUsed
 uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events) {
     if (events & RUNTIME_TICK_EVT) {
         tick();
-        return events ^ RUNTIME_TICK_EVT;
+        // ReSharper disable once CppRedundantParentheses
+        return events & (~RUNTIME_TICK_EVT);
     }
     return 0;
 }
 
-void RuntimeTask_Init(void) {
+void RuntimeTask_Init() {
     runtime_task_id = TMOS_ProcessEventRegister(RuntimeTask_ProcessEvent);
     if (runtime_task_id == 0xFF) {
         PRINT("Runtime task register failed\n");
@@ -49,7 +51,14 @@ void RuntimeTask_Init(void) {
     tmos_start_reload_task(runtime_task_id, RUNTIME_TICK_EVT, RUNTIME_PERIOD);
 }
 
-int main(void) {
+void InputGPIO_Init() {
+    const uint32_t target_pins = LIGHT_BTN | RIGHT_BTN | LEFT_BTN | ACTION_BTN |
+                                 ENC_A | MIDDLE_BTN | ENC_B;
+    GPIOADigitalCfg(ENABLE, target_pins);
+    GPIOA_ModeCfg(target_pins, GPIO_ModeIN_Floating);
+}
+
+int main() {
 #if (defined(DCDC_ENABLE)) && (DCDC_ENABLE == TRUE)
     PWR_DCDCCfg(ENABLE);
 #endif
@@ -64,17 +73,25 @@ int main(void) {
 #endif
 
 #ifdef DEBUG
-    GPIOA_SetBits(GPIO_Pin_14);
+    GPIOA_SetBits(DEBUG_TX);
     GPIOPinRemap(ENABLE, RB_PIN_UART0);
-    GPIOA_ModeCfg(GPIO_Pin_15, GPIO_ModeIN_PU);
-    GPIOA_ModeCfg(GPIO_Pin_14, GPIO_ModeOut_PP_5mA);
+    GPIOA_ModeCfg(DEBUG_RX, GPIO_ModeIN_PU);
+    GPIOA_ModeCfg(DEBUG_TX, GPIO_ModeOut_PP_5mA);
     UART0_DefInit();
 #endif
+
+
+    GPIOA_ModeCfg(GPIO_Pin_0, GPIO_ModeOut_PP_5mA);
+    GPIOA_ModeCfg(GPIO_Pin_1, GPIO_ModeOut_PP_5mA);
+
+    GPIOA_ResetBits(GPIO_Pin_0);
+    GPIOA_ResetBits(GPIO_Pin_1);
 
     PRINT("%s\n", (const char *)VER_LIB);
 
     CH58x_BLEInit();
     HAL_Init();
+    InputGPIO_Init();
 
     I2C_Hardware_Init();
     if (!LSM6DSV_Init()) PRINT("IMU init failed\n");
