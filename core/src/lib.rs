@@ -1,40 +1,32 @@
 #![no_std]
 
 use crate::attitude::get_current_attitude;
-use crate::logger::init_logger;
-use crate::runtime::{RUNTIME, Runtime};
 use log::LevelFilter::Info;
 use log::info;
+use utils::logger::init_logger;
+use utils::runtime::{RUNTIME, Runtime};
 
 pub mod attitude;
 pub mod bindings;
-pub mod clock;
 pub mod hid;
 pub mod input;
-pub mod logger;
 pub mod motion;
 pub mod report;
-pub mod runtime;
+pub mod utils;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn init_core() {
     init_logger(Info).expect("Failed to initialize logger");
-    unsafe {
-        RUNTIME = Some(Runtime::new());
-    }
+    RUNTIME.init(Runtime::new());
     info!("Core initialized.");
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn tick() {
-    unsafe {
-        let rt_ptr = core::ptr::addr_of_mut!(RUNTIME);
+    let ret = RUNTIME.execute(Runtime::tick);
 
-        if let Some(runtime) = (*rt_ptr).as_mut() {
-            runtime.tick();
-        } else {
-            log::error!("Call tick() before runtime initialize!");
-        }
+    if ret.is_none() {
+        log::error!("Call tick() before runtime initialize!");
     }
 }
 
