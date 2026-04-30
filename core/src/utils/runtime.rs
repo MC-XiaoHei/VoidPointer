@@ -9,8 +9,9 @@ use crate::motion::resolver::TiltMotionSolver;
 use crate::motion::state::MotionState;
 use crate::report::config::ReportConfig;
 use crate::report::state::ReportState;
+use crate::utils::global::MainLoopGlobal;
 
-pub static mut RUNTIME: Option<Runtime> = None;
+pub static RUNTIME: MainLoopGlobal<Runtime> = MainLoopGlobal::new();
 
 pub struct Runtime {
     solver: TiltMotionSolver,
