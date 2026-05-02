@@ -1,5 +1,11 @@
-use crate::bindings::sflp_game_rotation_raw_t;
 use half::f16;
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SflpGameRotationRaw {
+    pub x: u16,
+    pub y: u16,
+    pub z: u16,
+}
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AttitudeData {
@@ -19,8 +25,8 @@ pub struct AttitudeData {
     pub z: f32,
 }
 
-impl From<sflp_game_rotation_raw_t> for AttitudeData {
-    fn from(raw: sflp_game_rotation_raw_t) -> Self {
+impl From<SflpGameRotationRaw> for AttitudeData {
+    fn from(raw: SflpGameRotationRaw) -> Self {
         let x = f16::from_bits(raw.x).to_f32();
         let y = f16::from_bits(raw.y).to_f32();
         let z = f16::from_bits(raw.z).to_f32();

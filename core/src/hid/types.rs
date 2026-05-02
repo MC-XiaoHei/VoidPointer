@@ -33,5 +33,6 @@ impl MouseButtons {
 pub enum HidSendStatus {
     Sent,
     RetryLater,
+    NotConnected,
     Fatal,
 }

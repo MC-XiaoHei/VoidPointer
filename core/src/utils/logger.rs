@@ -1,5 +1,5 @@
-use crate::bindings::c_print_to_uart;
-use core::ffi::{c_char, c_uint};
+use crate::ffi::bindings::c_vp_debug_print;
+use core::ffi::c_char;
 use core::fmt::Write;
 use heapless::String;
 use log::{LevelFilter, Log, Metadata, Record, SetLoggerError};
@@ -11,9 +11,9 @@ static UART_LOGGER: UartLogger = UartLogger;
 pub fn print_to_uart(s: &str) {
     // SAFETY:
     // `s` provides a valid pointer to `len` bytes for the duration of the call.
-    // `print_to_uart` is expected to read exactly `len` bytes.
+    // `c_vp_debug_print` is expected to read exactly `len` bytes.
     unsafe {
-        c_print_to_uart(s.as_ptr() as *const c_char, s.len() as c_uint);
+        c_vp_debug_print(s.as_ptr() as *const c_char, s.len() as u16);
     }
 }
 

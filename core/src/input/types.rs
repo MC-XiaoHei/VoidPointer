@@ -1,4 +1,7 @@
-use crate::bindings::c_get_input_status;
+use crate::ffi::bindings::{
+    VP_INPUT_ACTION, VP_INPUT_ENCODER_A, VP_INPUT_ENCODER_B, VP_INPUT_LASER, VP_INPUT_LEFT,
+    VP_INPUT_MIDDLE, VP_INPUT_RIGHT, c_vp_gpio_read,
+};
 use crate::input::encoder::RotaryEncoder;
 use log::info;
 
@@ -24,17 +27,23 @@ impl InputManager {
     }
 
     pub fn get_current_input(&mut self) -> InputStatus {
-        let raw = unsafe { c_get_input_status() };
-        let wheel_delta = self.encoder.update(raw.enc_a, raw.enc_b);
+        let left = unsafe { c_vp_gpio_read(VP_INPUT_LEFT as u8) } != 0;
+        let right = unsafe { c_vp_gpio_read(VP_INPUT_RIGHT as u8) } != 0;
+        let middle = unsafe { c_vp_gpio_read(VP_INPUT_MIDDLE as u8) } != 0;
+        let action = unsafe { c_vp_gpio_read(VP_INPUT_ACTION as u8) } != 0;
+        let light = unsafe { c_vp_gpio_read(VP_INPUT_LASER as u8) } != 0;
+        let enc_a = unsafe { c_vp_gpio_read(VP_INPUT_ENCODER_A as u8) } != 0;
+        let enc_b = unsafe { c_vp_gpio_read(VP_INPUT_ENCODER_B as u8) } != 0;
+        let wheel_delta = self.encoder.update(enc_a, enc_b);
         if wheel_delta != 0 {
-            info!("{},{},{}", raw.enc_a, raw.enc_b, wheel_delta);
+            info!("{},{},{}", enc_a, enc_b, wheel_delta);
         }
         InputStatus {
-            left: raw.left,
-            right: raw.right,
-            middle: raw.middle,
-            light: raw.light,
-            action: raw.action,
+            left,
+            right,
+            middle,
+            light,
+            action,
             wheel_delta,
         }
     }

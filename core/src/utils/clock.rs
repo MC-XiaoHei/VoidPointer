@@ -1,4 +1,4 @@
-use crate::bindings::{c_get_rtc_micros, c_get_rtc_millis};
+use crate::ffi::bindings::{c_vp_rtc_micros, c_vp_rtc_millis};
 use fugit::TimerInstantU32;
 
 pub type MillisInstant = TimerInstantU32<1000>;
@@ -8,10 +8,10 @@ pub struct RTC;
 
 impl RTC {
     pub fn millis() -> MillisInstant {
-        MillisInstant::from_ticks(unsafe { c_get_rtc_millis() })
+        MillisInstant::from_ticks(unsafe { c_vp_rtc_millis() })
     }
 
     pub fn micros() -> MicrosInstant {
-        MicrosInstant::from_ticks(unsafe { c_get_rtc_micros() })
+        MicrosInstant::from_ticks(unsafe { c_vp_rtc_micros() })
     }
 }
