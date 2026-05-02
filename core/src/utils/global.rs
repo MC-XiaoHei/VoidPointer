@@ -1,11 +1,11 @@
 use core::cell::UnsafeCell;
 
-/// Core Contract: Only call within the main loop. NEVER use in an ISR!
+/// 只允许主循环访问，ISR 禁用
 pub struct MainLoopGlobal<T> {
     inner: UnsafeCell<Option<T>>,
 }
 
-// SAFETY: Thread-safe (Sync) ONLY if strictly confined to the non-preemptible main loop.
+// SAFETY: 仅限非抢占主循环访问
 unsafe impl<T> Sync for MainLoopGlobal<T> {}
 
 impl<T> MainLoopGlobal<T> {
@@ -16,7 +16,7 @@ impl<T> MainLoopGlobal<T> {
     }
 
     pub fn init(&self, value: T) {
-        // SAFETY: Main loop execution prevents concurrent mutation.
+        // SAFETY: 主循环内无并发写
         unsafe {
             *self.inner.get() = Some(value);
         }
@@ -26,7 +26,7 @@ impl<T> MainLoopGlobal<T> {
     where
         F: FnOnce(&mut T) -> R,
     {
-        // SAFETY: Main loop execution guarantees no simultaneous `&mut T` aliasing.
+        // SAFETY: 主循环内不会产生可变别名
         unsafe {
             let opt = &mut *self.inner.get();
             opt.as_mut().map(f)

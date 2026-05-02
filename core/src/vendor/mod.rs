@@ -90,7 +90,7 @@ pub struct VendorRxQueue {
     inner: UnsafeCell<VendorRxQueueInner>,
 }
 
-// SAFETY: all accesses are serialized with `interrupt_free()` on the single-core target.
+// SAFETY: 所有访问由 CH585 单核临界区串行化
 unsafe impl Sync for VendorRxQueue {}
 
 impl VendorRxQueue {
@@ -115,7 +115,7 @@ impl VendorRxQueue {
 
         let mut data = [0u8; VENDOR_RX_PAYLOAD_CAPACITY];
         if len_usize != 0 {
-            // SAFETY: caller guarantees `ptr` points to `len` bytes valid for the callback.
+            // SAFETY: 调用方保证 callback 期间 `ptr..ptr+len` 有效
             unsafe { ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), len_usize) };
         }
 

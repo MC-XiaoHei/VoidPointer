@@ -9,9 +9,7 @@ pub struct UartLogger;
 static UART_LOGGER: UartLogger = UartLogger;
 
 pub fn print_to_uart(s: &str) {
-    // SAFETY:
-    // `s` provides a valid pointer to `len` bytes for the duration of the call.
-    // `c_vp_debug_print` is expected to read exactly `len` bytes.
+    // SAFETY: `s` 在调用期间提供有效的 `len` 字节
     unsafe {
         c_vp_debug_print(s.as_ptr() as *const c_char, s.len() as u16);
     }

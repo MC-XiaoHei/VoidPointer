@@ -127,8 +127,7 @@ pub struct EventQueue {
     inner: UnsafeCell<EventQueueInner>,
 }
 
-// SAFETY: `inner` is only accessed inside `interrupt_free()`, which serializes
-// main-loop and ISR access on the single-core CH585 target.
+// SAFETY: 所有访问由 CH585 单核临界区串行化
 unsafe impl Sync for EventQueue {}
 
 impl EventQueue {
@@ -139,10 +138,7 @@ impl EventQueue {
     }
 
     pub fn push(&self, event: RuntimeEvent) -> bool {
-        // Called from GPIO/TMR ISR callbacks on CH585. Do not use the
-        // interrupt_free() helper here: restoring mstatus from inside an ISR can
-        // wedge the core. Event enqueue is serialized enough for current
-        // bring-up because the main loop only drains after the ISR returns.
+        // ISR 内不能恢复 mstatus；这里只做短入队
         unsafe { (&mut *self.inner.get()).push(event) }
     }
 

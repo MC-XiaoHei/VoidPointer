@@ -9,19 +9,19 @@ pub struct SflpGameRotationRaw {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AttitudeData {
-    /// radians
+    /// 弧度
     pub roll: f32,
-    /// radians
+    /// 弧度
     pub pitch: f32,
-    /// radians
+    /// 弧度
     pub yaw: f32,
-    /// quaternion scalar part
+    /// 四元数标量
     pub w: f32,
-    /// quaternion x
+    /// 四元数 x
     pub x: f32,
-    /// quaternion y
+    /// 四元数 y
     pub y: f32,
-    /// quaternion z
+    /// 四元数 z
     pub z: f32,
 }
 

@@ -168,10 +168,7 @@ impl Runtime {
                 self.dirty.power = false;
             }
             RuntimeCommandResult::ImuFifoReadRequested { status: _ } => {
-                // The platform reports completion via vp_on_imu_fifo_done() when an
-                // async read is actually in flight. For Busy/Unsupported/Error, drop
-                // this request to avoid a tight bottom-half retry loop; the next IMU
-                // interrupt can request another read.
+                // 未真正启动异步读时丢弃请求，避免 bottom-half 紧重试
                 self.pending.imu_fifo_read = false;
             }
         }

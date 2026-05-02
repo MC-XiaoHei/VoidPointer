@@ -186,9 +186,7 @@ impl InputManager {
     }
 
     pub fn get_current_input(&mut self) -> InputStatus {
-        // Event-time encoder resync. The primary wheel path is EncoderExti;
-        // this read normally produces zero after the queued EXTI state has been
-        // applied, but keeps the encoder state coherent across missed edges.
+        // 兜底同步编码器状态，避免漏边沿后长期偏移
         let enc_a = read_active_low_input(VP_INPUT_ENCODER_A as u8);
         let enc_b = read_active_low_input(VP_INPUT_ENCODER_B as u8);
         let polled_wheel = self.encoder.update(enc_a, enc_b);
@@ -240,10 +238,8 @@ fn arm_next_level_interrupt(input_id: u8, active: bool) {
 
 fn next_edge_for_active_low_state(active: bool) -> u32 {
     if active {
-        // Active-low input is currently low; wait for physical high/release.
         VP_EXTI_EDGE_RISING
     } else {
-        // Active-low input is currently high; wait for physical low/press.
         VP_EXTI_EDGE_FALLING
     }
 }

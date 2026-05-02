@@ -1,9 +1,7 @@
-//! FFI integration boundary.
+//! FFI 边界
 //!
-//! `platform/Bind/c_api.h` is the single source of truth for Rust→C ABI types,
-//! constants, and imported functions. This module exposes the generated
-//! `bindgen` output and may contain small idiomatic Rust helpers/wrappers, but
-//! it must not duplicate C-style ABI type definitions by hand.
+//! `platform/Bind/c_api.h` 是 ABI 单一事实来源；
+//! 本模块只暴露生成的 `bindgen` 结果和少量 Rust 包装
 
 pub mod bindings;
 

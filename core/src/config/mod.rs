@@ -16,8 +16,7 @@ impl ConfigManager {
     }
 
     pub fn poll(&mut self) {
-        // DataFlash-backed config save/load is intentionally deferred to a later task.
-        // Keep dirty set until the real save path can clear it.
+        // 等真实 DataFlash 保存路径接入后再清 dirty
     }
 }
 
