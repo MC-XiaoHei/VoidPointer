@@ -141,6 +141,7 @@ vp_timestamp_t c_vp_rtc_millis(void);
 uint32_t       c_vp_rtc_micros(void);
 vp_status_t    c_vp_rtc_set_wake_after(uint32_t ms);
 void           c_vp_request_core_poll(void);
+void           c_vp_request_core_poll_after(uint32_t ms);
 
 /* I2C / IMU API. Bottom-half only unless otherwise documented. */
 vp_status_t c_vp_i2c_init(void);

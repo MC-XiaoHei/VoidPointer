@@ -19,6 +19,7 @@
 #include "hiddev.h"
 #include "hidmouse.h"
 #include "hidmouseservice.h"
+#include "rust_api.h"
 
 /*********************************************************************
  * MACROS
@@ -359,6 +360,7 @@ static void hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t* pEvent) {
 
                 // get connection handle
                 hidEmuConnHandle = event->connectionHandle;
+                vp_on_ble_connected(c_vp_rtc_millis());
                 tmos_start_task(hidEmuTaskId, START_PARAM_UPDATE_EVT,
                                 START_PARAM_UPDATE_EVT_DELAY);
                 PRINT("Connected..\n");
@@ -377,6 +379,8 @@ static void hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t* pEvent) {
             } else if (pEvent->gap.opcode == GAP_LINK_TERMINATED_EVENT) {
                 PRINT("Disconnected.. Reason:%x\n",
                       pEvent->linkTerminate.reason);
+                vp_on_ble_disconnected(pEvent->linkTerminate.reason,
+                                       c_vp_rtc_millis());
             } else if (pEvent->gap.opcode == GAP_LINK_ESTABLISHED_EVENT) {
                 PRINT("Advertising timeout..\n");
             }
