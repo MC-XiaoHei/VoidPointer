@@ -1,8 +1,9 @@
-use crate::ffi::bindings::{
-    c_vp_power_enter_sleep, c_vp_power_enter_suspend, c_vp_power_prepare_sleep,
-    c_vp_power_prepare_suspend,
-};
 use crate::route::{HidRouter, UsbState};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PowerTransition {
+    pub target: PowerState,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PowerState {
@@ -49,10 +50,10 @@ impl PowerManager {
         last_activity_ms: u32,
         config_dirty: bool,
         router: &HidRouter,
-    ) {
+    ) -> Option<PowerTransition> {
         if router.usb_state() == UsbState::Configured {
             self.state = PowerState::Active;
-            return;
+            return None;
         }
 
         let idle_ms = now_ms.wrapping_sub(last_activity_ms);
@@ -71,30 +72,69 @@ impl PowerManager {
             PowerState::Active
         };
 
-        self.transition(target);
+        self.transition(target)
     }
 
-    fn transition(&mut self, target: PowerState) {
+    pub fn next_eval_delay_ms(
+        &self,
+        now_ms: u32,
+        last_activity_ms: u32,
+        config_dirty: bool,
+        router: &HidRouter,
+    ) -> Option<u32> {
+        if router.usb_state() == UsbState::Configured {
+            return None;
+        }
+
+        let idle_ms = now_ms.wrapping_sub(last_activity_ms);
+        let wireless_connected = router.has_wireless_connection();
+        let usb_allows_sleep = router.usb_state() == UsbState::Detached;
+
+        if wireless_connected {
+            if self.state == PowerState::Suspend {
+                return None;
+            }
+            return Some(remaining_delay_ms(self.config.suspend_timeout_ms, idle_ms));
+        }
+
+        if usb_allows_sleep && !config_dirty {
+            if self.state == PowerState::Sleep {
+                return None;
+            }
+            return Some(remaining_delay_ms(
+                self.config.disconnect_sleep_timeout_ms,
+                idle_ms,
+            ));
+        }
+
+        None
+    }
+
+    fn transition(&mut self, target: PowerState) -> Option<PowerTransition> {
         if self.state == target {
-            return;
+            return None;
         }
 
         match target {
             PowerState::Active => {
                 self.state = PowerState::Active;
+                None
             }
-            PowerState::Suspend => unsafe {
-                let _ = c_vp_power_prepare_suspend();
-                let _ = c_vp_power_enter_suspend();
-                self.state = PowerState::Suspend;
-            },
-            PowerState::Sleep => unsafe {
-                let _ = c_vp_power_prepare_sleep();
-                let _ = c_vp_power_enter_sleep();
-                self.state = PowerState::Sleep;
-            },
+            PowerState::Suspend | PowerState::Sleep => Some(PowerTransition { target }),
         }
     }
+
+    pub fn apply_transition_result(&mut self, target: PowerState, accepted: bool) {
+        if accepted {
+            self.state = target;
+        } else {
+            self.state = PowerState::Active;
+        }
+    }
+}
+
+fn remaining_delay_ms(timeout_ms: u32, elapsed_ms: u32) -> u32 {
+    timeout_ms.saturating_sub(elapsed_ms).max(1)
 }
 
 impl Default for PowerManager {

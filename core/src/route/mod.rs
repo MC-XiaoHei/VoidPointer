@@ -67,6 +67,10 @@ impl HidRouter {
         self.usb_state = state;
     }
 
+    pub fn is_ble_connected(&self) -> bool {
+        self.ble_connected
+    }
+
     pub fn usb_state(&self) -> UsbState {
         self.usb_state
     }
