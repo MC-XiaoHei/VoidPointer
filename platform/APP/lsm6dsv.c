@@ -39,7 +39,7 @@ static bool lsm6dsv_write_reg(const uint8_t reg, const uint8_t value) {
     return true;
 }
 
-static bool lsm6dsv_read_reg(const uint8_t reg, uint8_t *value) {
+static bool lsm6dsv_read_reg(const uint8_t reg, uint8_t* value) {
     I2C_GenerateSTART(ENABLE);
     if (!i2c_wait_event(I2C_EVENT_MASTER_MODE_SELECT)) return false;
 
@@ -69,7 +69,7 @@ static bool lsm6dsv_read_reg(const uint8_t reg, uint8_t *value) {
     return true;
 }
 
-static bool lsm6dsv_read_regs(const uint8_t reg, uint8_t *buf,
+static bool lsm6dsv_read_regs(const uint8_t reg, uint8_t* buf,
                               const uint16_t len) {
     if (len == 0) return false;
 
@@ -140,7 +140,7 @@ bool LSM6DSV_Init(void) {
     return true;
 }
 
-bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t *raw) {
+bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw) {
     if (raw == 0) return false;
 
     uint8_t s1 = 0;

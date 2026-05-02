@@ -6,7 +6,7 @@
  * Description        : 蓝牙鼠标应用程序，初始化广播连接参数，然后广播，直至连接主机后，定时上传键值
  *********************************************************************************
  * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * Attention: This software (modified or not) and binary are used for 
+ * Attention: This software (modified or not) and binary are used for
  * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 
@@ -146,13 +146,13 @@ static uint16_t hidEmuConnHandle = GAP_CONNHANDLE_INIT;
  * LOCAL FUNCTIONS
  */
 
-static void    hidEmu_ProcessTMOSMsg(tmos_event_hdr_t *pMsg);
+static void    hidEmu_ProcessTMOSMsg(tmos_event_hdr_t* pMsg);
 static void    hidEmuSendMouseReport(uint8_t buttons, uint8_t X_data,
                                      uint8_t Y_data);
 static uint8_t hidEmuRptCB(uint8_t id, uint8_t type, uint16_t uuid,
-                           uint8_t oper, uint16_t *pLen, uint8_t *pData);
+                           uint8_t oper, uint16_t* pLen, uint8_t* pData);
 static void    hidEmuEvtCB(uint8_t evt);
-static void    hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t *pEvent);
+static void    hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t* pEvent);
 
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -198,7 +198,7 @@ void HidEmu_Init() {
 
     // Set the GAP Characteristics
     GGS_SetParameter(GGS_DEVICE_NAME_ATT, GAP_DEVICE_NAME_LEN,
-                     (void *)attDeviceName);
+                     (void*)attDeviceName);
 
     // Setup the GAP Bond Manager
     {
@@ -251,10 +251,10 @@ void HidEmu_Init() {
  */
 uint16_t HidEmu_ProcessEvent(uint8_t task_id, uint16_t events) {
     if (events & SYS_EVENT_MSG) {
-        uint8_t *pMsg;
+        uint8_t* pMsg;
 
         if ((pMsg = tmos_msg_receive(hidEmuTaskId)) != NULL) {
-            hidEmu_ProcessTMOSMsg((tmos_event_hdr_t *)pMsg);
+            hidEmu_ProcessTMOSMsg((tmos_event_hdr_t*)pMsg);
 
             // Release the TMOS message
             tmos_msg_deallocate(pMsg);
@@ -298,7 +298,7 @@ uint16_t HidEmu_ProcessEvent(uint8_t task_id, uint16_t events) {
  *
  * @return  none
  */
-static void hidEmu_ProcessTMOSMsg(tmos_event_hdr_t *pMsg) {
+static void hidEmu_ProcessTMOSMsg(tmos_event_hdr_t* pMsg) {
     switch (pMsg->event) {
         default:
             break;
@@ -338,7 +338,7 @@ static void hidEmuSendMouseReport(uint8_t buttons, uint8_t X_data,
  *
  * @return  none
  */
-static void hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t *pEvent) {
+static void hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t* pEvent) {
     switch (newState & GAPROLE_STATE_ADV_MASK) {
         case GAPROLE_STARTED: {
             uint8_t ownAddr[6];
@@ -355,7 +355,7 @@ static void hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t *pEvent) {
 
         case GAPROLE_CONNECTED:
             if (pEvent->gap.opcode == GAP_LINK_ESTABLISHED_EVENT) {
-                gapEstLinkReqEvent_t *event = (gapEstLinkReqEvent_t *)pEvent;
+                gapEstLinkReqEvent_t* event = (gapEstLinkReqEvent_t*)pEvent;
 
                 // get connection handle
                 hidEmuConnHandle = event->connectionHandle;
@@ -413,7 +413,7 @@ static void hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t *pEvent) {
  * @return  GATT status code.
  */
 static uint8_t hidEmuRptCB(uint8_t id, uint8_t type, uint16_t uuid,
-                           uint8_t oper, uint16_t *pLen, uint8_t *pData) {
+                           uint8_t oper, uint16_t* pLen, uint8_t* pData) {
     uint8_t status = SUCCESS;
 
     // write

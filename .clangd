@@ -10,8 +10,19 @@ CompileFlags:
     - -Iplatform/RVMSIS
     - -Iplatform/Bind
     - -DDEBUG=0
+    - -D__GNUC__=12
+    - -D__GNUC_MINOR__=0
+    - -D__GNUC_PATCHLEVEL__=0
     - -D__riscv
     - -D__riscv_xlen=32
+    - -include
+    - stdint.h
+    - -include
+    - CH585SFR.h
+    - -include
+    - core_riscv.h
+    - -include
+    - CH58xBLE_LIB.h
 
   Remove:
     - -march=*
@@ -20,3 +31,9 @@ CompileFlags:
     - -msmall-data-limit=*
     - -mno-save-restore
     - --param=*
+---
+If:
+  PathMatch: .*platform[\\/](HAL|StdPeriphDriver|Profile|LIB)[\\/].*\.h
+Diagnostics:
+  Suppress:
+    - unused-includes

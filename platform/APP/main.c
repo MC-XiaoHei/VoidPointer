@@ -80,14 +80,13 @@ int main() {
     UART0_DefInit();
 #endif
 
-
     GPIOA_ModeCfg(GPIO_Pin_0, GPIO_ModeOut_PP_5mA);
     GPIOA_ModeCfg(GPIO_Pin_1, GPIO_ModeOut_PP_5mA);
 
     GPIOA_ResetBits(GPIO_Pin_0);
     GPIOA_ResetBits(GPIO_Pin_1);
 
-    PRINT("%s\n", (const char *)VER_LIB);
+    PRINT("%s\n", (const char*)VER_LIB);
 
     CH58x_BLEInit();
     HAL_Init();
