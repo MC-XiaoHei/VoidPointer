@@ -1,5 +1,5 @@
 #include "lsm6dsv.h"
-#include "CH58x_common.h"
+#include "CH58x_common.h"  // IWYU pragma: keep
 
 static bool i2c_wait_event(const uint32_t event) {
     uint32_t timeout = LSM6DSV_I2C_MAX_TIMEOUT;

@@ -14,9 +14,8 @@
  * INCLUDES
  */
 
-#include "CONFIG.h"
+#include "CONFIG.h"  // IWYU pragma: keep
 #include "battservice.h"
-#include "devinfoservice.h"
 #include "hiddev.h"
 #include "hidmouse.h"
 #include "hidmouseservice.h"

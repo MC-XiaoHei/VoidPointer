@@ -35,7 +35,7 @@ static tmosTaskID runtime_task_id = 0xFF;
 // ReSharper disable once CppParameterNeverUsed
 uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events) {
     if (events & RUNTIME_TICK_EVT) {
-        tick();
+        vp_core_poll();
         // ReSharper disable once CppRedundantParentheses
         return events & (~RUNTIME_TICK_EVT);
     }
@@ -100,7 +100,7 @@ int main() {
     HidDev_Init();
     HidEmu_Init();
 
-    init_core();
+    vp_core_init();
     RuntimeTask_Init();
 
     Main_Circulation();
