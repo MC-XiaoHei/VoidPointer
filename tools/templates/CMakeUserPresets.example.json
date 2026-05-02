@@ -1,0 +1,40 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "mounriver-riscv-gcc12-debug",
+      "displayName": "MounRiver WCH RISC-V GCC12 Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/cmake-build-debug-mrs-risc-v-gcc12",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/Toolchain/RISC-V Embedded GCC12/bin/riscv-wch-elf-gcc.exe",
+        "CMAKE_CXX_COMPILER": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/Toolchain/RISC-V Embedded GCC12/bin/riscv-wch-elf-g++.exe",
+        "CMAKE_ASM_COMPILER": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/Toolchain/RISC-V Embedded GCC12/bin/riscv-wch-elf-gcc.exe",
+        "CMAKE_OBJCOPY": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/Toolchain/RISC-V Embedded GCC12/bin/riscv-wch-elf-objcopy.exe",
+        "CMAKE_OBJDUMP": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/Toolchain/RISC-V Embedded GCC12/bin/riscv-wch-elf-objdump.exe",
+        "CMAKE_SIZE": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/Toolchain/RISC-V Embedded GCC12/bin/riscv-wch-elf-size.exe",
+        "CMAKE_AR": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/Toolchain/RISC-V Embedded GCC12/bin/riscv-wch-elf-ar.exe"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "mounriver-riscv-gcc12-debug",
+      "configurePreset": "mounriver-riscv-gcc12-debug"
+    }
+  ],
+  "vendor": {
+    "voidpointer": {
+      "debugger": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/Toolchain/RISC-V Embedded GCC12/bin/riscv-wch-elf-gdb.exe",
+      "openocdExecutable": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/OpenOCD/OpenOCD/bin/openocd.exe",
+      "openocdConfig": "C:/Path/To/MounRiver_Studio2/resources/app/resources/win32/components/WCH/OpenOCD/OpenOCD/bin/wch-riscv.cfg"
+    }
+  }
+}

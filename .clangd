@@ -1,0 +1,22 @@
+CompileFlags:
+  Add:
+    - -Iplatform/Startup
+    - -Iplatform/APP/include
+    - -Iplatform/Profile/include
+    - -Iplatform/StdPeriphDriver/inc
+    - -Iplatform/HAL/include
+    - -Iplatform/Ld
+    - -Iplatform/LIB
+    - -Iplatform/RVMSIS
+    - -Iplatform/Bind
+    - -DDEBUG=0
+    - -D__riscv
+    - -D__riscv_xlen=32
+
+  Remove:
+    - -march=*
+    - -mabi=*
+    - -mcmodel=*
+    - -msmall-data-limit=*
+    - -mno-save-restore
+    - --param=*

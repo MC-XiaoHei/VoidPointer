@@ -1,1 +1,18 @@
+# IDE / editor local state
 .idea/
+.cache/
+
+# Operating system metadata
+.DS_Store
+Thumbs.db
+
+# CMake build outputs and local compile database
+cmake-build**/
+compile_commands.json
+
+# Local machine configuration
+CMakeUserPresets.json
+.env.local
+
+# Rust build outputs
+core/target/
