@@ -13,6 +13,3 @@ compile_commands.json
 # Local machine configuration
 CMakeUserPresets.json
 .env.local
-
-# Rust build outputs
-core/target/

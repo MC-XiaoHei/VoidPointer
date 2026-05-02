@@ -1,8 +1,19 @@
 [
   {
-    "label": "configure firmware",
+    "label": "init local environment",
     "command": "python",
-    "args": ["tools/dev-task.py", "configure"],
+    "args": ["tools/dev-task.py", "init"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "save": "none"
+  },
+  {
+    "label": "refresh project config",
+    "command": "python",
+    "args": ["tools/dev-task.py", "refresh"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
@@ -22,28 +33,6 @@
     "save": "all"
   },
   {
-    "label": "refresh clangd compile commands",
-    "command": "python",
-    "args": ["tools/dev-task.py", "refresh-clangd"],
-    "cwd": "$ZED_WORKTREE_ROOT",
-    "use_new_terminal": false,
-    "allow_concurrent_runs": false,
-    "reveal": "always",
-    "hide": "on_success",
-    "save": "none"
-  },
-  {
-    "label": "configure + refresh clangd",
-    "command": "python",
-    "args": ["tools/dev-task.py", "configure-refresh"],
-    "cwd": "$ZED_WORKTREE_ROOT",
-    "use_new_terminal": false,
-    "allow_concurrent_runs": false,
-    "reveal": "always",
-    "hide": "never",
-    "save": "all"
-  },
-  {
     "label": "download firmware",
     "command": "python",
     "args": ["tools/dev-task.py", "download"],
@@ -52,12 +41,12 @@
     "allow_concurrent_runs": false,
     "reveal": "always",
     "hide": "never",
-    "save": "none"
+    "save": "all"
   },
   {
-    "label": "build + download firmware",
+    "label": "download firmware without build",
     "command": "python",
-    "args": ["tools/dev-task.py", "build-download"],
+    "args": ["tools/dev-task.py", "download-only"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
