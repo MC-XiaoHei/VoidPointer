@@ -7,7 +7,7 @@ use crate::input::encoder::RotaryEncoder;
 use log::info;
 
 const DEBOUNCE_STABLE_TICKS: u8 = 5;
-const DEBOUNCED_BUTTONS: usize = 4;
+const DEBOUNCED_TWO_STATE_INPUTS: usize = 4;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct InputStatus {
@@ -20,78 +20,98 @@ pub struct InputStatus {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct DebouncedButton {
+struct StableTransition {
     input_id: u8,
-    stable_level: bool,
-    candidate_level: bool,
-    stable_ticks: u8,
     active: bool,
+    changed: bool,
 }
 
-impl DebouncedButton {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct DebouncedTwoStateInput {
+    input_id: u8,
+    stable_active: bool,
+    candidate_active: bool,
+    stable_ticks: u8,
+    debouncing: bool,
+}
+
+impl DebouncedTwoStateInput {
     const fn new(input_id: u8) -> Self {
         Self {
             input_id,
-            stable_level: false,
-            candidate_level: false,
+            stable_active: false,
+            candidate_active: false,
             stable_ticks: 0,
-            active: false,
+            debouncing: false,
         }
     }
 
-    fn sync(&mut self) {
-        let level = unsafe { c_vp_gpio_read(self.input_id) } != 0;
-        self.stable_level = level;
-        self.candidate_level = level;
+    fn sync_from_gpio(&mut self) {
+        let active = read_active_low_input(self.input_id);
+        self.stable_active = active;
+        self.candidate_active = active;
         self.stable_ticks = 0;
-        self.active = false;
+        self.debouncing = false;
     }
 
-    fn begin(&mut self, level: bool) {
-        self.candidate_level = level;
+    fn begin_debounce(&mut self, observed_active: bool) {
+        self.candidate_active = observed_active;
         self.stable_ticks = 0;
-        self.active = true;
+        self.debouncing = true;
     }
 
-    fn sample(&mut self) -> DebounceSampleResult {
-        if !self.active {
-            return DebounceSampleResult::Idle;
+    fn sample(&mut self) -> DebounceTickOutcome {
+        if !self.debouncing {
+            return DebounceTickOutcome::Idle;
         }
 
-        let sample = unsafe { c_vp_gpio_read(self.input_id) } != 0;
-        if sample == self.candidate_level {
+        self.track_candidate(read_active_low_input(self.input_id));
+
+        if !self.candidate_is_stable() {
+            return DebounceTickOutcome::StillDebouncing;
+        }
+
+        DebounceTickOutcome::Stabilized(self.accept_candidate())
+    }
+
+    fn track_candidate(&mut self, observed_active: bool) {
+        if observed_active == self.candidate_active {
             self.stable_ticks = self.stable_ticks.saturating_add(1);
         } else {
-            self.candidate_level = sample;
+            self.candidate_active = observed_active;
             self.stable_ticks = 1;
         }
+    }
 
-        if self.stable_ticks < DEBOUNCE_STABLE_TICKS {
-            return DebounceSampleResult::Active;
-        }
+    fn candidate_is_stable(&self) -> bool {
+        self.stable_ticks >= DEBOUNCE_STABLE_TICKS
+    }
 
-        let changed = self.stable_level != self.candidate_level;
-        self.stable_level = self.candidate_level;
-        self.active = false;
+    fn accept_candidate(&mut self) -> StableTransition {
+        let transition = StableTransition {
+            input_id: self.input_id,
+            active: self.candidate_active,
+            changed: self.stable_active != self.candidate_active,
+        };
+
+        self.stable_active = self.candidate_active;
         self.stable_ticks = 0;
+        self.debouncing = false;
 
-        DebounceSampleResult::Stable {
-            level: self.stable_level,
-            changed,
-        }
+        transition
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum DebounceSampleResult {
+enum DebounceTickOutcome {
     Idle,
-    Active,
-    Stable { level: bool, changed: bool },
+    StillDebouncing,
+    Stabilized(StableTransition),
 }
 
 pub struct InputManager {
     encoder: RotaryEncoder,
-    buttons: [DebouncedButton; DEBOUNCED_BUTTONS],
+    two_state_inputs: [DebouncedTwoStateInput; DEBOUNCED_TWO_STATE_INPUTS],
     pending_wheel: i8,
 }
 
@@ -99,66 +119,61 @@ impl InputManager {
     pub fn new() -> Self {
         Self {
             encoder: RotaryEncoder::new(),
-            buttons: [
-                DebouncedButton::new(VP_INPUT_LEFT as u8),
-                DebouncedButton::new(VP_INPUT_RIGHT as u8),
-                DebouncedButton::new(VP_INPUT_MIDDLE as u8),
-                DebouncedButton::new(VP_INPUT_ACTION as u8),
+            two_state_inputs: [
+                DebouncedTwoStateInput::new(VP_INPUT_LEFT as u8),
+                DebouncedTwoStateInput::new(VP_INPUT_RIGHT as u8),
+                DebouncedTwoStateInput::new(VP_INPUT_MIDDLE as u8),
+                DebouncedTwoStateInput::new(VP_INPUT_ACTION as u8),
             ],
             pending_wheel: 0,
         }
     }
 
     pub fn sync_snapshot(&mut self) -> InputStatus {
-        for button in &mut self.buttons {
-            button.sync();
+        for input in &mut self.two_state_inputs {
+            input.sync_from_gpio();
+            arm_next_level_interrupt(input.input_id, input.stable_active);
         }
 
-        let enc_a = unsafe { c_vp_gpio_read(VP_INPUT_ENCODER_A as u8) } != 0;
-        let enc_b = unsafe { c_vp_gpio_read(VP_INPUT_ENCODER_B as u8) } != 0;
+        let enc_a = read_active_low_input(VP_INPUT_ENCODER_A as u8);
+        let enc_b = read_active_low_input(VP_INPUT_ENCODER_B as u8);
         self.encoder.sync(enc_a, enc_b);
         self.pending_wheel = 0;
 
         self.current_status(0)
     }
 
-    pub fn on_button_exti(&mut self, button_id: u8, level: bool) -> bool {
+    pub fn on_button_exti(&mut self, button_id: u8, active: bool) -> bool {
         let Some(input_id) = button_id_to_input_id(button_id) else {
             return false;
         };
-        let Some(button) = self.button_mut(input_id) else {
+        let Some(input) = self.two_state_input_mut(input_id) else {
             return false;
         };
 
-        button.begin(level);
-        unsafe { c_vp_debounce_timer_start() == VP_STATUS_OK as u8 }
+        input.begin_debounce(active);
+        start_debounce_timer()
     }
 
     pub fn on_debounce_tick(&mut self) -> bool {
         let mut changed = false;
-        let mut any_active = false;
+        let mut any_debouncing = false;
 
-        for button in &mut self.buttons {
-            match button.sample() {
-                DebounceSampleResult::Idle => {}
-                DebounceSampleResult::Active => {
-                    any_active = true;
+        for input in &mut self.two_state_inputs {
+            match input.sample() {
+                DebounceTickOutcome::Idle => {}
+                DebounceTickOutcome::StillDebouncing => {
+                    any_debouncing = true;
                 }
-                DebounceSampleResult::Stable {
-                    level,
-                    changed: button_changed,
-                } => {
-                    if button_changed {
-                        log_button_change(button.input_id, level);
-                    }
-                    rearm_button_exti(button.input_id, level);
-                    changed |= button_changed;
+                DebounceTickOutcome::Stabilized(transition) => {
+                    publish_stable_transition(transition);
+                    changed |= transition.changed;
                 }
             }
         }
 
-        if !any_active {
-            let _ = unsafe { c_vp_debounce_timer_stop() };
+        if !any_debouncing {
+            stop_debounce_timer();
         }
 
         changed
@@ -174,8 +189,8 @@ impl InputManager {
         // Event-time encoder resync. The primary wheel path is EncoderExti;
         // this read normally produces zero after the queued EXTI state has been
         // applied, but keeps the encoder state coherent across missed edges.
-        let enc_a = unsafe { c_vp_gpio_read(VP_INPUT_ENCODER_A as u8) } != 0;
-        let enc_b = unsafe { c_vp_gpio_read(VP_INPUT_ENCODER_B as u8) } != 0;
+        let enc_a = read_active_low_input(VP_INPUT_ENCODER_A as u8);
+        let enc_b = read_active_low_input(VP_INPUT_ENCODER_B as u8);
         let polled_wheel = self.encoder.update(enc_a, enc_b);
         self.pending_wheel = self.pending_wheel.saturating_add(polled_wheel);
 
@@ -186,39 +201,63 @@ impl InputManager {
 
     fn current_status(&self, wheel_delta: i8) -> InputStatus {
         InputStatus {
-            left: self.button_level(VP_INPUT_LEFT as u8),
-            right: self.button_level(VP_INPUT_RIGHT as u8),
-            middle: self.button_level(VP_INPUT_MIDDLE as u8),
+            left: self.stable_active_level(VP_INPUT_LEFT as u8),
+            right: self.stable_active_level(VP_INPUT_RIGHT as u8),
+            middle: self.stable_active_level(VP_INPUT_MIDDLE as u8),
             light: false,
-            action: self.button_level(VP_INPUT_ACTION as u8),
+            action: self.stable_active_level(VP_INPUT_ACTION as u8),
             wheel_delta,
         }
     }
 
-    fn button_level(&self, input_id: u8) -> bool {
-        self.buttons
+    fn stable_active_level(&self, input_id: u8) -> bool {
+        self.two_state_inputs
             .iter()
-            .find(|button| button.input_id == input_id)
-            .map(|button| button.stable_level)
+            .find(|input| input.input_id == input_id)
+            .map(|input| input.stable_active)
             .unwrap_or(false)
     }
 
-    fn button_mut(&mut self, input_id: u8) -> Option<&mut DebouncedButton> {
-        self.buttons
+    fn two_state_input_mut(&mut self, input_id: u8) -> Option<&mut DebouncedTwoStateInput> {
+        self.two_state_inputs
             .iter_mut()
-            .find(|button| button.input_id == input_id)
+            .find(|input| input.input_id == input_id)
     }
 }
 
-fn rearm_button_exti(input_id: u8, active_level: bool) {
-    let edge = if active_level {
+fn publish_stable_transition(transition: StableTransition) {
+    arm_next_level_interrupt(transition.input_id, transition.active);
+
+    if transition.changed {
+        log_button_change(transition.input_id, transition.active);
+    }
+}
+
+fn arm_next_level_interrupt(input_id: u8, active: bool) {
+    let edge = next_edge_for_active_low_state(active);
+    let _ = unsafe { c_vp_exti_set_edge(input_id, edge as u8) };
+}
+
+fn next_edge_for_active_low_state(active: bool) -> u32 {
+    if active {
         // Active-low input is currently low; wait for physical high/release.
         VP_EXTI_EDGE_RISING
     } else {
         // Active-low input is currently high; wait for physical low/press.
         VP_EXTI_EDGE_FALLING
-    };
-    let _ = unsafe { c_vp_exti_set_edge(input_id, edge as u8) };
+    }
+}
+
+fn read_active_low_input(input_id: u8) -> bool {
+    unsafe { c_vp_gpio_read(input_id) != 0 }
+}
+
+fn start_debounce_timer() -> bool {
+    unsafe { c_vp_debounce_timer_start() == VP_STATUS_OK as u8 }
+}
+
+fn stop_debounce_timer() {
+    let _ = unsafe { c_vp_debounce_timer_stop() };
 }
 
 fn log_button_change(input_id: u8, pressed: bool) {
