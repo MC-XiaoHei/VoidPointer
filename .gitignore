@@ -13,3 +13,6 @@ compile_commands.json
 # Local machine configuration
 CMakeUserPresets.json
 .env.local
+
+# User local resources
+resources/

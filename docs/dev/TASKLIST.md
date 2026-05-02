@@ -6,14 +6,14 @@
 
 | 模块 | 当前代码状态 | v1 目标 / 主要差距 |
 | --- | --- | --- |
-| Rust lifecycle | 已切到 `vp_core_init()` / `vp_core_poll()`；`core/src/utils/runtime.rs` 仍残留 legacy `tick()` 原型但未接入当前 Runtime | 仍需把 `c_vp_request_core_poll()` 接到 TMOS event，移除 1-tick reload 轮询，完善 deferred work 处理。 |
-| Input | 已有 Rust input/encoder 原型 | 接入 EXTI callback、debounce timer callback、mode switch policy。 |
+| Rust lifecycle | 已切到 `vp_core_init()` / `vp_core_poll()`；`c_vp_request_core_poll()` 已接到 TMOS event；临时 debug polling bridge 已移除；`core/src/utils/runtime.rs` 仍残留 legacy `tick()` 原型但未接入当前 Runtime | 仍需完善 deferred work 处理并清理 legacy 原型。 |
+| Input | 已有 Rust input/encoder 原型；新 Runtime 已通过 EXTI/debounce 接入按钮，通过 encoder EXTI 接入 wheel 到 BLE HID | mode switch policy、IMU INT、最终移除事件处理中的 GPIO 兜底同步。 |
 | Motion / Attitude | 已有 attitude/motion 模块和 LSM6DSV 原型 | 接入 IMU INT + async FIFO + latest sample cache。 |
-| Report / HID | 已有 report/hid 模块和 BLE HID 原型 | 扩展为 route-aware HID send、retry、USB/2.4G stub。 |
+| Report / HID | 已有 report/hid 模块和 BLE HID 原型；新 Runtime 已打通最小 GPIO snapshot → BLE mouse buttons/wheel report，`RetryLater` 保留 pending | 扩展为 route-aware HID send、USB/2.4G stub、motion dx/dy 聚合、异步完成处理。 |
 | Route | 已有独立 Rust route 模块骨架，维护 BLE/dongle connected 与 USB state | 仍需 route selection、`usb_mouse_policy`、Vendor route 优先级、USB/2.4G 发送实现。 |
-| Power | 已有独立 Rust power 模块骨架和简化 `Active` / `Suspend` / `Sleep` 转换 | blocker、断连时间门控、平台 power API、wake/restore、配置参数仍需补齐。 |
+| Power | 已有独立 Rust power 模块骨架和简化 `Active` / `Suspend` / `Sleep` 转换；Power transition 已改为 RuntimeCommand 边界，不在 PowerManager 内直接调用 C API；power timeout 已安排 delayed poll 重新评估 | blocker、断连时间门控、平台 power API、wake/restore、配置参数仍需补齐。 |
 | Config | 已有 `ConfigManager` dirty flag 骨架 | 仍需 `DeviceConfig`、双槽读写、CRC、migration、runtime apply。 |
-| Vendor/WebHID | 已有 `VendorRuntime` pending RX 骨架 | 仍需 vendor report protocol、命令解析、响应与保存流程。 |
+| Vendor/WebHID | 已有 `VendorRuntime` pending RX 骨架；新增固定容量 vendor RX payload queue，callback 短路径复制最多 64B payload 后由 bottom-half drain | 仍需 vendor report protocol、命令解析、响应与保存流程；USBHS 512B payload/分片策略未完成。 |
 | FFI ABI | `platform/Bind/c_api.h` 已目标化，`bindgen`/`cbindgen` 已接入并生成 `rust_api.h` | 大量 C API 仍是 `UNSUPPORTED`，callback 多数只置位 pending/dirty。 |
 | Platform C | 有 CH585/LSM6DSV/BLE 原型 | 拆成底层 API，不持有业务状态。 |
 
@@ -21,23 +21,24 @@
 
 ## 0. 基础设施任务
 
-- [ ] 实现 ISR-safe 与 bottom-half 执行规则。
-  - [ ] ISR-safe Rust callback 只做短状态更新、事件入队、调用 C 的轻量 API。
-  - [ ] HID retry、I2C 读取请求、DataFlash 写入、WebHID 解析、电源切换放到 `vp_core_poll()`。
-  - [ ] ISR 或 Rust 快速回调中如产生 deferred work，Rust 通过 C API 请求 TMOS event 调度 `vp_core_poll()`。
-- [ ] 接入 RTC 作为统一事件时间戳。
-  - [ ] Rust 统一使用 C 提供的 RTC timestamp。
-  - [ ] C→Rust 事件回调均携带 RTC timestamp。
-  - [ ] debounce、activity timeout、Suspend/Sleep timeout 均基于 RTC timestamp 计算。
+- [ ] 实现 ISR-safe 与 bottom-half 执行规则。（已建立固定容量 ISR event queue，C→Rust 快速 callback 不再直接借用 Runtime；具体业务事件仍需逐步接入真实 EXTI/I2C/Vendor 数据）
+  - [x] ISR-safe Rust callback 只做短状态更新、事件入队、调用 C 的轻量 API。
+  - [ ] HID retry、I2C 读取请求、DataFlash 写入、WebHID 解析、电源切换放到 `vp_core_poll()`。（HID retry、Power transition、IMU FIFO read request 已走 poll/RuntimeCommand；HID RetryLater 现在使用延迟 TMOS poll 而非立即 tight retry；Vendor RX payload 已固定缓冲并在 poll 中 drain；DataFlash/WebHID 协议解析未完成）
+  - [x] ISR 或 Rust 快速回调中如产生 deferred work，Rust 通过 C API 请求 TMOS event 调度 `vp_core_poll()`。
+- [ ] 接入 RTC 作为统一事件时间戳。（Rust runtime 与已接入 BLE 事件使用 RTC millis；EXTI/debounce/IMU/USB 平台事件待接入时仍需逐项验证）
+  - [x] Rust 统一使用 C 提供的 RTC timestamp。
+  - [x] C→Rust 事件回调均携带 RTC timestamp。（ABI 均携带 timestamp；当前已接入 BLE connected/disconnected、GPIO EXTI 与 debounce timer tick；IMU/USB 平台事件待接入时仍需逐项验证）
+  - [ ] debounce、activity timeout、Suspend/Sleep timeout 均基于 RTC timestamp 计算。（activity 与 power timeout 已基于 RTC millis；power timeout 已可安排 delayed poll 重新评估；debounce tick 已携带 RTC timestamp，完整 release/mode-switch 策略仍需继续完善）
 - [ ] 实现 TMOS bottom-half 调度。
   - [x] C 注册专用 TMOS task/event 用于调用 `vp_core_poll()`。
-  - [ ] Rust 暴露 deferred work 标志或通过 C API 请求触发该 TMOS event。
-  - [ ] 多次请求可合并，避免重复排队。
+  - [x] Rust 暴露 deferred work 标志或通过 C API 请求触发该 TMOS event。
+  - [x] 多次请求可合并，避免重复排队。（即时 core poll 与 delayed core poll 均走专用 TMOS event；临时 debug fallback poll 已移除）
   - [x] `vp_core_poll()` 每次执行到无 pending work 或达到单次预算后返回。
+  - [x] Suspend/Sleep timeout 使用 delayed TMOS poll 明确调度下一次 power eval。
   - [x] 主循环只运行 `TMOS_SystemProcess()`/协议栈，不直接轮询业务状态。
 - [ ] 实现全局 Runtime 访问保护。
-  - [ ] 确定使用短临界区或 ISR event queue。
-  - [ ] 禁止在长耗时操作期间持有 Runtime 可变借用。
+  - [x] 确定使用短临界区或 ISR event queue。
+  - [ ] 禁止在长耗时操作期间持有 Runtime 可变借用。（已为 HID mouse send、Power transition、IMU FIFO read request 建立 RuntimeCommand 边界，先释放 Runtime 借用再调用 C API；Flash/DataFlash 等长耗时调用仍需继续拆分）
 
 ---
 
@@ -48,43 +49,44 @@
 ### 1.1 C → Rust exported callbacks
 
 - [ ] 生命周期入口。
-  - [ ] `vp_core_init()`：Rust Runtime 初始化、配置加载、初始状态同步。（入口函数与 Runtime 初始化已完成；配置加载/初始状态同步未完成）
-  - [ ] `vp_core_poll()`：Rust bottom-half，由 TMOS event 调度；处理 deferred work、HID retry、I2C 读取请求、配置任务、电源决策。（入口函数、pass budget 和电源/config/vendor 骨架已完成；HID retry/I2C 请求等未完成）
+  - [ ] `vp_core_init()`：Rust Runtime 初始化、配置加载、初始状态同步。（入口函数、Runtime 初始化、初始 input snapshot/encoder sync 已完成；配置加载未完成）
+  - [ ] `vp_core_poll()`：Rust bottom-half，由 TMOS event 调度；处理 deferred work、HID retry、I2C 读取请求、配置任务、电源决策。（入口函数、TMOS event 调度、固定容量 event queue、HID/Power/IMU FIFO RuntimeCommand 边界、pass budget、电源/config/vendor 骨架、最小 BLE HID retry pending 已完成；DataFlash/WebHID 等未完成；临时 debug polling bridge 已移除）
 - [ ] 输入入口。
-  - [ ] `vp_on_button_exti(button_id, level, timestamp)`。
-  - [ ] `vp_on_debounce_tick(timestamp)`。
-  - [ ] `vp_on_encoder_exti(a_level, b_level, timestamp)`。
-  - [ ] `vp_on_mode_switch_exti(level, timestamp)`。
+  - [ ] `vp_on_button_exti(button_id, level, timestamp)`。（ABI/callback 入队路径已完成；C EXTI 未接入）
+  - [ ] `vp_on_debounce_tick(timestamp)`。（ABI/callback 入队路径已完成；Timer 未接入）
+  - [ ] `vp_on_encoder_exti(a_level, b_level, timestamp)`。（ABI/callback 入队路径已完成；C EXTI 未接入）
+  - [ ] `vp_on_mode_switch_exti(level, timestamp)`。（ABI/callback 入队路径已完成；C EXTI 未接入）
 - [ ] IMU 入口。
-  - [ ] `vp_on_imu_int(timestamp)`。
-  - [ ] `vp_on_imu_sample(raw_x, raw_y, raw_z, timestamp)`。
-  - [ ] 可选：`vp_on_imu_fifo_done(status, dropped_count, timestamp)`。
+  - [ ] `vp_on_imu_int(timestamp)`。（ABI/callback 入队路径已完成；C IMU INT 未接入）
+  - [ ] `vp_on_imu_sample(raw_x, raw_y, raw_z, timestamp)`。（ABI/callback 入队路径已完成；async FIFO 未接入）
+  - [ ] 可选：`vp_on_imu_fifo_done(status, dropped_count, timestamp)`。（ABI/callback 入队路径已完成；async FIFO 未接入）
 - [ ] HID / 连接入口。
-  - [ ] `vp_on_ble_connected(timestamp)`。
-  - [ ] `vp_on_ble_disconnected(timestamp)`。
-  - [ ] `vp_on_dongle_connected(timestamp)`。
-  - [ ] `vp_on_dongle_disconnected(timestamp)`。
-  - [ ] `vp_on_usb_state_changed(state, timestamp)`。
-  - [ ] `vp_on_hid_send_done(route, status, timestamp)`，如果发送采用异步完成模型。
+  - [x] `vp_on_ble_connected(timestamp)`。
+  - [x] `vp_on_ble_disconnected(reason, timestamp)`。
+  - [ ] `vp_on_dongle_connected(timestamp)`。（ABI/callback 入队路径已完成；2.4G 协议栈未接入）
+  - [ ] `vp_on_dongle_disconnected(timestamp)`。（ABI/callback 入队路径已完成；2.4G 协议栈未接入）
+  - [ ] `vp_on_usb_state_changed(state, timestamp)`。（ABI/callback 入队路径已完成；USB stack 未接入）
+  - [ ] `vp_on_hid_send_done(route, status, timestamp)`，如果发送采用异步完成模型。（ABI/callback 入队路径已完成；当前 BLE send 为同步返回）
 - [ ] WebHID / Vendor 入口。
-  - [ ] `vp_on_vendor_report_rx(route, ptr, len, timestamp)`。
+  - [ ] `vp_on_vendor_report_rx(route, ptr, len, timestamp)`。（payload 固定缓冲复制与 callback 入队路径已完成；协议解析未完成，当前只支持最多 64B 单包）
 
 ### 1.2 Rust → C imported hardware APIs
 
 - [ ] GPIO / EXTI API。
-  - [ ] 读取单个 GPIO 输入。
-  - [ ] 批量读取按键 GPIO。
+  - [x] 读取单个 GPIO 输入。
+  - [x] 批量读取按键 GPIO。
   - [ ] 写 GPIO 输出，例如 Laser。
-  - [ ] mask/unmask 指定 EXTI。
-  - [ ] 清 EXTI pending。
-  - [ ] 配置 EXTI 边沿。
+  - [x] mask/unmask 指定 EXTI。（当前支持已映射 GPIOA 输入）
+  - [x] 清 EXTI pending。（当前支持已映射 GPIOA 输入）
+  - [x] 配置 EXTI 边沿。（Rising/Falling 原生映射；Encoder A/B 的 Both 使用按当前电平重配下一边沿模拟）
 - [ ] Timer / RTC API。
-  - [ ] 启动/停止 1ms debounce timer。
-  - [ ] 请求 TMOS event 调度 `vp_core_poll()`。
-  - [ ] 读取 RTC tick。
-  - [ ] 读取 RTC millis。
-  - [ ] 读取 RTC micros，可选。
-  - [ ] 配置 RTC wake。
+  - [x] 启动/停止 1ms debounce timer。
+  - [x] 请求 TMOS event 调度 `vp_core_poll()`。
+  - [x] 请求延迟 TMOS poll，用于 BLE HID RetryLater 等退避重试。
+  - [x] 读取 RTC tick。
+  - [x] 读取 RTC millis。
+  - [x] 读取 RTC micros，可选。
+  - [x] 配置 RTC wake。
 - [ ] I2C / IMU API。
   - [ ] 按 `../RESOURCE_PROFILE.md` 中的 LSM6DSV/I2C profile 实现目标接口。
   - [ ] I2C 初始化。
@@ -121,11 +123,11 @@
 - [x] 保留现有 `bindgen` / `cbindgen` 自动生成机制。
 - [ ] 一次性替换 legacy `init_core()` / `tick()`；v1 不保留 legacy wrapper 过渡。（主入口已替换；`core/src/utils/runtime.rs` 仍残留未接入的 legacy tick 原型，待清理）
 - [x] 将 Rust exported `init_core()` 替换为 `vp_core_init()`。
-- [ ] 将 Rust exported `tick()` 替换为 `vp_core_poll()`，并改为 TMOS event bottom-half 语义。（export 已替换；`c_vp_request_core_poll()` 尚未接入 event，当前仍靠 reload task 周期调用）
+- [ ] 将 Rust exported `tick()` 替换为 `vp_core_poll()`，并改为 TMOS event bottom-half 语义。（export 已替换；`c_vp_request_core_poll()` 已接入 event；临时 1-tick delayed polling bridge 已移除）
 - [x] 将 C API 命名迁移到 `c_vp_*` 前缀。
-- [ ] 用事件化输入 callback 替代主路径中的同步 `c_get_input_status()`。
-- [ ] 用 GPIO/EXTI/Timer API 替代输入业务中的直接 GPIO 快照轮询。
-- [ ] 用 IMU INT + async FIFO + `vp_on_imu_sample()` 替代主路径中的同步 `c_read_sflp_game_rotation_raw()`。
+- [ ] 用事件化输入 callback 替代主路径中的同步 `c_get_input_status()`。（按键与 encoder 主路径已走 EXTI/debounce；事件处理中的 GPIO 读取仍用于 debounce 采样、初始 sync 与 encoder 状态兜底同步）
+- [ ] 用 GPIO/EXTI/Timer API 替代输入业务中的直接 GPIO 快照轮询。（已使用目标 `c_vp_gpio_read()`；button EXTI/debounce 与 encoder EXTI 已接入；ModeSwitch 未完成）
+- [ ] 用 IMU INT + async FIFO + `vp_on_imu_sample()` 替代主路径中的同步 `c_read_sflp_game_rotation_raw()`。（callback/event queue 与 `c_vp_imu_read_fifo_async()` RuntimeCommand 请求路径已完成；C 异步 I2C/FIFO 状态机未完成）
 - [ ] 将 BLE-only `c_send_ble_hid_mouse_report()` 扩展或替换为 route-aware `c_vp_hid_send_mouse(route, ...)`。
 - [x] 保留 RTC API 能力，并按目标 API 命名提供 `c_vp_rtc_tick/millis/micros()`。
 - [ ] 为每个新增 Rust→C API 标注 ISR-safe 或 bottom-half only。
@@ -148,28 +150,28 @@
   - [x] 调用 `vp_core_init()`。
   - [ ] 根据 Rust 返回/调用结果配置 EXTI、IMU profile、HID route。
 
-- [x] C 主循环只运行 `TMOS_SystemProcess()` 和协议栈调度，不做业务轮询。
+- [x] C 主循环只运行 `TMOS_SystemProcess()` 和协议栈调度，不做业务轮询。（Runtime 通过即时/延迟 TMOS event 调度；临时 debug fallback poll 已移除）
 
 ### 2.2 GPIO / EXTI
 
-- [x] 为 Left/Right/Middle/Action/Laser/ModeSwitch 配置 GPIO 输入。（当前 `InputGPIO_Init()` 覆盖按键/编码器/Laser 引脚；ModeSwitch 实际 GPIO 映射仍需确认）
-- [ ] 为编码器 A/B 配置任意边沿输入。
-  - [ ] 如平台存在可靠 both-edge 能力则直接映射。
-  - [ ] CH585 StdPeriph 未暴露普通 GPIO IRQ both-edge 时，平台层用“读当前电平后重配下一边沿”模拟。
-  - [ ] Rust 编码器状态机用 old/new 4-bit lookup 兜底非法跳变；必要时增加短周期采样兜底。
-- [ ] 为普通按键配置 EXTI wake。
+- [x] 为 Left/Right/Middle/Action/Laser/ModeSwitch 配置 GPIO 输入。（当前 `InputGPIO_Init()` 覆盖按键/编码器/Laser 引脚；ModeSwitch 实际 GPIO 映射仍需确认，`c_vp_gpio_read()` 对未映射输入返回 0）
+- [x] 为编码器 A/B 配置任意边沿输入。（CH585 StdPeriph 无原生 both-edge，当前用“读当前电平后重配下一边沿”模拟；Rust encoder lookup 兜底非法跳变）
+  - [ ] 如平台存在可靠 both-edge 能力则直接映射。（当前未发现 StdPeriph 原生 both-edge，保持未完成/待寄存器级进一步验证）
+  - [x] CH585 StdPeriph 未暴露普通 GPIO IRQ both-edge 时，平台层用“读当前电平后重配下一边沿”模拟。
+  - [x] Rust 编码器状态机用 old/new 4-bit lookup 兜底非法跳变；必要时增加短周期采样兜底。
+- [x] 为普通按键配置 EXTI wake。（当前配置 falling edge GPIOA IRQ；低功耗 wake source 尚未配置）
 - [ ] 为 ModeSwitch 配置 EXTI wake。
-- [ ] 按键 EXTI ISR 中只做：识别 pin、读 level、拿 timestamp、调用 Rust。
-- [ ] 编码器 EXTI ISR 中只做：读 A/B level、拿 timestamp、调用 Rust。
-- [ ] 提供 Rust 可调用的 EXTI mask/unmask/clear/edge 配置 API。
+- [x] 按键 EXTI ISR 中只做：识别 pin、读 level、拿 timestamp、mask 对应 EXTI、调用 Rust。（mask 是为避免 bottom-half 处理前的 bounce storm；unmask 由 Rust debounce policy 在稳定释放后完成）
+- [x] 编码器 EXTI ISR 中只做：读 A/B level、拿 timestamp、调用 Rust。
+- [x] 提供 Rust 可调用的 EXTI mask/unmask/clear/edge 配置 API。（当前支持已映射 GPIOA 输入；ModeSwitch/IMU INT 映射待确认）
 
 ### 2.3 Debounce Timer
 
-- [ ] 实现共享 1ms debounce timer。
-- [ ] Timer ISR 调用 `vp_on_debounce_tick(timestamp)`。
-- [ ] 普通按键与 ModeSwitch 复用同一个 debounce tick，差异由 Rust policy 处理。
-- [ ] Timer 是否继续运行由 Rust 通过 C API 控制。
-- [ ] C 不维护“哪个输入正在消抖”的业务状态。
+- [x] 实现共享 1ms debounce timer。（当前用 TMR0 周期中断，ISR 调用 Rust debounce tick callback）
+- [x] Timer ISR 调用 `vp_on_debounce_tick(timestamp)`。
+- [ ] 普通按键与 ModeSwitch 复用同一个 debounce tick，差异由 Rust policy 处理。（普通按键已接入；ModeSwitch 映射仍未知）
+- [x] Timer 是否继续运行由 Rust 通过 C API 控制。
+- [x] C 不维护“哪个输入正在消抖”的业务状态。
 
 ### 2.4 I2C / IMU
 
@@ -222,7 +224,7 @@
   - [x] `RetryLater`。
   - [x] `NotConnected`。
   - [x] `Fatal`。
-- [ ] BLE connected/disconnected 事件回调 Rust。
+- [x] BLE connected/disconnected 事件回调 Rust。
 - [ ] USB attach/detach/configured 事件回调 Rust。
 - [ ] 2.4G dongle connected/disconnected 事件回调 Rust。
 - [ ] Vendor report RX 只传 raw bytes 给 Rust。
