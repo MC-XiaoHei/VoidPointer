@@ -12,6 +12,11 @@ impl RotaryEncoder {
         }
     }
 
+    pub fn sync(&mut self, enc_a: bool, enc_b: bool) {
+        self.prev_state = ((enc_a as u8) << 1) | (enc_b as u8);
+        self.accum = 0;
+    }
+
     pub fn update(&mut self, enc_a: bool, enc_b: bool) -> i8 {
         let current_state = ((enc_a as u8) << 1) | (enc_b as u8);
         let state_transition = (self.prev_state << 2) | current_state;
