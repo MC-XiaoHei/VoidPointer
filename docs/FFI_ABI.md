@@ -175,7 +175,7 @@ USB attach/configured/suspend 状态通过 USB stack callback 上报，不作为
 | `c_vp_exti_mask(input_id)` | 是 | 屏蔽指定输入 EXTI。 |
 | `c_vp_exti_unmask(input_id)` | 是 | 重新开启指定输入 EXTI。 |
 | `c_vp_exti_clear_pending(input_id)` | 是 | 清除指定输入 pending。 |
-| `c_vp_exti_set_edge(input_id, edge)` | 是 | 设置 EXTI 边沿。 |
+| `c_vp_exti_set_edge(input_id, edge)` | 是 | 设置下一次语义转换；平台可按输入类型映射为边沿、电平触发或模拟实现。 |
 
 ### 5.4 EXTI edge 类型
 
@@ -187,7 +187,7 @@ USB attach/configured/suspend 状态通过 USB stack callback 上报，不作为
 | `1` | `Falling` | 下降沿。 |
 | `2` | `Both` | 任意边沿。平台层负责映射或模拟。 |
 
-CH585 WCH 标准外设 API 原生提供 low-level/high-level/fall-edge/rise-edge，未直接提供 both-edge；`Both` 是否可用由平台层按具体输入实现。普通按键默认不依赖 both-edge，编码器 A/B 需要平台层验证。
+CH585 WCH 标准外设 API 原生提供低电平/高电平/下降沿/上升沿触发，未直接提供双边沿；`Both` 是否可用由平台层按具体输入实现。普通低有效二态输入（按键/自锁开关）把 `Falling`/`Rising` 视作“下一次语义转换”而非强制硬件边沿：平台可映射为低电平/高电平触发，以避开机械触点上的 GPIOA 边沿锁存问题。编码器 A/B 需要 `Both`，当前由平台层按当前电平重配下一边沿模拟。
 
 ---
 
@@ -195,8 +195,8 @@ CH585 WCH 标准外设 API 原生提供 low-level/high-level/fall-edge/rise-edge
 
 | API | ISR-safe | 说明 |
 | --- | --- | --- |
-| `c_vp_debounce_timer_start()` | 是 | 启动共享 1ms debounce timer。 |
-| `c_vp_debounce_timer_stop()` | 是 | 停止共享 debounce timer。 |
+| `c_vp_debounce_timer_start()` | 是 | 启动共享 debounce tick 来源。 |
+| `c_vp_debounce_timer_stop()` | 是 | 停止共享 debounce tick 来源。 |
 | `c_vp_rtc_tick()` | 是 | 读取 RTC tick。 |
 | `c_vp_rtc_millis()` | 是 | 读取 RTC millis。 |
 | `c_vp_rtc_micros()` | 是 | 读取 RTC micros，可选调试用。 |

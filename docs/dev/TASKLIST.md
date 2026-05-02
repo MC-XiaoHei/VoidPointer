@@ -7,7 +7,7 @@
 | 模块 | 当前代码状态 | v1 目标 / 主要差距 |
 | --- | --- | --- |
 | Rust lifecycle | 已切到 `vp_core_init()` / `vp_core_poll()`；`c_vp_request_core_poll()` 已接到 TMOS event；临时 debug polling bridge 已移除；`core/src/utils/runtime.rs` 仍残留 legacy `tick()` 原型但未接入当前 Runtime | 仍需完善 deferred work 处理并清理 legacy 原型。 |
-| Input | 已有 Rust input/encoder 原型；新 Runtime 已通过 EXTI/debounce 接入按钮，通过 encoder EXTI 接入 wheel 到 BLE HID | mode switch policy、IMU INT、最终移除事件处理中的 GPIO 兜底同步。 |
+| Input | 已有 Rust input/encoder 原型；新 Runtime 已通过低有效二态输入 + 电平 EXTI + debounce 接入按钮，通过 GPIOA 待处理服务补偿 CH585 PFIC 未再次派发的待处理中断标志；encoder EXTI 接入 wheel 到 BLE HID | mode switch GPIO 映射与 route policy、IMU INT。 |
 | Motion / Attitude | 已有 attitude/motion 模块和 LSM6DSV 原型 | 接入 IMU INT + async FIFO + latest sample cache。 |
 | Report / HID | 已有 report/hid 模块和 BLE HID 原型；新 Runtime 已打通最小 GPIO snapshot → BLE mouse buttons/wheel report，`RetryLater` 保留 pending | 扩展为 route-aware HID send、USB/2.4G stub、motion dx/dy 聚合、异步完成处理。 |
 | Route | 已有独立 Rust route 模块骨架，维护 BLE/dongle connected 与 USB state | 仍需 route selection、`usb_mouse_policy`、Vendor route 优先级、USB/2.4G 发送实现。 |
@@ -52,9 +52,9 @@
   - [ ] `vp_core_init()`：Rust Runtime 初始化、配置加载、初始状态同步。（入口函数、Runtime 初始化、初始 input snapshot/encoder sync 已完成；配置加载未完成）
   - [ ] `vp_core_poll()`：Rust bottom-half，由 TMOS event 调度；处理 deferred work、HID retry、I2C 读取请求、配置任务、电源决策。（入口函数、TMOS event 调度、固定容量 event queue、HID/Power/IMU FIFO RuntimeCommand 边界、pass budget、电源/config/vendor 骨架、最小 BLE HID retry pending 已完成；DataFlash/WebHID 等未完成；临时 debug polling bridge 已移除）
 - [ ] 输入入口。
-  - [ ] `vp_on_button_exti(button_id, level, timestamp)`。（ABI/callback 入队路径已完成；C EXTI 未接入）
-  - [ ] `vp_on_debounce_tick(timestamp)`。（ABI/callback 入队路径已完成；Timer 未接入）
-  - [ ] `vp_on_encoder_exti(a_level, b_level, timestamp)`。（ABI/callback 入队路径已完成；C EXTI 未接入）
+  - [x] `vp_on_button_exti(button_id, level, timestamp)`。（ABI/callback 入队路径已完成；C GPIOA 低有效二态输入电平 EXTI 已接入）
+  - [x] `vp_on_debounce_tick(timestamp)`。（ABI/callback 入队路径已完成；debounce tick 由 main runtime service 基于 RTC millis 驱动）
+  - [x] `vp_on_encoder_exti(a_level, b_level, timestamp)`。（ABI/callback 入队路径已完成；C GPIOA EXTI 已接入）
   - [ ] `vp_on_mode_switch_exti(level, timestamp)`。（ABI/callback 入队路径已完成；C EXTI 未接入）
 - [ ] IMU 入口。
   - [ ] `vp_on_imu_int(timestamp)`。（ABI/callback 入队路径已完成；C IMU INT 未接入）
@@ -78,7 +78,7 @@
   - [ ] 写 GPIO 输出，例如 Laser。
   - [x] mask/unmask 指定 EXTI。（当前支持已映射 GPIOA 输入）
   - [x] 清 EXTI pending。（当前支持已映射 GPIOA 输入）
-  - [x] 配置 EXTI 边沿。（Rising/Falling 原生映射；Encoder A/B 的 Both 使用按当前电平重配下一边沿模拟）
+  - [x] 配置 EXTI 边沿/语义转换。（Encoder A/B 的 Both 使用按当前电平重配下一边沿模拟；低有效二态输入将 Falling/Rising 语义映射为低电平/高电平触发）
 - [ ] Timer / RTC API。
   - [x] 启动/停止 1ms debounce timer。
   - [x] 请求 TMOS event 调度 `vp_core_poll()`。
@@ -150,28 +150,27 @@
   - [x] 调用 `vp_core_init()`。
   - [ ] 根据 Rust 返回/调用结果配置 EXTI、IMU profile、HID route。
 
-- [x] C 主循环只运行 `TMOS_SystemProcess()` 和协议栈调度，不做业务轮询。（Runtime 通过即时/延迟 TMOS event 调度；临时 debug fallback poll 已移除）
+- [x] C 主循环只运行 `TMOS_SystemProcess()`、协议栈调度和硬件 pending bottom-half，不做业务轮询。（Runtime 通过即时/延迟 TMOS event 调度；GPIOA pending service 只消费 `R16_PA_INT_IF & R16_PA_INT_EN` 这个硬件中断事实；临时 debug fallback poll 已移除）
 
 ### 2.2 GPIO / EXTI
 
 - [x] 为 Left/Right/Middle/Action/Laser/ModeSwitch 配置 GPIO 输入。（当前 `InputGPIO_Init()` 覆盖按键/编码器/Laser 引脚；ModeSwitch 实际 GPIO 映射仍需确认，`c_vp_gpio_read()` 对未映射输入返回 0）
 - [x] 为编码器 A/B 配置任意边沿输入。（CH585 StdPeriph 无原生 both-edge，当前用“读当前电平后重配下一边沿”模拟；Rust encoder lookup 兜底非法跳变）
-  - [ ] 如平台存在可靠 both-edge 能力则直接映射。（当前未发现 StdPeriph 原生 both-edge，保持未完成/待寄存器级进一步验证）
   - [x] CH585 StdPeriph 未暴露普通 GPIO IRQ both-edge 时，平台层用“读当前电平后重配下一边沿”模拟。
   - [x] Rust 编码器状态机用 old/new 4-bit lookup 兜底非法跳变；必要时增加短周期采样兜底。
-- [x] 为普通按键配置 EXTI wake。（当前配置 falling edge GPIOA IRQ；低功耗 wake source 尚未配置）
+- [x] 为普通按键配置 EXTI wake。（低有效二态输入：Rust 请求 Falling/Rising 语义，CH585 平台映射为低电平/高电平触发，避免机械按键下降沿锁存一次性问题；低功耗 wake source 尚未配置）
 - [ ] 为 ModeSwitch 配置 EXTI wake。
-- [x] 按键 EXTI ISR 中只做：识别 pin、读 level、拿 timestamp、mask 对应 EXTI、调用 Rust。（mask 是为避免 bottom-half 处理前的 bounce storm；unmask 由 Rust debounce policy 在稳定释放后完成）
+- [x] 按键/二态输入 EXTI service 中只做：识别 pin、读低有效电平、拿 timestamp、屏蔽对应 EXTI、调用 Rust。（屏蔽是为避免 debounce 处理前的弹跳中断风暴；下一相反电平由 Rust debounce policy 在稳定态确认后重新 arm）
 - [x] 编码器 EXTI ISR 中只做：读 A/B level、拿 timestamp、调用 Rust。
-- [x] 提供 Rust 可调用的 EXTI mask/unmask/clear/edge 配置 API。（当前支持已映射 GPIOA 输入；ModeSwitch/IMU INT 映射待确认）
+- [x] 提供 Rust 可调用的 EXTI mask/unmask/clear/edge 配置 API。（当前支持已映射 GPIOA 输入；低有效二态输入将语义 edge 映射为电平触发；ModeSwitch/IMU INT 映射待确认）
 
 ### 2.3 Debounce Timer
 
-- [x] 实现共享 1ms debounce timer。（当前用 TMR0 周期中断，ISR 调用 Rust debounce tick callback）
-- [x] Timer ISR 调用 `vp_on_debounce_tick(timestamp)`。
-- [ ] 普通按键与 ModeSwitch 复用同一个 debounce tick，差异由 Rust policy 处理。（普通按键已接入；ModeSwitch 映射仍未知）
+- [x] 实现共享 debounce tick。（当前由 main runtime service 基于 RTC millis 产生 1ms tick；保留 TMR0 IRQ 原型但实机调试路径不依赖 TMR0）
+- [x] debounce tick 调用 `vp_on_debounce_tick(timestamp)`。
+- [x] 普通按键与 ModeSwitch 复用同一个 debounce tick，差异由上层事件语义处理。（普通按键已作为二态输入接入；ModeSwitch 可复用同一状态机，但 GPIO 映射仍未知）
 - [x] Timer 是否继续运行由 Rust 通过 C API 控制。
-- [x] C 不维护“哪个输入正在消抖”的业务状态。
+- [x] C 不维护输入业务状态；仅维护 GPIOA/Timer 硬件服务状态。
 
 ### 2.4 I2C / IMU
 

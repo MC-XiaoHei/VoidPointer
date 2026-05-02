@@ -93,6 +93,17 @@
 | `GPIOA_ClearITFlagBit`, `GPIOB_ClearITFlagBit` | `CH58x_gpio.h` | 清中断标志 |
 | `RB_GPIO_EDGE_WAKE` | `CH585SFR.h`, `CH58x_pwr.c` | 低功耗 GPIO wake 可配置“无论上升还是下降都唤醒”；这是 wake 控制，不等同于普通 GPIO IRQ both-edge API |
 
+### VoidPointer 低有效二态输入实现
+
+实机调试发现：CH585 GPIOA 下降沿中断可以锁存第一次机械按键转换，但后续即使 `R16_PA_INT_IF` 与 `R16_PA_INT_EN` 已表示存在待处理中断，PFIC 也可能不再派发 GPIOA IRQ。因此 v1 对低有效按键和自锁开关采用以下平台策略：
+
+| Rust 语义请求 | CH585 GPIO 模式 | 含义 |
+| --- | --- | --- |
+| `VP_EXTI_EDGE_FALLING` | `GPIO_ITMode_LowLevel` | 当前稳定态为未激活/高电平；输入变为激活/低电平时唤醒 |
+| `VP_EXTI_EDGE_RISING` | `GPIO_ITMode_HighLevel` | 当前稳定态为激活/低电平；输入变为未激活/高电平时唤醒 |
+
+GPIOA service 在调用 Rust 前会先屏蔽触发的二态输入。Rust debounce 确认稳定态、发布状态变化后，再请求相反语义转换。由于 PFIC 可能不会再次派发已经待处理的 GPIOA IRQ，runtime 主循环会检查并服务已经锁存的 `R16_PA_INT_IF & R16_PA_INT_EN`。这不是 GPIO 扫描：事件来源仍然是硬件中断标志。
+
 ### Both-edge simulation options
 
 标准 API 没有原生 both-edge。平台层若需要对 `vp_exti_edge_t::Both` 支持，可模拟：

@@ -8,17 +8,18 @@
 
 | 用例 | 验收标准 |
 | --- | --- |
-| 单击 Left/Right/Middle/Action/Laser | 每次只产生一次 press/release。 |
+| 单击 Left/Right/Middle/Action/Laser | 每次只产生一次 press/release，重复点击不丢失。 |
 | 高频点击 | 无丢失、无多触发，延迟符合 debounce 配置。 |
-| 长按 | press 只触发一次，release 正常。 |
-| 抖动边沿模拟 | EXTI 首次触发后屏蔽，timer 裁决稳定状态。 |
+| 长按 | press 只触发一次；持有期间不产生中断风暴；release 正常。 |
+| 抖动边沿模拟 | EXTI/电平中断首次触发后屏蔽，debounce 裁决稳定状态，并按稳定态重新 arm 相反电平。 |
+| GPIOA pending service | 当 `R16_PA_INT_IF & R16_PA_INT_EN` 已置位但 PFIC 未派发时，runtime service 能复用 GPIOA handler 处理事件。 |
 
 ### 1.2 ModeSwitch
 
 | 用例 | 验收标准 |
 | --- | --- |
-| BLE ↔ 2.4G 切换 | 只发布最终稳定档位。 |
-| 切换过程抖动 | 不产生多次 route switch。 |
+| BLE ↔ 2.4G 切换 | 复用二态输入 debounce，只发布最终稳定档位。 |
+| 切换过程抖动 | 不产生多次 route switch，稳定后重新 arm 相反电平。 |
 | 切换时 motion active | 清 motion baseline/pending，避免跳变。 |
 
 ### 1.3 编码器

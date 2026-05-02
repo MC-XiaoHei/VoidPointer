@@ -11,17 +11,7 @@
 #include <hidmouseservice.h>
 #include <stdio.h>
 
-#ifndef VP_DEBUG_GPIO_IRQ
-#define VP_DEBUG_GPIO_IRQ 0
-#endif
 
-#ifndef VP_DEBUG_DEBOUNCE_TIMER
-#define VP_DEBUG_DEBOUNCE_TIMER 0
-#endif
-
-#ifndef VP_DEBUG_EXTI_REARM
-#define VP_DEBUG_EXTI_REARM 0
-#endif
 
 typedef struct {
     uint8_t buttons;
@@ -30,10 +20,7 @@ typedef struct {
     int8_t  wheel;
 } mouse_report_t;
 
-#define BUTTON_INPUT_FLAGS (LEFT_BTN | RIGHT_BTN | MIDDLE_BTN | ACTION_BTN)
-
 static uint16_t gpioa_exti_both_sim_mask = 0u;
-static uint16_t debouncing_button_flags = 0u;
 static vp_bool_t debounce_timer_running = 0u;
 
 typedef struct {
@@ -184,11 +171,6 @@ vp_status_t c_vp_exti_mask(const vp_input_id_t input_id) {
     }
 
     R16_PA_INT_EN &= (uint16_t)(~pin_mask);
-#if VP_DEBUG_EXTI_REARM
-    PRINT("EXTI mask input:%u pin:%04lx port:%04lx IF:%04x EN:%04x MODE:%04x\n",
-          input_id, pin_mask, GPIOA_ReadPort(), GPIOA_ReadITFlagPort(),
-          R16_PA_INT_EN, R16_PA_INT_MODE);
-#endif
     return VP_STATUS_OK;
 }
 
@@ -210,11 +192,6 @@ vp_status_t c_vp_exti_unmask(const vp_input_id_t input_id) {
         R16_PA_INT_EN |= (uint16_t)pin_mask;
     }
     PFIC_EnableIRQ(GPIO_A_IRQn);
-#if VP_DEBUG_EXTI_REARM
-    PRINT("EXTI unmask input:%u pin:%04lx port:%04lx IF:%04x EN:%04x MODE:%04x\n",
-          input_id, pin_mask, GPIOA_ReadPort(), GPIOA_ReadITFlagPort(),
-          R16_PA_INT_EN, R16_PA_INT_MODE);
-#endif
     return VP_STATUS_OK;
 }
 
@@ -253,10 +230,9 @@ vp_status_t c_vp_exti_set_edge(const vp_input_id_t  input_id,
 
     vp_button_id_t button_id;
     if (input_id_to_button_id(input_id, &button_id)) {
-        // Active-low mechanical two-state inputs are debounced by masking the
-        // interrupt during stabilization and re-arming the opposite stable
-        // level afterwards. This supports momentary buttons and maintained
-        // switches with the same state machine.
+        // 低有效二态输入使用电平触发 GPIO 中断。Rust 用
+        // Falling/Rising 表达下一次语义转换；CH585 平台映射为
+        // LowLevel/HighLevel，以避开机械触点上不可靠的一次性边沿锁存。
         if (edge == VP_EXTI_EDGE_FALLING) {
             mode = GPIO_ITMode_LowLevel;
         } else if (edge == VP_EXTI_EDGE_RISING) {
@@ -267,23 +243,16 @@ vp_status_t c_vp_exti_set_edge(const vp_input_id_t  input_id,
     gpioa_exti_both_sim_mask &= (uint16_t)(~pin_mask);
     GPIOA_ITModeCfg(pin_mask, mode);
     PFIC_EnableIRQ(GPIO_A_IRQn);
-#if VP_DEBUG_EXTI_REARM
-    PRINT("EXTI set input:%u edge:%u pin:%04lx PA:%04lx IF:%04x EN:%04x MODE:%04x\n",
-          input_id, edge, pin_mask, GPIOA_ReadPort(), GPIOA_ReadITFlagPort(),
-          R16_PA_INT_EN, R16_PA_INT_MODE);
-#endif
     return VP_STATUS_OK;
 }
 
-void GPIOA_IRQHandler(void) {
+void GPIOA_ServicePendingInterrupts(void) {
+    // CH585 可能已经锁存 GPIOA IF，但 PFIC 不再派发新的 GPIO_A IRQ。
+    // 事件来源仍然只认硬件 IF；main runtime service 发现 IF & EN 已经
+    // pending 时，可以调用同一个 service 例程补处理。
     const uint16_t flags = GPIOA_ReadITFlagPort();
     const uint16_t active_flags = (uint16_t)(flags & R16_PA_INT_EN);
     if (active_flags == 0u) {
-#if VP_DEBUG_GPIO_IRQ
-        PRINT("GPIOA IRQ ignored flags:%04x active:0000 PA:%04lx IF:%04x EN:%04x MODE:%04x\n",
-              flags, GPIOA_ReadPort(), GPIOA_ReadITFlagPort(), R16_PA_INT_EN,
-              R16_PA_INT_MODE);
-#endif
         if (flags != 0u) {
             GPIOA_ClearITFlagBit(flags);
             PFIC_ClearPendingIRQ(GPIO_A_IRQn);
@@ -291,17 +260,9 @@ void GPIOA_IRQHandler(void) {
         return;
     }
 
-#if VP_DEBUG_GPIO_IRQ
-    PRINT("GPIOA IRQ enter flags:%04x active:%04x PA:%04lx IF:%04x EN:%04x MODE:%04x\n",
-          flags, active_flags, GPIOA_ReadPort(), GPIOA_ReadITFlagPort(), R16_PA_INT_EN,
-          R16_PA_INT_MODE);
-#endif
-
     const vp_timestamp_t timestamp = c_vp_rtc_millis();
     const uint32_t       port_data = GPIOA_ReadPort();
     uint16_t             encoder_flags = 0u;
-    uint16_t             button_flags = 0u;
-    uint16_t             handled_flags = 0u;
 
     for (uint8_t i = 0u; i < sizeof(INPUT_PIN_MAP) / sizeof(INPUT_PIN_MAP[0]); i++) {
         const vp_input_id_t input_id = INPUT_PIN_MAP[i].input_id;
@@ -310,8 +271,6 @@ void GPIOA_IRQHandler(void) {
             continue;
         }
 
-        handled_flags |= (uint16_t)pin_mask;
-
         if (is_encoder_input(input_id)) {
             encoder_flags |= (uint16_t)pin_mask;
             continue;
@@ -319,30 +278,13 @@ void GPIOA_IRQHandler(void) {
 
         vp_button_id_t button_id;
         if (input_id_to_button_id(input_id, &button_id)) {
-            button_flags |= (uint16_t)pin_mask;
-            debouncing_button_flags |= (uint16_t)pin_mask;
             (void)c_vp_exti_mask(input_id);
-#if VP_DEBUG_GPIO_IRQ
-            PRINT("Button IRQ hit input:%u button:%u pin:%04lx level:%u PA:%04lx IF:%04x EN:%04x MODE:%04x\n",
-                  input_id, button_id, pin_mask, active_low_pin_level(port_data, pin_mask),
-                  GPIOA_ReadPort(), GPIOA_ReadITFlagPort(), R16_PA_INT_EN,
-                  R16_PA_INT_MODE);
-#endif
             vp_on_button_exti(button_id, active_low_pin_level(port_data, pin_mask),
                               timestamp);
-#if VP_DEBUG_GPIO_IRQ
-            PRINT("Button IRQ callback returned input:%u IF:%04x EN:%04x MODE:%04x\n",
-                  input_id, GPIOA_ReadITFlagPort(), R16_PA_INT_EN, R16_PA_INT_MODE);
-#endif
         }
     }
 
     if (encoder_flags != 0u) {
-#if VP_DEBUG_GPIO_IRQ
-        PRINT("Encoder IRQ flags:%04x a:%u b:%u\n", encoder_flags,
-              active_low_pin_level(port_data, ENC_A),
-              active_low_pin_level(port_data, ENC_B));
-#endif
         vp_on_encoder_exti(active_low_pin_level(port_data, ENC_A),
                            active_low_pin_level(port_data, ENC_B), timestamp);
 
@@ -356,27 +298,14 @@ void GPIOA_IRQHandler(void) {
 
     if (flags != 0u) {
         GPIOA_ClearITFlagBit(flags);
-#if VP_DEBUG_GPIO_IRQ
-        PRINT("GPIOA IRQ cleared raw:%04x handled:%04x now IF:%04x EN:%04x MODE:%04x\n",
-              flags, handled_flags, GPIOA_ReadITFlagPort(), R16_PA_INT_EN, R16_PA_INT_MODE);
-#endif
-    }
-
-    if (button_flags != 0u) {
-#if VP_DEBUG_GPIO_IRQ
-        PRINT("GPIOA IRQ buttons masked:%04x PA:%04lx IF:%04x EN:%04x MODE:%04x\n",
-              button_flags, GPIOA_ReadPort(), GPIOA_ReadITFlagPort(), R16_PA_INT_EN,
-              R16_PA_INT_MODE);
-#endif
     }
 }
 
+void GPIOA_IRQHandler(void) {
+    GPIOA_ServicePendingInterrupts();
+}
+
 vp_status_t c_vp_debounce_timer_start(void) {
-#if VP_DEBUG_DEBOUNCE_TIMER
-    PRINT("Debounce start req running:%u PA:%04lx IF:%04x EN:%04x MODE:%04x\n",
-          debounce_timer_running, GPIOA_ReadPort(), GPIOA_ReadITFlagPort(),
-          R16_PA_INT_EN, R16_PA_INT_MODE);
-#endif
     if (debounce_timer_running) {
         return VP_STATUS_OK;
     }
@@ -387,20 +316,9 @@ vp_status_t c_vp_debounce_timer_start(void) {
 }
 
 vp_status_t c_vp_debounce_timer_stop(void) {
-#if VP_DEBUG_DEBOUNCE_TIMER
-    PRINT("Debounce stop before clear PA:%04lx IF:%04x EN:%04x MODE:%04x\n", GPIOA_ReadPort(),
-          GPIOA_ReadITFlagPort(), R16_PA_INT_EN, R16_PA_INT_MODE);
-#endif
-    const uint16_t rearm_flags = debouncing_button_flags;
     GPIOA_ClearITFlagBit(GPIOA_ReadITFlagPort());
-    debouncing_button_flags = 0u;
     PFIC_EnableIRQ(GPIO_A_IRQn);
     PFIC_ClearPendingIRQ(GPIO_A_IRQn);
-#if VP_DEBUG_DEBOUNCE_TIMER
-    PRINT("Debounce stop after clear rearm:%04x PA:%04lx IF:%04x EN:%04x MODE:%04x\n",
-          rearm_flags, GPIOA_ReadPort(),
-          GPIOA_ReadITFlagPort(), R16_PA_INT_EN, R16_PA_INT_MODE);
-#endif
     debounce_timer_running = 0u;
     RuntimeTask_StopDebounceTimer();
     return VP_STATUS_OK;
@@ -413,11 +331,6 @@ void TMR0_IRQHandler(void) {
 
     TMR0_ClearITFlag(TMR0_3_IT_CYC_END);
     if (debounce_timer_running) {
-        static uint8_t debug_tick_count = 0u;
-        if (debug_tick_count < 8u) {
-            PRINT("Debounce timer IRQ\n");
-            debug_tick_count++;
-        }
         vp_on_debounce_tick(c_vp_rtc_millis());
     }
 }

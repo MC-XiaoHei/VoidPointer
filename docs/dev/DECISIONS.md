@@ -64,7 +64,9 @@
 - `vp_input_id_t` 预留 `ImuInt1` / `ImuInt2` 两个输入，实际是否都连接由 PCB 决定。
 - `vp_output_id_t` 当前只定义 `Laser`；充电灯目前不走 MCU。
 - `vp_exti_edge_t` FFI 只暴露 `Rising` / `Falling` / `Both`。
-- CH585 WCH GPIO interrupt API 原生提供 low-level/high-level/fall-edge/rise-edge，未直接提供普通 GPIO IRQ both-edge；`Both` 由平台层模拟或按具体输入验证。
+- CH585 WCH GPIO interrupt API 原生提供低电平/高电平/下降沿/上升沿触发，未直接提供普通 GPIO IRQ 双边沿；`Both` 由平台层模拟或按具体输入验证。
+- CH585 GPIOA 边沿锁存在机械按键实机调试中表现为可重复性不足；v1 低有效按键/二态开关不用下降沿/上升沿锁存，而由 Rust 语义请求 `Falling`/`Rising`，平台分别映射为低电平/高电平触发。
+- GPIOA IF 可能已经锁存但 PFIC 不再派发后续 GPIOA IRQ；主循环允许服务 `R16_PA_INT_IF & R16_PA_INT_EN` 中的待处理 GPIOA 硬件事实，并复用同一个 GPIOA handler，不做 GPIO 电平扫描造事件。
 - 编码器 A/B 按“任意边沿输入”实现：如有可靠 both-edge 能力则直接映射；否则在平台层通过读当前电平后重配下一边沿模拟，并由 Rust 正交状态机兜底非法跳变，必要时增加短周期采样兜底。
 
 ## 6. FFI / ABI decisions
