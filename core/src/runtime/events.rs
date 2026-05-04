@@ -130,7 +130,7 @@ pub struct EventQueue {
     inner: UnsafeCell<EventQueueInner>,
 }
 
-// SAFETY: 所有访问由 CH585 单核临界区串行化
+// SAFETY: 队列访问依赖 CH585 单核与当前执行模型的串行化约束
 unsafe impl Sync for EventQueue {}
 
 impl EventQueue {
@@ -141,7 +141,7 @@ impl EventQueue {
     }
 
     pub fn push(&self, event: RuntimeEvent) -> bool {
-        // ISR 内不能恢复 mstatus；这里只做短入队
+        // ISR 里不能做重活，这里只允许短入队
         unsafe { (&mut *self.inner.get()).push(event) }
     }
 

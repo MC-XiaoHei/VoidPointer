@@ -154,6 +154,7 @@ impl Runtime {
     }
 
     pub fn request_poll() {
+        // 先立 pending 标记，再唤醒主循环，避免边沿事件在窗口里丢失
         POLL_PENDING.store(true, Ordering::Release);
         unsafe { c_vp_request_core_poll() };
     }
@@ -172,6 +173,7 @@ impl Runtime {
     }
 
     pub fn poll(&mut self) -> Option<RuntimeCommand> {
+        // 单次 poll 允许短暂追平级联状态，但要限制 pass 数避免主循环长时间自旋
         const MAX_PASSES: usize = 4;
         let mut passes = 0;
 
@@ -349,6 +351,7 @@ impl Runtime {
     }
 
     fn drain_events(&mut self) {
+        // 事件队列单次只排一小段，避免事件风暴长期霸占主循环
         const MAX_EVENTS_PER_PASS: usize = 8;
         let mut drained = 0;
 
@@ -493,20 +496,16 @@ impl Runtime {
         unsafe { c_vp_hid_route_ready(route) != 0 }
     }
 
-    /// 当鼠标路由不存在或尚未 ready 时，不能让 `dirty.report` 持续自旋。
-    ///
-    /// 这种状态下不存在有意义的“立即重试”路径。这里要主动收敛本次
-    /// 发送尝试，等待下一次真正有意义的状态事件重新唤醒，例如：
-    /// BLE input-ready、USB 状态变化、dongle 链路变化，或者新的输入活动。
+    /// 鼠标路由不存在或尚未 ready 时，要收敛本次发送尝试
+    /// 等真正改变路由可用性的事件再次唤醒，例如 BLE ready、USB 状态变化或新的输入活动
     fn defer_report_until_route_event(&mut self) -> Option<RuntimeCommand> {
         self.pending.hid_retry = false;
         self.dirty.clear_report();
         None
     }
 
-    /// vendor pending tx 与鼠标 report 不同：它已经明确存在一笔待发负载，
-    /// 因此 route not-ready 时不应该直接丢掉本次发送机会，而应保留待发包，
-    /// 并用退避定时器等待后续 ready 窗口。
+    /// vendor 待发包已经真实存在，route not-ready 时不能直接放弃
+    /// 这里保留待发包并做短退避，等待下一次 ready 窗口
     fn defer_vendor_retry(&mut self, tx: PendingVendorTx) -> Option<RuntimeCommand> {
         self.vendor.requeue_pending_tx(tx);
         self.pending.hid_retry = true;
@@ -524,6 +523,7 @@ impl Runtime {
         };
         let packed_buttons = buttons.pack();
 
+        // 运行时把输入侧滚轮增量汇总到发送侧缓冲，避免短时间多个步进被后来的 report 覆盖
         self.pending_wheel = self
             .pending_wheel
             .saturating_add(input.wheel_delta as i16)
@@ -545,6 +545,7 @@ impl Runtime {
             && !self.pending.hid_retry
             && !self.dirty.report
         {
+            // 没有新状态也没有重试压力时直接退出，避免无意义重发空 report
             return None;
         }
 
@@ -568,10 +569,12 @@ impl Runtime {
 }
 
 fn deadline_due(now: u32, deadline: u32) -> bool {
+    // 用 wrapping 比较处理 rtc 回绕，避免简单大小比较在回绕点失真
     now.wrapping_sub(deadline) < 0x8000_0000
 }
 
 fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
+    // 已到期时仍返回 1ms，让调度路径尽快重新进入而不是返回 0
     if deadline_due(now, deadline) {
         1
     } else {

@@ -7,7 +7,7 @@ struct AttitudeCache {
     current: UnsafeCell<Option<AttitudeData>>,
 }
 
-// SAFETY: 当前仅在主循环 bottom-half 中读写。
+// SAFETY: 这个缓存只在主循环 bottom-half 中读写
 unsafe impl Sync for AttitudeCache {}
 
 impl AttitudeCache {

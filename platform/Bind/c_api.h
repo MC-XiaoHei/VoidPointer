@@ -100,7 +100,7 @@ typedef struct {
     uint32_t write_alignment;
 } vp_flash_region_t;
 
-/* Rust core callbacks exported by libvoid_pointer_core.a. */
+/* Rust core 导出的回调入口 */
 void vp_core_init(void);
 void vp_core_poll(void);
 void vp_on_ble_connected(vp_timestamp_t timestamp);
@@ -125,7 +125,7 @@ void vp_on_hid_send_done(vp_hid_route_t route, vp_hid_send_status_t status,
 void vp_on_vendor_report_rx(vp_hid_route_t route, const uint8_t* ptr,
                             uint16_t len, vp_timestamp_t timestamp);
 
-/* GPIO / EXTI API. ISR-safe unless noted by the implementation. */
+/* GPIO 与 EXTI API，除实现特别说明外默认可在 ISR 中调用 */
 vp_bool_t   c_vp_gpio_read(vp_input_id_t input_id);
 vp_status_t c_vp_gpio_read_inputs(uint16_t* out_snapshot);
 vp_status_t c_vp_gpio_write(vp_output_id_t output_id, vp_bool_t level);
@@ -134,7 +134,7 @@ vp_status_t c_vp_exti_unmask(vp_input_id_t input_id);
 vp_status_t c_vp_exti_clear_pending(vp_input_id_t input_id);
 vp_status_t c_vp_exti_set_edge(vp_input_id_t input_id, vp_exti_edge_t edge);
 
-/* Timer / RTC / TMOS API. */
+/* Timer、RTC 与 TMOS API */
 vp_status_t    c_vp_debounce_timer_start(void);
 vp_status_t    c_vp_debounce_timer_stop(void);
 uint32_t       c_vp_rtc_tick(void);
@@ -144,7 +144,7 @@ vp_status_t    c_vp_rtc_set_wake_after(uint32_t ms);
 void           c_vp_request_core_poll(void);
 void           c_vp_request_core_poll_after(uint32_t ms);
 
-/* I2C / IMU API. Bottom-half only unless otherwise documented. */
+/* I2C 与 IMU API，除特别说明外只允许在 bottom-half 中调用 */
 vp_status_t c_vp_i2c_init(void);
 vp_status_t c_vp_i2c_recover_bus(void);
 vp_status_t c_vp_i2c_abort(void);
@@ -154,7 +154,7 @@ vp_status_t c_vp_imu_config_sleep(void);
 vp_status_t c_vp_imu_read_fifo_async(uint16_t max_samples);
 vp_status_t c_vp_imu_read_whoami(uint8_t* out_id);
 
-/* HID / route API. */
+/* HID 与 route API */
 vp_bool_t            c_vp_hid_route_ready(vp_hid_route_t route);
 vp_hid_send_status_t c_vp_hid_send_mouse(vp_hid_route_t route, uint8_t buttons,
                                          int8_t dx, int8_t dy, int8_t wheel);
@@ -163,7 +163,7 @@ vp_hid_send_status_t c_vp_hid_send_vendor(vp_hid_route_t route,
 vp_status_t c_vp_hid_route_enable(vp_hid_route_t route, vp_bool_t enabled);
 vp_status_t c_vp_hid_route_reset(vp_hid_route_t route);
 
-/* Power API. */
+/* Power API */
 vp_status_t c_vp_power_prepare_suspend(void);
 vp_status_t c_vp_power_enter_suspend(void);
 vp_status_t c_vp_power_prepare_sleep(void);
@@ -171,13 +171,13 @@ vp_status_t c_vp_power_enter_sleep(void);
 vp_status_t c_vp_power_restore_from_sleep(void);
 vp_status_t c_vp_wake_source_enable(vp_wake_source_t source, vp_bool_t enabled);
 
-/* DataFlash config storage API. */
+/* DataFlash 配置存储 API */
 vp_status_t c_vp_flash_config_region(vp_flash_region_t* out_info);
 vp_status_t c_vp_flash_read(uint32_t offset, uint8_t* ptr, uint32_t len);
 vp_status_t c_vp_flash_erase(uint32_t offset, uint32_t len);
 vp_status_t c_vp_flash_write(uint32_t offset, const uint8_t* ptr, uint32_t len);
 
-/* Debug / diagnostics API. */
+/* Debug 与 diagnostics API */
 void        c_vp_debug_print(const char* ptr, uint16_t len);
 vp_status_t c_vp_platform_reset(uint32_t reason);
 

@@ -56,6 +56,7 @@ impl DebouncedTwoStateInput {
     }
 
     fn begin_debounce(&mut self, observed_active: bool) {
+        // EXTI 只负责报出候选电平，是否采信交给后续定时采样确认
         self.candidate_active = observed_active;
         self.stable_ticks = 0;
         self.debouncing = true;
@@ -68,6 +69,7 @@ impl DebouncedTwoStateInput {
 
         self.track_candidate(read_active_low_input(self.input_id));
 
+        // 只有连续稳定足够久才更新 stable 状态，避免把抖动当成真实按键变化
         if !self.candidate_is_stable() {
             return DebounceTickOutcome::StillDebouncing;
         }
@@ -144,6 +146,7 @@ impl InputManager {
     }
 
     pub fn enable_interrupts(&self) {
+        // 两态输入只监听下一条会改变稳定状态的边沿，避免在当前电平上空转
         for input in &self.two_state_inputs {
             arm_next_level_interrupt(input.input_id, input.stable_active);
         }
@@ -160,6 +163,7 @@ impl InputManager {
             return false;
         };
 
+        // 中断里只启动去抖窗口，不在这里直接改 stable 状态
         input.begin_debounce(active);
         start_debounce_timer()
     }
@@ -189,13 +193,14 @@ impl InputManager {
     }
 
     pub fn on_encoder_exti(&mut self, enc_a: bool, enc_b: bool) -> bool {
+        // 编码器相位变化在中断里先累计，是否形成完整步进由解码器决定
         let delta = self.encoder.update(enc_a, enc_b);
         self.pending_wheel = self.pending_wheel.saturating_add(delta);
         delta != 0
     }
 
     pub fn get_current_input(&mut self) -> InputStatus {
-        // 兜底同步编码器状态，避免漏边沿后长期偏移
+        // 轮询时再对齐一次编码器状态，避免漏边沿后长期漂移
         let enc_a = read_active_low_input(VP_INPUT_ENCODER_A as u8);
         let enc_b = read_active_low_input(VP_INPUT_ENCODER_B as u8);
         let polled_wheel = self.encoder.update(enc_a, enc_b);
@@ -233,6 +238,7 @@ impl InputManager {
 }
 
 fn publish_stable_transition(transition: StableTransition) {
+    // 状态稳定后立刻挂到下一条相反电平边沿，避免同一状态反复触发
     arm_next_level_interrupt(transition.input_id, transition.active);
 
     if transition.changed {
@@ -241,6 +247,7 @@ fn publish_stable_transition(transition: StableTransition) {
 }
 
 fn arm_next_level_interrupt(input_id: u8, active: bool) {
+    // 低有效输入在 active 时要等释放沿，在 inactive 时要等按下沿
     let edge = next_edge_for_active_low_state(active);
     let _ = unsafe { c_vp_exti_set_edge(input_id, edge as u8) };
 }

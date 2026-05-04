@@ -1,10 +1,7 @@
 /**
- * HID 路由策略。
+ * HID 路由策略只回答两个问题：现在该走哪条路，由这条路发出的报告是否真的能成功送达
  *
- * 路由选择必须区分“传输链路已建立”和“报告路径已真正可用”。
- * 对 BLE 来说，链路可能已经连上，但 HID 输入路径尚未完成
- * secure/notify ready，因此不能把 `ble_connected` 直接等价成
- * “现在就可以路由 BLE 鼠标报告”。
+ * 对 BLE 来说，链路连上不等于输入路径已经可用，因此必须把 connected 和 input-ready 分开建模
  */
 use crate::ffi::bindings::{
     VP_HID_ROUTE_BLE, VP_HID_ROUTE_DONGLE_2G4, VP_HID_ROUTE_NONE, VP_HID_ROUTE_USB, vp_hid_route_t,
@@ -63,15 +60,9 @@ impl From<vp_usb_state_t> for UsbState {
 }
 
 pub struct HidRouter {
-    /// BLE 传输链路已建立。
-    ///
-    /// 这只表示链路存在，不表示 HID 输入通知已经完成安全建立并且
-    /// 可以作为当前鼠标活动路由使用。
+    /// 只表示 BLE 链路存在，还不表示输入通知已经可用
     ble_connected: bool,
-    /// BLE HID 输入路径已具备可路由条件。
-    ///
-    /// 只有在 BLE 侧明确报告 secure/notify 路径可用于输入报告后，
-    /// 这个状态才应该为 true。
+    /// 只有 secure 与 notify 路径就绪后才允许参与路由选择
     ble_input_ready: bool,
     dongle_connected: bool,
     usb_state: UsbState,

@@ -1,11 +1,11 @@
 use core::cell::UnsafeCell;
 
-/// 只允许主循环访问，ISR 禁用
+/// 这个容器只允许主循环访问，ISR 不能碰
 pub struct MainLoopGlobal<T> {
     inner: UnsafeCell<Option<T>>,
 }
 
-// SAFETY: 仅限非抢占主循环访问
+// SAFETY: 访问约束由单线程主循环保证
 unsafe impl<T> Sync for MainLoopGlobal<T> {}
 
 impl<T> MainLoopGlobal<T> {
@@ -16,7 +16,7 @@ impl<T> MainLoopGlobal<T> {
     }
 
     pub fn init(&self, value: T) {
-        // SAFETY: 主循环内无并发写
+        // SAFETY: 初始化发生在主循环语境中，不存在并发写
         unsafe {
             *self.inner.get() = Some(value);
         }
@@ -26,7 +26,7 @@ impl<T> MainLoopGlobal<T> {
     where
         F: FnOnce(&mut T) -> R,
     {
-        // SAFETY: 主循环内不会产生可变别名
+        // SAFETY: 主循环里不会出现可变别名
         unsafe {
             let opt = &mut *self.inner.get();
             opt.as_mut().map(f)

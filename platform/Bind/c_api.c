@@ -237,9 +237,8 @@ vp_status_t c_vp_exti_set_edge(const vp_input_id_t  input_id,
 
     vp_button_id_t button_id;
     if (input_id_to_button_id(input_id, &button_id)) {
-        // 低有效二态输入使用电平触发 GPIO 中断。Rust 用 Falling/Rising
-        // 表达下一次语义转换；CH585 平台映射为 LowLevel/HighLevel，
-        // 以避开机械触点上不可靠的一次性边沿锁存。
+        // 低有效二态输入的目标不是抓住某一次边沿，而是等待下一次稳定语义转换
+        // Rust 请求 Falling 或 Rising，平台改映射为 LowLevel 或 HighLevel，避开机械触点一次性边沿锁存不稳定的问题
         if (edge == VP_EXTI_EDGE_FALLING) {
             mode = GPIO_ITMode_LowLevel;
         } else if (edge == VP_EXTI_EDGE_RISING) {
@@ -254,9 +253,8 @@ vp_status_t c_vp_exti_set_edge(const vp_input_id_t  input_id,
 }
 
 void GPIOA_ServicePendingInterrupts(void) {
-    // CH585 可能已经锁存 GPIOA IF，但 PFIC 不再派发新的 GPIO_A IRQ。
-    // 事件来源仍然只认硬件 IF；main runtime service 发现 IF & EN 已经
-    // pending 时，可以调用同一个 service 例程补处理。
+    // CH585 可能已经锁存 GPIOA IF，但 PFIC 不再补发 GPIO_A IRQ
+    // 这里仍然只消费硬件已经锁存的中断事实，不通过轮询电平制造事件
     const uint16_t flags = GPIOA_ReadITFlagPort();
     const uint16_t active_flags = (uint16_t)(flags & R16_PA_INT_EN);
     if (active_flags == 0u) {

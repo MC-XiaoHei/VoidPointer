@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-// TMOS events owned by ble_hid_app glue.
+// 这些事件位由 ble_hid_app glue 自己持有，外部只负责触发，不解释内部时序
 #define START_DEVICE_EVT       0x0001
 #define START_REPORT_EVT       0x0002
 #define START_PARAM_UPDATE_EVT 0x0004

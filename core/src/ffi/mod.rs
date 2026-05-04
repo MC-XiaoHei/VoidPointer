@@ -1,7 +1,4 @@
-//! FFI 边界
-//!
-//! `platform/Bind/c_api.h` 是 ABI 单一事实来源；
-//! 本模块只暴露生成的 `bindgen` 结果和少量 Rust 包装
+//! FFI 边界只负责两件事：承认 `c_api.h` 是唯一 ABI 事实来源，并在 Rust 侧提供最薄的一层包装
 
 pub mod bindings;
 
