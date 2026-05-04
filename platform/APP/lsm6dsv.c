@@ -140,7 +140,17 @@ bool LSM6DSV_Init(void) {
     return true;
 }
 
-bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw) {
+bool LSM6DSV_ReadWhoAmI(uint8_t* out_id) {
+    if (out_id == 0) {
+        return false;
+    }
+
+    return lsm6dsv_read_reg(LSM6DSV_REG_WHO_AM_I, out_id);
+}
+
+bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
+                                           const uint16_t max_samples,
+                                           uint16_t*      out_dropped_count) {
     if (raw == 0) return false;
 
     uint8_t s1 = 0;
@@ -148,15 +158,28 @@ bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw) {
     uint8_t data[7];
     bool    found = false;
 
+    if (out_dropped_count != 0) {
+        *out_dropped_count = 0u;
+    }
+
     if (!lsm6dsv_read_reg(LSM6DSV_REG_FIFO_STATUS1, &s1)) return false;
     if (!lsm6dsv_read_reg(LSM6DSV_REG_FIFO_STATUS2, &s2)) return false;
 
     uint16_t sample_count = ((s2 & 0x01) << 8) | s1;
-    if (sample_count == 0) return false;
+    if (sample_count == 0u) return false;
 
-    while (sample_count--) {
-        if (!lsm6dsv_read_regs(LSM6DSV_REG_FIFO_DATA_OUT_TAG, data, 7))
+    uint16_t read_limit = sample_count;
+    if (max_samples != 0u && read_limit > max_samples) {
+        read_limit = max_samples;
+        if (out_dropped_count != 0) {
+            *out_dropped_count = (uint16_t)(sample_count - max_samples);
+        }
+    }
+
+    while (read_limit--) {
+        if (!lsm6dsv_read_regs(LSM6DSV_REG_FIFO_DATA_OUT_TAG, data, 7)) {
             return false;
+        }
 
         const uint8_t tag = data[0] >> 3;
         if (tag == LSM6DSV_FIFO_TAG_SFLP_GAME) {
@@ -168,4 +191,8 @@ bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw) {
     }
 
     return found;
+}
+
+bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw) {
+    return LSM6DSV_ReadLatestSFLPGameRotationRaw(raw, 0u, 0);
 }

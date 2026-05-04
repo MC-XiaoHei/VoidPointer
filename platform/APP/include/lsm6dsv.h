@@ -32,6 +32,10 @@ extern "C" {
 #define LSM6DSV_FIFO_TAG_SFLP_GAME     0x13
 
 bool LSM6DSV_Init(void);
+bool LSM6DSV_ReadWhoAmI(uint8_t* out_id);
+bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
+                                           uint16_t                 max_samples,
+                                           uint16_t*                out_dropped_count);
 bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw);
 
 #ifdef __cplusplus

@@ -1,7 +1,8 @@
 use crate::ffi::bindings::{
-    VP_EXTI_EDGE_FALLING, VP_EXTI_EDGE_RISING, VP_INPUT_ACTION, VP_INPUT_ENCODER_A,
-    VP_INPUT_ENCODER_B, VP_INPUT_LEFT, VP_INPUT_MIDDLE, VP_INPUT_RIGHT, VP_STATUS_OK,
-    c_vp_debounce_timer_start, c_vp_debounce_timer_stop, c_vp_exti_set_edge, c_vp_gpio_read,
+    VP_EXTI_EDGE_BOTH, VP_EXTI_EDGE_FALLING, VP_EXTI_EDGE_RISING, VP_INPUT_ACTION,
+    VP_INPUT_ENCODER_A, VP_INPUT_ENCODER_B, VP_INPUT_LEFT, VP_INPUT_MIDDLE, VP_INPUT_RIGHT,
+    VP_STATUS_OK, c_vp_debounce_timer_start, c_vp_debounce_timer_stop, c_vp_exti_set_edge,
+    c_vp_gpio_read,
 };
 use crate::input::encoder::RotaryEncoder;
 use log::info;
@@ -132,7 +133,6 @@ impl InputManager {
     pub fn sync_snapshot(&mut self) -> InputStatus {
         for input in &mut self.two_state_inputs {
             input.sync_from_gpio();
-            arm_next_level_interrupt(input.input_id, input.stable_active);
         }
 
         let enc_a = read_active_low_input(VP_INPUT_ENCODER_A as u8);
@@ -141,6 +141,15 @@ impl InputManager {
         self.pending_wheel = 0;
 
         self.current_status(0)
+    }
+
+    pub fn enable_interrupts(&self) {
+        for input in &self.two_state_inputs {
+            arm_next_level_interrupt(input.input_id, input.stable_active);
+        }
+
+        let _ = unsafe { c_vp_exti_set_edge(VP_INPUT_ENCODER_A as u8, VP_EXTI_EDGE_BOTH as u8) };
+        let _ = unsafe { c_vp_exti_set_edge(VP_INPUT_ENCODER_B as u8, VP_EXTI_EDGE_BOTH as u8) };
     }
 
     pub fn on_button_exti(&mut self, button_id: u8, active: bool) -> bool {

@@ -1,4 +1,7 @@
-use crate::ffi::bindings::{vp_hid_route_t, vp_usb_state_t};
+use crate::ffi::bindings::{
+    VP_HID_ROUTE_BLE, VP_HID_ROUTE_DONGLE_2G4, VP_HID_ROUTE_NONE, VP_HID_ROUTE_USB, vp_hid_route_t,
+    vp_usb_state_t,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HidRoute {
@@ -6,6 +9,17 @@ pub enum HidRoute {
     Ble,
     Dongle2G4,
     Usb,
+}
+
+impl HidRoute {
+    pub fn as_ffi(self) -> vp_hid_route_t {
+        match self {
+            Self::None => VP_HID_ROUTE_NONE as u8,
+            Self::Ble => VP_HID_ROUTE_BLE as u8,
+            Self::Dongle2G4 => VP_HID_ROUTE_DONGLE_2G4 as u8,
+            Self::Usb => VP_HID_ROUTE_USB as u8,
+        }
+    }
 }
 
 impl From<vp_hid_route_t> for HidRoute {
@@ -73,6 +87,42 @@ impl HidRouter {
 
     pub fn usb_state(&self) -> UsbState {
         self.usb_state
+    }
+
+    pub fn is_usb_configured(&self) -> bool {
+        self.usb_state == UsbState::Configured
+    }
+
+    pub fn preferred_mouse_route(&self) -> HidRoute {
+        if self.is_usb_configured() {
+            HidRoute::Usb
+        } else if self.ble_connected {
+            HidRoute::Ble
+        } else if self.dongle_connected {
+            HidRoute::Dongle2G4
+        } else {
+            HidRoute::None
+        }
+    }
+
+    pub fn preferred_custom_route(&self) -> HidRoute {
+        if self.is_usb_configured() {
+            HidRoute::Usb
+        } else if self.ble_connected {
+            HidRoute::Ble
+        } else if self.dongle_connected {
+            HidRoute::Dongle2G4
+        } else {
+            HidRoute::None
+        }
+    }
+
+    pub fn has_mouse_route(&self) -> bool {
+        self.preferred_mouse_route() != HidRoute::None
+    }
+
+    pub fn has_custom_route(&self) -> bool {
+        self.preferred_custom_route() != HidRoute::None
     }
 
     pub fn has_wireless_connection(&self) -> bool {

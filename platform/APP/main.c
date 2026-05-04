@@ -1,4 +1,16 @@
-﻿#include "CONFIG.h"
+﻿/********************************** (C) COPYRIGHT *******************************
+ * File Name          : main.c
+ * Author             : WCH
+ * Version            : V1.0
+ * Date               : 2018/12/10
+ * Description        : 主程序，完成系统初始化后进入 TMOS/BLE 主循环
+ *********************************************************************************
+ * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
+ * Attention: This software (modified or not) and binary are used for
+ * microcontroller manufactured by Nanjing Qinheng Microelectronics.
+ *******************************************************************************/
+
+#include "CONFIG.h"
 #include "HAL.h"
 #include "main.h"
 #include "hiddev.h"
@@ -6,8 +18,11 @@
 #include "lsm6dsv.h"
 #include "rust_api.h"
 #include "c_api.h"
+#include "usbhs_hid_device.h"
 
 #include <math.h>
+
+#define VP_USB_BRINGUP_DISABLE_IMU 1
 
 __attribute__((aligned(4))) uint32_t MEM_BUF[BLE_MEMHEAP_SIZE / 4];
 
@@ -116,7 +131,6 @@ void RuntimeTask_RequestPollAfter(uint32_t ms) {
 
 void RuntimeTask_StartDebounceTimer(void) {
     if (runtime_task_id == 0xFF) {
-        PRINT("Runtime debounce start ignored: no task\n");
         return;
     }
     runtime_debounce_timer_running = 1u;
@@ -135,8 +149,6 @@ void RuntimeTask_Init() {
     }
     RuntimeTask_RequestPoll();
 }
-
-
 
 void InputGPIO_Init() {
     const uint32_t target_pins = RIGHT_BTN | LEFT_BTN | ACTION_BTN | ENC_A |
@@ -188,16 +200,20 @@ int main() {
     HAL_Init();
     InputGPIO_Init();
 
+#if !VP_USB_BRINGUP_DISABLE_IMU
     I2C_Hardware_Init();
     if (!LSM6DSV_Init()) PRINT("IMU init failed\n");
+#endif
 
     GAPRole_PeripheralInit();
     HidDev_Init();
     HidEmu_Init();
 
+    USBHS_HidDevice_Init();
+
     vp_core_init();
     RuntimeTask_Init();
-    InputEXTI_Init();
+    vp_input_enable();
 
     Main_Circulation();
 }

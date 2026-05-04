@@ -30,6 +30,14 @@ pub extern "C" fn vp_core_init() {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn vp_input_enable() {
+    let ret = RUNTIME.execute(Runtime::enable_input_interrupts);
+    if ret.is_none() {
+        log::error!("Call vp_input_enable() before vp_core_init()!");
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn vp_core_poll() {
     if POLL_RUNNING.load(Ordering::Acquire) {
         POLL_PENDING.store(true, Ordering::Release);
@@ -71,6 +79,11 @@ fn enqueue_runtime_event(event: RuntimeEvent) {
 #[unsafe(no_mangle)]
 pub extern "C" fn vp_on_ble_connected(timestamp: u32) {
     enqueue_runtime_event(RuntimeEvent::BleConnected { timestamp });
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn vp_on_ble_input_ready(timestamp: u32) {
+    enqueue_runtime_event(RuntimeEvent::BleInputReady { timestamp });
 }
 
 #[unsafe(no_mangle)]

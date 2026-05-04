@@ -1,5 +1,7 @@
 CompileFlags:
   Add:
+    - -D__INTERRUPT=
+    - -D__attribute__(x)=
     - -Iplatform/Startup
     - -Iplatform/APP/include
     - -Iplatform/Profile/include
@@ -18,11 +20,15 @@ CompileFlags:
     - -include
     - stdint.h
     - -include
+    - CH58x_pwm.h
+    - -include
     - CH585SFR.h
     - -include
     - core_riscv.h
     - -include
     - CH58xBLE_LIB.h
+    - "-Wno-pointer-to-int-cast"
+    - "-Wno-int-to-pointer-cast"
 
   Remove:
     - -march=*
@@ -31,9 +37,6 @@ CompileFlags:
     - -msmall-data-limit=*
     - -mno-save-restore
     - --param=*
----
-If:
-  PathMatch: .*platform[\\/](HAL|StdPeriphDriver|Profile|LIB)[\\/].*\.h
+
 Diagnostics:
-  Suppress:
-    - unused-includes
+  UnusedIncludes: None

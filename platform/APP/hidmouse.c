@@ -36,6 +36,8 @@
  */
 // Param update delay
 #define START_PARAM_UPDATE_EVT_DELAY      12800
+#define VP_BLE_BRINGUP_DISABLE_PARAM_UPDATE 0
+#define VP_BLE_BRINGUP_REQUEST_SECURITY_ON_CONNECT FALSE
 
 // Param update delay
 #define START_PHY_UPDATE_DELAY            1600
@@ -141,7 +143,10 @@ static hidDevCfg_t hidEmuCfg = {
     HID_FEATURE_FLAGS  // HID feature flags
 };
 
-static uint16_t hidEmuConnHandle = GAP_CONNHANDLE_INIT;
+static uint16_t         hidEmuConnHandle = GAP_CONNHANDLE_INIT;
+static uint8_t          hidEmuAdvertisingAllowed = TRUE;
+static gapRole_States_t hidEmuGapState = GAPROLE_INIT;
+static uint8_t          hidEmuGapStarted = FALSE;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -154,6 +159,7 @@ static uint8_t hidEmuRptCB(uint8_t id, uint8_t type, uint16_t uuid,
                            uint8_t oper, uint16_t* pLen, uint8_t* pData);
 static void    hidEmuEvtCB(uint8_t evt);
 static void    hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t* pEvent);
+static void    hidEmuApplyAdvertisingPolicy(void);
 
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -181,6 +187,10 @@ static hidDevCB_t hidEmuHidCBs = {hidEmuRptCB, hidEmuEvtCB, NULL,
  * @return  none
  */
 void HidEmu_Init() {
+    hidEmuAdvertisingAllowed = TRUE;
+    hidEmuConnHandle = GAP_CONNHANDLE_INIT;
+    hidEmuGapState = GAPROLE_INIT;
+    hidEmuGapStarted = FALSE;
     hidEmuTaskId = TMOS_ProcessEventRegister(HidEmu_ProcessEvent);
 
     // Setup the GAP Peripheral Role Profile
@@ -218,13 +228,14 @@ void HidEmu_Init() {
                                 &ioCap);
         GAPBondMgr_SetParameter(GAPBOND_PERI_BONDING_ENABLED, sizeof(uint8_t),
                                 &bonding);
+        PRINT("BLE bond cfg: pairMode=%u mitm=%u ioCap=%u bonding=%u passkey=%lu\n",
+              pairMode, mitm, ioCap, bonding, (unsigned long)passkey);
     }
 
     // Setup Battery Characteristic Values
     {
         uint8_t critical = DEFAULT_BATT_CRITICAL_LEVEL;
-        Batt_SetParameter(BATT_PARAM_CRITICAL_LEVEL, sizeof(uint8_t),
-                          &critical);
+        Batt_SetParameter(BATT_PARAM_CRITICAL_LEVEL, sizeof(uint8_t), &critical);
     }
 
     // Set up HID keyboard service
@@ -235,6 +246,23 @@ void HidEmu_Init() {
 
     // Setup a delayed profile startup
     tmos_set_event(hidEmuTaskId, START_DEVICE_EVT);
+}
+
+uint8_t HidEmu_SetAdvertisingEnabled(uint8_t enabled) {
+    hidEmuAdvertisingAllowed = enabled ? TRUE : FALSE;
+    PRINT("BLE advertising allowed=%u state=%u started=%u handle=%u\n",
+          hidEmuAdvertisingAllowed, hidEmuGapState, hidEmuGapStarted,
+          hidEmuConnHandle);
+    hidEmuApplyAdvertisingPolicy();
+    return SUCCESS;
+}
+
+uint8_t HidEmu_Disconnect(void) {
+    if (hidEmuConnHandle == GAP_CONNHANDLE_INIT) {
+        return SUCCESS;
+    }
+
+    return GAPRole_TerminateLink(hidEmuConnHandle);
 }
 
 /*********************************************************************
@@ -270,23 +298,25 @@ uint16_t HidEmu_ProcessEvent(uint8_t task_id, uint16_t events) {
     }
 
     if (events & START_PARAM_UPDATE_EVT) {
-        // Send connect param update request
+#if !VP_BLE_BRINGUP_DISABLE_PARAM_UPDATE
+        PRINT("ConnParamUpdate start\n");
         GAPRole_PeripheralConnParamUpdateReq(
             hidEmuConnHandle, DEFAULT_DESIRED_MIN_CONN_INTERVAL,
             DEFAULT_DESIRED_MAX_CONN_INTERVAL, DEFAULT_DESIRED_SLAVE_LATENCY,
             DEFAULT_DESIRED_CONN_TIMEOUT, hidEmuTaskId);
+#endif
 
         return (events ^ START_PARAM_UPDATE_EVT);
     }
 
     if (events & START_PHY_UPDATE_EVT) {
-        // start phy update
         PRINT("Send Phy Update %x...\n",
               GAPRole_UpdatePHY(hidEmuConnHandle, 0, GAP_PHY_BIT_LE_2M,
                                 GAP_PHY_BIT_LE_2M, 0));
 
         return (events ^ START_PHY_UPDATE_EVT);
     }
+
     return 0;
 }
 
@@ -306,14 +336,28 @@ static void hidEmu_ProcessTMOSMsg(tmos_event_hdr_t* pMsg) {
     }
 }
 
+static void hidEmuApplyAdvertisingPolicy(void) {
+    if (!hidEmuGapStarted) {
+        return;
+    }
+
+    if ((hidEmuGapState & GAPROLE_STATE_ADV_MASK) == GAPROLE_CONNECTED ||
+        (hidEmuGapState & GAPROLE_STATE_ADV_MASK) == GAPROLE_CONNECTED_ADV) {
+        return;
+    }
+
+    GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(uint8_t),
+                         &hidEmuAdvertisingAllowed);
+}
+
 /*********************************************************************
  * @fn      hidEmuSendMouseReport
  *
  * @brief   Build and send a HID mouse report.
  *
  * @param   buttons - Mouse button code
- *					X_data - X axis move data
- *					Y_data - Y axis move data
+ *                    X_data - X axis move data
+ *                    Y_data - Y axis move data
  *
  * @return  none
  */
@@ -340,61 +384,58 @@ static void hidEmuSendMouseReport(uint8_t buttons, uint8_t X_data,
  * @return  none
  */
 static void hidEmuStateCB(gapRole_States_t newState, gapRoleEvent_t* pEvent) {
+    hidEmuGapState = newState;
+
     switch (newState & GAPROLE_STATE_ADV_MASK) {
         case GAPROLE_STARTED: {
             uint8_t ownAddr[6];
+            hidEmuGapStarted = TRUE;
             GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddr);
             GAP_ConfigDeviceAddr(ADDRTYPE_STATIC, ownAddr);
             PRINT("Initialized..\n");
+            hidEmuApplyAdvertisingPolicy();
         } break;
 
         case GAPROLE_ADVERTISING:
-            if (pEvent->gap.opcode == GAP_MAKE_DISCOVERABLE_DONE_EVENT) {
-                PRINT("Advertising..\n");
-            }
+            PRINT("Advertising..\n");
             break;
 
         case GAPROLE_CONNECTED:
             if (pEvent->gap.opcode == GAP_LINK_ESTABLISHED_EVENT) {
                 gapEstLinkReqEvent_t* event = (gapEstLinkReqEvent_t*)pEvent;
 
-                // get connection handle
                 hidEmuConnHandle = event->connectionHandle;
+                PRINT("Connected..\n");
                 vp_on_ble_connected(c_vp_rtc_millis());
+#if VP_BLE_BRINGUP_REQUEST_SECURITY_ON_CONNECT
+                PRINT("SecurityReq start: handle=%u\n", hidEmuConnHandle);
+                bStatus_t securityReqStatus =
+                    GAPBondMgr_PeriSecurityReq(hidEmuConnHandle);
+                PRINT("SecurityReq done: handle=%u status=%u\n",
+                      hidEmuConnHandle, securityReqStatus);
+#endif
+#if !VP_BLE_BRINGUP_DISABLE_PARAM_UPDATE
                 tmos_start_task(hidEmuTaskId, START_PARAM_UPDATE_EVT,
                                 START_PARAM_UPDATE_EVT_DELAY);
-                PRINT("Connected..\n");
+#endif
             }
             break;
 
         case GAPROLE_CONNECTED_ADV:
-            if (pEvent->gap.opcode == GAP_MAKE_DISCOVERABLE_DONE_EVENT) {
-                PRINT("Connected Advertising..\n");
-            }
             break;
 
         case GAPROLE_WAITING:
-            if (pEvent->gap.opcode == GAP_END_DISCOVERABLE_DONE_EVENT) {
-                PRINT("Waiting for advertising..\n");
-            } else if (pEvent->gap.opcode == GAP_LINK_TERMINATED_EVENT) {
-                PRINT("Disconnected.. Reason:%x\n",
+            if (pEvent->gap.opcode == GAP_LINK_TERMINATED_EVENT) {
+                PRINT("Disconnected.. reason=%x\n",
                       pEvent->linkTerminate.reason);
+                hidEmuConnHandle = GAP_CONNHANDLE_INIT;
                 vp_on_ble_disconnected(pEvent->linkTerminate.reason,
                                        c_vp_rtc_millis());
-            } else if (pEvent->gap.opcode == GAP_LINK_ESTABLISHED_EVENT) {
-                PRINT("Advertising timeout..\n");
             }
-            // Enable advertising
-            {
-                uint8_t initial_advertising_enable = TRUE;
-                // Set the GAP Role Parameters
-                GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(uint8_t),
-                                     &initial_advertising_enable);
-            }
+            hidEmuApplyAdvertisingPolicy();
             break;
 
         case GAPROLE_ERROR:
-            PRINT("Error %x ..\n", pEvent->gap.opcode);
             break;
 
         default:
@@ -422,28 +463,34 @@ static uint8_t hidEmuRptCB(uint8_t id, uint8_t type, uint16_t uuid,
 
     // write
     if (oper == HID_DEV_OPER_WRITE) {
-        status = Hid_SetParameter(id, type, uuid, *pLen, pData);
+        if (uuid == REPORT_UUID) {
+            if (type == HID_REPORT_TYPE_OUTPUT) {
+                // keyboard output report (LEDs)
+            } else if (type == HID_REPORT_TYPE_FEATURE) {
+                // feature report
+            }
+        }
+    } else if (oper == HID_DEV_OPER_ENABLE && uuid == GATT_CLIENT_CHAR_CFG_UUID &&
+               id == HID_RPT_ID_MOUSE_IN && type == HID_REPORT_TYPE_INPUT &&
+               HidDev_IsReportNotifyEnabled(id, type)) {
+        vp_on_ble_input_ready(c_vp_rtc_millis());
     }
-    // read
-    else if (oper == HID_DEV_OPER_READ) {
-        status = Hid_GetParameter(id, type, uuid, pLen, pData);
-    }
+
     return status;
 }
 
 /*********************************************************************
  * @fn      hidEmuEvtCB
  *
- * @brief   HID Dev event callback.
+ * @brief   HID event callback.
  *
- * @param   evt - event ID.
+ * @param   evt - event code
  *
- * @return  HID response code.
+ * @return  none
  */
 static void hidEmuEvtCB(uint8_t evt) {
-    // process enter/exit suspend or enter/exit boot mode
-    return;
+    switch (evt) {
+        default:
+            break;
+    }
 }
-
-/*********************************************************************
-*********************************************************************/

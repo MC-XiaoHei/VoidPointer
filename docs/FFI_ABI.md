@@ -350,15 +350,24 @@ Rust 不应在快速 callback 中：
 
 ### 12.2 `vp_core_poll()`
 
-`vp_core_poll()` 只由 TMOS event 在 task 上下文调用，用于处理：
+`vp_core_poll()` 必须运行在非 ISR 上下文，但当前稳定实现并不是“收到 TMOS event 就立刻在 TMOS task 内直接执行”。实际流程是：
+
+1. Rust callback / C 平台逻辑调用 `c_vp_request_core_poll()`。
+2. `RuntimeTask_RequestPoll()` 仅置位 `runtime_poll_request_pending`。
+3. 主循环 `Main_Circulation()` 每轮执行两次 `RuntimeTask_Service()`，分别位于 `TMOS_SystemProcess()` 前后。
+4. `RuntimeTask_Service()` 先补服务 GPIOA 锁存中断、推进 debounce 软时基，再在 `runtime_poll_request_pending != 0` 时调用 `vp_core_poll()`。
+5. `RuntimeTask_RequestPollAfter(ms)` 在 `ms > 0` 时通过 TMOS timer 投递 `RUNTIME_CORE_POLL_EVT`；`RuntimeTask_ProcessEvent()` 收到事件后只把 `runtime_poll_request_pending` 置位，真正的 `vp_core_poll()` 仍由下一轮 `RuntimeTask_Service()` 执行。
+
+因此，`vp_core_poll()` 的职责保持不变：
 
 - event queue。
 - HID report send/retry。
 - IMU FIFO async read request。
 - WebHID command parse。
 - config save。
-- route switch。
 - power transition。
+
+但它的**实际执行入口**是主循环侧的 runtime service，而不是 TMOS 事件处理函数直接调用。这是当前项目已验证的稳定调度结构。
 
 如果 `vp_core_poll()` 处理后仍有 pending work，应再次调用 `c_vp_request_core_poll()`。
 

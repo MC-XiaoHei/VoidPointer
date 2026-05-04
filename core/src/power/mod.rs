@@ -44,6 +44,10 @@ impl PowerManager {
         self.state
     }
 
+    pub fn config(&self) -> PowerConfig {
+        self.config
+    }
+
     pub fn poll(
         &mut self,
         now_ms: u32,

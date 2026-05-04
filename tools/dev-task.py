@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 import os
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -548,8 +550,42 @@ def download(args: argparse.Namespace) -> None:
 def serial_monitor(_: argparse.Namespace) -> None:
     load_env_local()
     port = os.environ.get("VP_SERIAL_PORT", "COM5")
-    baud = os.environ.get("VP_SERIAL_BAUD", "115200")
-    run(["python", "-m", "serial.tools.miniterm", port, baud, "--raw"])
+    baud = int(os.environ.get("VP_SERIAL_BAUD", "115200"))
+
+    try:
+        import serial  # type: ignore
+    except ImportError as exc:
+        raise SystemExit(
+            "pyserial is required for the serial monitor. Install it with: python -m pip install pyserial"
+        ) from exc
+
+    print(f"+ timestamped serial monitor on {port} {baud},8,N,1", flush=True)
+    print("--- Quit: Ctrl+C ---", flush=True)
+
+    try:
+        with serial.Serial(port, baudrate=baud, timeout=0.1) as ser:
+            buffer = bytearray()
+            while True:
+                chunk = ser.read(4096)
+                if not chunk:
+                    continue
+                buffer.extend(chunk)
+
+                while True:
+                    newline_index = buffer.find(b"\n")
+                    if newline_index < 0:
+                        break
+
+                    line = bytes(buffer[: newline_index + 1])
+                    del buffer[: newline_index + 1]
+
+                    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                    text = line.decode("utf-8", errors="replace").rstrip("\r\n")
+                    print(f"[{timestamp}] {text}", flush=True)
+    except KeyboardInterrupt:
+        print("\n--- Serial monitor stopped ---", flush=True)
+    except Exception as exc:
+        raise SystemExit(f"Serial monitor failed: {exc}") from exc
 
 
 def main() -> None:

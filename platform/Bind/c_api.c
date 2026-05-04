@@ -9,8 +9,10 @@
 #include "rust_api.h"
 #include <hiddev.h>
 #include <hidmouseservice.h>
+#include "hidmouse.h"
 #include <stdio.h>
-
+#include "usbhs_hid_device.h"
+#include "lsm6dsv.h"
 
 
 typedef struct {
@@ -22,6 +24,7 @@ typedef struct {
 
 static uint16_t gpioa_exti_both_sim_mask = 0u;
 static vp_bool_t debounce_timer_running = 0u;
+static vp_usb_state_t current_usb_state = VP_USB_STATE_DETACHED;
 
 typedef struct {
     vp_input_id_t input_id;
@@ -260,47 +263,37 @@ void GPIOA_ServicePendingInterrupts(void) {
         return;
     }
 
-    const vp_timestamp_t timestamp = c_vp_rtc_millis();
-    const uint32_t       port_data = GPIOA_ReadPort();
-    uint16_t             encoder_flags = 0u;
+    const uint32_t port_data = GPIOA_ReadPort();
 
     for (uint8_t i = 0u; i < sizeof(INPUT_PIN_MAP) / sizeof(INPUT_PIN_MAP[0]); i++) {
         const vp_input_id_t input_id = INPUT_PIN_MAP[i].input_id;
-        const uint32_t      pin_mask = INPUT_PIN_MAP[i].pin_mask;
+        const uint32_t pin_mask = INPUT_PIN_MAP[i].pin_mask;
         if ((active_flags & pin_mask) == 0u) {
             continue;
         }
 
+        GPIOA_ClearITFlagBit(pin_mask);
         if (is_encoder_input(input_id)) {
-            encoder_flags |= (uint16_t)pin_mask;
+            const vp_bool_t a_level = active_low_pin_level(port_data, ENC_A);
+            const vp_bool_t b_level = active_low_pin_level(port_data, ENC_B);
+            gpioa_config_next_edge_for_pin(pin_mask);
+            vp_on_encoder_exti(a_level, b_level, c_vp_rtc_millis());
             continue;
         }
 
-        vp_button_id_t button_id;
+        vp_button_id_t button_id = 0u;
         if (input_id_to_button_id(input_id, &button_id)) {
+            const vp_bool_t level = active_low_pin_level(port_data, pin_mask);
             (void)c_vp_exti_mask(input_id);
-            vp_on_button_exti(button_id, active_low_pin_level(port_data, pin_mask),
-                              timestamp);
+            vp_on_button_exti(button_id, level, c_vp_rtc_millis());
         }
     }
 
-    if (encoder_flags != 0u) {
-        vp_on_encoder_exti(active_low_pin_level(port_data, ENC_A),
-                           active_low_pin_level(port_data, ENC_B), timestamp);
-
-        if (gpioa_exti_both_sim_mask & ENC_A) {
-            gpioa_config_next_edge_for_pin(ENC_A);
-        }
-        if (gpioa_exti_both_sim_mask & ENC_B) {
-            gpioa_config_next_edge_for_pin(ENC_B);
-        }
-    }
-
-    if (flags != 0u) {
-        GPIOA_ClearITFlagBit(flags);
-    }
+    PFIC_ClearPendingIRQ(GPIO_A_IRQn);
 }
 
+__INTERRUPT
+__HIGH_CODE
 void GPIOA_IRQHandler(void) {
     GPIOA_ServicePendingInterrupts();
 }
@@ -309,50 +302,31 @@ vp_status_t c_vp_debounce_timer_start(void) {
     if (debounce_timer_running) {
         return VP_STATUS_OK;
     }
-
     debounce_timer_running = 1u;
     RuntimeTask_StartDebounceTimer();
     return VP_STATUS_OK;
 }
 
 vp_status_t c_vp_debounce_timer_stop(void) {
-    GPIOA_ClearITFlagBit(GPIOA_ReadITFlagPort());
-    PFIC_EnableIRQ(GPIO_A_IRQn);
-    PFIC_ClearPendingIRQ(GPIO_A_IRQn);
+    if (!debounce_timer_running) {
+        return VP_STATUS_OK;
+    }
     debounce_timer_running = 0u;
     RuntimeTask_StopDebounceTimer();
     return VP_STATUS_OK;
 }
 
-void TMR0_IRQHandler(void) {
-    if (!TMR0_GetITFlag(TMR0_3_IT_CYC_END)) {
-        return;
-    }
-
-    TMR0_ClearITFlag(TMR0_3_IT_CYC_END);
-    if (debounce_timer_running) {
-        vp_on_debounce_tick(c_vp_rtc_millis());
-    }
-}
-
 uint32_t c_vp_rtc_tick(void) { return RTC_GetCycle32k(); }
 
-vp_timestamp_t c_vp_rtc_millis(void) { return RTC_TO_MS(c_vp_rtc_tick()); }
+vp_timestamp_t c_vp_rtc_millis(void) { return TMOS_GetSystemClock(); }
 
-uint32_t c_vp_rtc_micros(void) { return RTC_TO_US(c_vp_rtc_tick()); }
+uint32_t c_vp_rtc_micros(void) {
+    return (uint32_t)((uint64_t)c_vp_rtc_millis() * 1000u);
+}
 
 vp_status_t c_vp_rtc_set_wake_after(const uint32_t ms) {
-    if (ms == 0u) {
-        return VP_STATUS_INVALID_ARG;
-    }
-
-    uint32_t cycles = MS_TO_RTC(ms);
-    if (cycles == 0u) {
-        cycles = 1u;
-    }
-
-    RTC_TRIGFunCfg(cycles);
-    return VP_STATUS_OK;
+    (void)ms;
+    return VP_STATUS_UNSUPPORTED;
 }
 
 void c_vp_request_core_poll(void) { RuntimeTask_RequestPoll(); }
@@ -360,6 +334,16 @@ void c_vp_request_core_poll(void) { RuntimeTask_RequestPoll(); }
 void c_vp_request_core_poll_after(const uint32_t ms) {
     RuntimeTask_RequestPollAfter(ms);
 }
+
+void Platform_NotifyUsbStateChanged(const vp_usb_state_t state) {
+    if (current_usb_state == state) {
+        return;
+    }
+
+    current_usb_state = state;
+    vp_on_usb_state_changed(state, c_vp_rtc_millis());
+}
+
 
 vp_status_t c_vp_i2c_init(void) { return VP_STATUS_UNSUPPORTED; }
 
@@ -374,38 +358,58 @@ vp_status_t c_vp_imu_config_suspend(void) { return VP_STATUS_UNSUPPORTED; }
 vp_status_t c_vp_imu_config_sleep(void) { return VP_STATUS_UNSUPPORTED; }
 
 vp_status_t c_vp_imu_read_fifo_async(const uint16_t max_samples) {
-    (void)max_samples;
-    return VP_STATUS_UNSUPPORTED;
+    sflp_game_rotation_raw_t raw = {0};
+    uint16_t                 dropped_count = 0u;
+    const vp_timestamp_t     timestamp = c_vp_rtc_millis();
+
+    if (!LSM6DSV_ReadLatestSFLPGameRotationRaw(&raw, max_samples, &dropped_count)) {
+        vp_on_imu_fifo_done(VP_STATUS_NOT_READY, 0u, timestamp);
+        return VP_STATUS_NOT_READY;
+    }
+
+    vp_on_imu_sample(raw.x, raw.y, raw.z, timestamp);
+    vp_on_imu_fifo_done(VP_STATUS_OK, dropped_count, timestamp);
+    return VP_STATUS_OK;
 }
 
 vp_status_t c_vp_imu_read_whoami(uint8_t* out_id) {
     if (out_id == NULL) {
         return VP_STATUS_INVALID_ARG;
     }
-    *out_id = 0u;
-    return VP_STATUS_UNSUPPORTED;
-}
 
-vp_bool_t c_vp_hid_route_ready(const vp_hid_route_t route) {
-    return route == VP_HID_ROUTE_BLE ? 1u : 0u;
-}
-
-vp_hid_send_status_t c_vp_hid_send_mouse(const vp_hid_route_t route,
-                                         const uint8_t buttons, const int8_t dx,
-                                         const int8_t dy, const int8_t wheel) {
-    if (route != VP_HID_ROUTE_BLE) {
-        return VP_HID_SEND_NOT_CONNECTED;
+    if (!LSM6DSV_ReadWhoAmI(out_id)) {
+        *out_id = 0u;
+        return VP_STATUS_IO_ERROR;
     }
 
-    mouse_report_t rpt;
-    rpt.buttons = buttons;
-    rpt.dx = clamp_i8_to_hid_range(dx);
-    rpt.dy = clamp_i8_to_hid_range(dy);
-    rpt.wheel = clamp_i8_to_hid_range(wheel);
+    return VP_STATUS_OK;
+}
+
+static vp_bool_t ble_mouse_route_ready(void) {
+    if (current_usb_state == VP_USB_STATE_CONFIGURED) {
+        return 0u;
+    }
+
+    return HidDev_IsReportNotifyEnabled(HID_RPT_ID_MOUSE_IN,
+                                        HID_REPORT_TYPE_INPUT)
+               ? 1u
+               : 0u;
+}
+
+static vp_bool_t usb_mouse_route_ready(void) {
+    return current_usb_state == VP_USB_STATE_CONFIGURED ? 1u : 0u;
+}
+
+static vp_bool_t dongle_mouse_route_ready(void) { return 0u; }
+
+static vp_hid_send_status_t ble_send_mouse_report(const mouse_report_t* rpt) {
+    if (rpt == NULL) {
+        return VP_HID_SEND_FATAL;
+    }
 
     const uint8_t status =
         HidDev_Report(HID_RPT_ID_MOUSE_IN, HID_REPORT_TYPE_INPUT,
-                      sizeof(mouse_report_t), (uint8_t*)&rpt);
+                      sizeof(mouse_report_t), (uint8_t*)rpt);
     switch (status) {
         case SUCCESS:
             return VP_HID_SEND_SENT;
@@ -418,13 +422,85 @@ vp_hid_send_status_t c_vp_hid_send_mouse(const vp_hid_route_t route,
     }
 }
 
+static vp_hid_send_status_t usb_send_mouse_report(const mouse_report_t* rpt) {
+    if (rpt == NULL) {
+        return VP_HID_SEND_FATAL;
+    }
+
+    if (current_usb_state != VP_USB_STATE_CONFIGURED) {
+        return VP_HID_SEND_NOT_CONNECTED;
+    }
+
+    return USBHS_HidDevice_SendMouseReport((const uint8_t*)rpt, sizeof(*rpt))
+               ? VP_HID_SEND_SENT
+               : VP_HID_SEND_RETRY_LATER;
+}
+
+static vp_hid_send_status_t dongle_send_mouse_report(const mouse_report_t* rpt) {
+    (void)rpt;
+    return VP_HID_SEND_NOT_CONNECTED;
+}
+
+static vp_hid_send_status_t usb_send_vendor_report(const uint8_t* ptr,
+                                                   const uint16_t len) {
+    if (ptr == NULL) {
+        return VP_HID_SEND_FATAL;
+    }
+
+    if (current_usb_state != VP_USB_STATE_CONFIGURED) {
+        return VP_HID_SEND_NOT_CONNECTED;
+    }
+
+    return USBHS_HidDevice_SendVendorReport(ptr, len)
+               ? VP_HID_SEND_SENT
+               : VP_HID_SEND_RETRY_LATER;
+}
+
+vp_bool_t c_vp_hid_route_ready(const vp_hid_route_t route) {
+    switch (route) {
+        case VP_HID_ROUTE_BLE:
+            return ble_mouse_route_ready();
+        case VP_HID_ROUTE_USB:
+            return usb_mouse_route_ready();
+        case VP_HID_ROUTE_DONGLE_2G4:
+            return dongle_mouse_route_ready();
+        default:
+            return 0u;
+    }
+}
+
+vp_hid_send_status_t c_vp_hid_send_mouse(const vp_hid_route_t route,
+                                         const uint8_t buttons, const int8_t dx,
+                                         const int8_t dy, const int8_t wheel) {
+    mouse_report_t rpt;
+    rpt.buttons = buttons;
+    rpt.dx = clamp_i8_to_hid_range(dx);
+    rpt.dy = clamp_i8_to_hid_range(dy);
+    rpt.wheel = clamp_i8_to_hid_range(wheel);
+
+    switch (route) {
+        case VP_HID_ROUTE_BLE:
+            return ble_send_mouse_report(&rpt);
+        case VP_HID_ROUTE_USB:
+            return usb_send_mouse_report(&rpt);
+        case VP_HID_ROUTE_DONGLE_2G4:
+            return dongle_send_mouse_report(&rpt);
+        default:
+            return VP_HID_SEND_NOT_CONNECTED;
+    }
+}
+
 vp_hid_send_status_t c_vp_hid_send_vendor(const vp_hid_route_t route,
                                           const uint8_t*       ptr,
                                           const uint16_t       len) {
-    (void)route;
-    (void)ptr;
-    (void)len;
-    return VP_HID_SEND_NOT_CONNECTED;
+    switch (route) {
+        case VP_HID_ROUTE_USB:
+            return usb_send_vendor_report(ptr, len);
+        case VP_HID_ROUTE_BLE:
+        case VP_HID_ROUTE_DONGLE_2G4:
+        default:
+            return VP_HID_SEND_NOT_CONNECTED;
+    }
 }
 
 vp_status_t c_vp_hid_route_enable(const vp_hid_route_t route,

@@ -1,6 +1,6 @@
 use half::f16;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct SflpGameRotationRaw {
     pub x: u16,
     pub y: u16,

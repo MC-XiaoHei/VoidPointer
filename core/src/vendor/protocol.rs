@@ -1,0 +1,383 @@
+use crate::config::ConfigManager;
+use crate::hid::types::{CUSTOM_REPORT_PAYLOAD_CAPACITY, CustomReport};
+use crate::power::{PowerManager, PowerState};
+use crate::route::{HidRoute, HidRouter, UsbState};
+use crate::runtime::events::EventQueueStats;
+use crate::vendor::VendorRxStats;
+
+pub const CUSTOM_PROTOCOL_MAGIC: u8 = 0xA5;
+pub const CUSTOM_PROTOCOL_VERSION: u8 = 1;
+pub const CUSTOM_PROTOCOL_HEADER_LEN: usize = 16;
+pub const CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN: usize =
+    CUSTOM_REPORT_PAYLOAD_CAPACITY - CUSTOM_PROTOCOL_HEADER_LEN;
+
+pub const CUSTOM_FLAG_REQUEST: u8 = 1 << 0;
+pub const CUSTOM_FLAG_RESPONSE: u8 = 1 << 1;
+pub const CUSTOM_FLAG_FRAGMENT: u8 = 1 << 2;
+
+pub const CUSTOM_STATUS_OK: u16 = 0x0000;
+pub const CUSTOM_STATUS_INVALID_COMMAND: u16 = 0x0001;
+pub const CUSTOM_STATUS_INVALID_ARGUMENT: u16 = 0x0002;
+pub const CUSTOM_STATUS_BAD_LENGTH: u16 = 0x0003;
+pub const CUSTOM_STATUS_BAD_SEQUENCE: u16 = 0x0004;
+pub const CUSTOM_STATUS_CRC_MISMATCH: u16 = 0x0005;
+pub const CUSTOM_STATUS_BUSY: u16 = 0x0006;
+pub const CUSTOM_STATUS_NOT_READY: u16 = 0x0007;
+pub const CUSTOM_STATUS_STORAGE_ERROR: u16 = 0x0008;
+pub const CUSTOM_STATUS_INTERNAL_ERROR: u16 = 0x0009;
+
+pub const CUSTOM_CMD_PING: u16 = 0x0000;
+pub const CUSTOM_CMD_GET_PROTOCOL_INFO: u16 = 0x0001;
+pub const CUSTOM_CMD_GET_DEVICE_INFO: u16 = 0x0002;
+pub const CUSTOM_CMD_GET_CONFIG_INFO: u16 = 0x0100;
+pub const CUSTOM_CMD_GET_ROUTE_STATE: u16 = 0x0201;
+pub const CUSTOM_CMD_GET_POWER_STATE: u16 = 0x0202;
+pub const CUSTOM_CMD_GET_DIAGNOSTICS: u16 = 0x0300;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CustomFrameView<'a> {
+    pub magic: u8,
+    pub version: u8,
+    pub flags: u8,
+    pub sequence: u8,
+    pub command: u16,
+    pub status: u16,
+    pub offset: u16,
+    pub total_len: u32,
+    pub payload: &'a [u8],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ParseError {
+    TooShort,
+    BadMagic,
+    UnsupportedVersion,
+    FragmentNotSupported,
+    PayloadTooLarge,
+    LengthMismatch,
+    TotalLengthMismatch,
+    NonZeroOffset,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CustomFrameHeader {
+    pub flags: u8,
+    pub sequence: u8,
+    pub command: u16,
+    pub status: u16,
+    pub offset: u16,
+    pub total_len: u32,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ProtocolStats {
+    pub rx_ok: u16,
+    pub rx_invalid: u16,
+    pub rx_unsupported: u16,
+    pub tx_generated: u16,
+    pub tx_dropped_no_route: u16,
+}
+
+pub fn parse_frame(buf: &[u8]) -> Result<CustomFrameView<'_>, ParseError> {
+    if buf.len() < CUSTOM_PROTOCOL_HEADER_LEN {
+        return Err(ParseError::TooShort);
+    }
+
+    if buf[0] != CUSTOM_PROTOCOL_MAGIC {
+        return Err(ParseError::BadMagic);
+    }
+
+    if buf[1] != CUSTOM_PROTOCOL_VERSION {
+        return Err(ParseError::UnsupportedVersion);
+    }
+
+    let flags = buf[2];
+    if (flags & CUSTOM_FLAG_FRAGMENT) != 0 {
+        return Err(ParseError::FragmentNotSupported);
+    }
+
+    let command = u16::from_le_bytes([buf[4], buf[5]]);
+    let status = u16::from_le_bytes([buf[6], buf[7]]);
+    let offset = u16::from_le_bytes([buf[8], buf[9]]);
+    let total_len = u32::from_le_bytes([buf[10], buf[11], buf[12], buf[13]]);
+    let payload_len = u16::from_le_bytes([buf[14], buf[15]]) as usize;
+
+    if payload_len > CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN {
+        return Err(ParseError::PayloadTooLarge);
+    }
+
+    let expected_len = CUSTOM_PROTOCOL_HEADER_LEN + payload_len;
+    if buf.len() != expected_len {
+        return Err(ParseError::LengthMismatch);
+    }
+
+    if offset != 0 {
+        return Err(ParseError::NonZeroOffset);
+    }
+
+    if total_len != payload_len as u32 {
+        return Err(ParseError::TotalLengthMismatch);
+    }
+
+    Ok(CustomFrameView {
+        magic: buf[0],
+        version: buf[1],
+        flags,
+        sequence: buf[3],
+        command,
+        status,
+        offset,
+        total_len,
+        payload: &buf[CUSTOM_PROTOCOL_HEADER_LEN..expected_len],
+    })
+}
+
+pub fn encode_frame(
+    header: CustomFrameHeader,
+    payload: &[u8],
+    out: &mut CustomReport,
+) -> Result<(), ParseError> {
+    if payload.len() > CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN {
+        return Err(ParseError::PayloadTooLarge);
+    }
+
+    out.data[0] = CUSTOM_PROTOCOL_MAGIC;
+    out.data[1] = CUSTOM_PROTOCOL_VERSION;
+    out.data[2] = header.flags;
+    out.data[3] = header.sequence;
+    out.data[4..6].copy_from_slice(&header.command.to_le_bytes());
+    out.data[6..8].copy_from_slice(&header.status.to_le_bytes());
+    out.data[8..10].copy_from_slice(&header.offset.to_le_bytes());
+    out.data[10..14].copy_from_slice(&header.total_len.to_le_bytes());
+    out.data[14..16].copy_from_slice(&(payload.len() as u16).to_le_bytes());
+
+    if !payload.is_empty() {
+        out.data[CUSTOM_PROTOCOL_HEADER_LEN..CUSTOM_PROTOCOL_HEADER_LEN + payload.len()]
+            .copy_from_slice(payload);
+    }
+
+    let total_len = CUSTOM_PROTOCOL_HEADER_LEN + payload.len();
+    for b in &mut out.data[total_len..] {
+        *b = 0;
+    }
+    out.len = total_len as u16;
+    Ok(())
+}
+
+pub fn encode_response(
+    command: u16,
+    sequence: u8,
+    status: u16,
+    payload: &[u8],
+    out: &mut CustomReport,
+) -> Result<(), ParseError> {
+    encode_frame(
+        CustomFrameHeader {
+            flags: CUSTOM_FLAG_RESPONSE,
+            sequence,
+            command,
+            status,
+            offset: 0,
+            total_len: payload.len() as u32,
+        },
+        payload,
+        out,
+    )
+}
+
+pub fn encode_error_response(
+    command: u16,
+    sequence: u8,
+    status: u16,
+    out: &mut CustomReport,
+) -> Result<(), ParseError> {
+    encode_response(command, sequence, status, &[], out)
+}
+
+pub fn build_protocol_info_payload() -> [u8; 4] {
+    [
+        CUSTOM_PROTOCOL_VERSION,
+        CUSTOM_PROTOCOL_HEADER_LEN as u8,
+        CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN as u8,
+        0u8,
+    ]
+}
+
+pub fn build_route_state_payload(router: &HidRouter) -> [u8; 5] {
+    [
+        router.preferred_mouse_route().as_ffi(),
+        router.preferred_custom_route().as_ffi(),
+        router.is_ble_connected() as u8,
+        router.is_usb_configured() as u8,
+        router.has_wireless_connection() as u8,
+    ]
+}
+
+pub fn build_config_info_payload(config: &ConfigManager) -> [u8; 12] {
+    let mut payload = [0u8; 12];
+    payload[0..2].copy_from_slice(&config.current_config_version().to_le_bytes());
+    payload[2] = config.is_dirty() as u8;
+    payload[3] = 0;
+    payload[4..8].copy_from_slice(&config.current_payload_len().to_le_bytes());
+    payload[8..12].copy_from_slice(&config.current_payload_crc32().to_le_bytes());
+    payload
+}
+
+pub fn build_power_state_payload(
+    power: &PowerManager,
+    router: &HidRouter,
+    config: &ConfigManager,
+) -> [u8; 12] {
+    let mut payload = [0u8; 12];
+    payload[0] = match power.state() {
+        PowerState::Active => 0,
+        PowerState::Suspend => 1,
+        PowerState::Sleep => 2,
+    };
+    payload[1] = match router.usb_state() {
+        UsbState::Detached => 0,
+        UsbState::Attached => 1,
+        UsbState::Configured => 2,
+        UsbState::Suspended => 3,
+        UsbState::Error => 4,
+    };
+    payload[2] = router.has_wireless_connection() as u8;
+    payload[3] = config.is_dirty() as u8;
+
+    let power_config = power.config();
+    payload[4..8].copy_from_slice(&power_config.suspend_timeout_ms.to_le_bytes());
+    payload[8..12].copy_from_slice(&power_config.disconnect_sleep_timeout_ms.to_le_bytes());
+    payload
+}
+
+pub fn build_diagnostics_payload(
+    protocol_stats: ProtocolStats,
+    vendor_rx_stats: VendorRxStats,
+    event_queue_stats: EventQueueStats,
+) -> [u8; 16] {
+    let mut payload = [0u8; 16];
+    payload[0..2].copy_from_slice(&protocol_stats.rx_ok.to_le_bytes());
+    payload[2..4].copy_from_slice(&protocol_stats.rx_invalid.to_le_bytes());
+    payload[4..6].copy_from_slice(&protocol_stats.rx_unsupported.to_le_bytes());
+    payload[6..8].copy_from_slice(&protocol_stats.tx_generated.to_le_bytes());
+    payload[8..10].copy_from_slice(&protocol_stats.tx_dropped_no_route.to_le_bytes());
+    payload[10..12].copy_from_slice(&vendor_rx_stats.dropped.to_le_bytes());
+    payload[12..14].copy_from_slice(&vendor_rx_stats.too_large.to_le_bytes());
+    payload[14..16].copy_from_slice(&event_queue_stats.dropped.to_le_bytes());
+    payload
+}
+
+pub fn handle_request(
+    frame: CustomFrameView<'_>,
+    router: &HidRouter,
+    config: &mut ConfigManager,
+    power: &PowerManager,
+    protocol_stats: ProtocolStats,
+    vendor_rx_stats: VendorRxStats,
+    event_queue_stats: EventQueueStats,
+    out: &mut CustomReport,
+) -> Result<(), u16> {
+    if (frame.flags & CUSTOM_FLAG_REQUEST) == 0 || (frame.flags & CUSTOM_FLAG_RESPONSE) != 0 {
+        return encode_error_response(
+            frame.command,
+            frame.sequence,
+            CUSTOM_STATUS_INVALID_ARGUMENT,
+            out,
+        )
+        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR);
+    }
+
+    match frame.command {
+        CUSTOM_CMD_PING => encode_response(
+            frame.command,
+            frame.sequence,
+            CUSTOM_STATUS_OK,
+            frame.payload,
+            out,
+        )
+        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+        CUSTOM_CMD_GET_PROTOCOL_INFO => {
+            let payload = build_protocol_info_payload();
+            encode_response(
+                frame.command,
+                frame.sequence,
+                CUSTOM_STATUS_OK,
+                &payload,
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+        }
+        CUSTOM_CMD_GET_DEVICE_INFO => {
+            let payload = b"VoidPointer";
+            encode_response(
+                frame.command,
+                frame.sequence,
+                CUSTOM_STATUS_OK,
+                payload,
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+        }
+        CUSTOM_CMD_GET_CONFIG_INFO => {
+            let payload = build_config_info_payload(config);
+            encode_response(
+                frame.command,
+                frame.sequence,
+                CUSTOM_STATUS_OK,
+                &payload,
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+        }
+        CUSTOM_CMD_GET_ROUTE_STATE => {
+            let payload = build_route_state_payload(router);
+            encode_response(
+                frame.command,
+                frame.sequence,
+                CUSTOM_STATUS_OK,
+                &payload,
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+        }
+        CUSTOM_CMD_GET_POWER_STATE => {
+            let payload = build_power_state_payload(power, router, config);
+            encode_response(
+                frame.command,
+                frame.sequence,
+                CUSTOM_STATUS_OK,
+                &payload,
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+        }
+        CUSTOM_CMD_GET_DIAGNOSTICS => {
+            let payload =
+                build_diagnostics_payload(protocol_stats, vendor_rx_stats, event_queue_stats);
+            encode_response(
+                frame.command,
+                frame.sequence,
+                CUSTOM_STATUS_OK,
+                &payload,
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+        }
+        _ => encode_error_response(
+            frame.command,
+            frame.sequence,
+            CUSTOM_STATUS_INVALID_COMMAND,
+            out,
+        )
+        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+    }
+}
+
+pub fn preferred_response_route(router: &HidRouter, request_route: u8) -> HidRoute {
+    let request_route = HidRoute::from(request_route);
+    if request_route != HidRoute::None {
+        request_route
+    } else {
+        router.preferred_custom_route()
+    }
+}

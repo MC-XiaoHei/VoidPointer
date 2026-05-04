@@ -104,6 +104,7 @@ typedef struct {
 void vp_core_init(void);
 void vp_core_poll(void);
 void vp_on_ble_connected(vp_timestamp_t timestamp);
+void vp_on_ble_input_ready(vp_timestamp_t timestamp);
 void vp_on_ble_disconnected(uint8_t reason, vp_timestamp_t timestamp);
 void vp_on_dongle_connected(vp_timestamp_t timestamp);
 void vp_on_dongle_disconnected(uint8_t reason, vp_timestamp_t timestamp);

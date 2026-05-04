@@ -7,6 +7,9 @@ pub enum RuntimeEvent {
     BleConnected {
         timestamp: u32,
     },
+    BleInputReady {
+        timestamp: u32,
+    },
     BleDisconnected {
         reason: u8,
         timestamp: u32,

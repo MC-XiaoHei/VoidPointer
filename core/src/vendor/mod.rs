@@ -1,6 +1,17 @@
+pub mod protocol;
+
+use crate::config::ConfigManager;
+use crate::hid::types::CustomReport;
+use crate::power::PowerManager;
+use crate::route::HidRouter;
+use crate::runtime::EVENT_QUEUE;
 use crate::utils::critical::interrupt_free;
 use core::cell::UnsafeCell;
 use core::ptr;
+use protocol::{
+    CUSTOM_STATUS_BAD_LENGTH, CUSTOM_STATUS_INTERNAL_ERROR, CUSTOM_STATUS_INVALID_COMMAND,
+    ProtocolStats, encode_error_response, handle_request, parse_frame, preferred_response_route,
+};
 
 pub const VENDOR_RX_PAYLOAD_CAPACITY: usize = 64;
 const VENDOR_RX_QUEUE_CAPACITY: usize = 4;
@@ -134,22 +145,32 @@ impl VendorRxQueue {
 
 pub static VENDOR_RX_QUEUE: VendorRxQueue = VendorRxQueue::new();
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PendingVendorTx {
+    pub route: u8,
+    pub report: CustomReport,
+}
+
 pub struct VendorRuntime {
     pending_rx: bool,
+    pending_tx: Option<PendingVendorTx>,
     last_route: u8,
     last_len: u16,
     last_timestamp: u32,
     processed_count: u16,
+    stats: ProtocolStats,
 }
 
 impl VendorRuntime {
     pub fn new() -> Self {
         Self {
             pending_rx: false,
+            pending_tx: None,
             last_route: 0,
             last_len: 0,
             last_timestamp: 0,
             processed_count: 0,
+            stats: ProtocolStats::default(),
         }
     }
 
@@ -157,15 +178,101 @@ impl VendorRuntime {
         self.pending_rx = true;
     }
 
-    pub fn poll(&mut self) {
+    pub fn has_pending_tx(&self) -> bool {
+        self.pending_tx.is_some()
+    }
+
+    pub fn take_pending_tx(&mut self) -> Option<PendingVendorTx> {
+        self.pending_tx.take()
+    }
+
+    pub fn requeue_pending_tx(&mut self, tx: PendingVendorTx) {
+        self.pending_tx = Some(tx);
+    }
+
+    pub fn stats(&self) -> ProtocolStats {
+        self.stats
+    }
+
+    pub fn poll(&mut self, router: &HidRouter, config: &mut ConfigManager, power: &PowerManager) {
         while let Some(report) = VENDOR_RX_QUEUE.pop() {
             self.last_route = report.route;
             self.last_len = report.len;
             self.last_timestamp = report.timestamp;
             self.processed_count = self.processed_count.saturating_add(1);
+            self.handle_rx_report(report, router, config, power);
         }
 
         self.pending_rx = false;
+    }
+
+    fn handle_rx_report(
+        &mut self,
+        report: VendorRxReport,
+        router: &HidRouter,
+        config: &mut ConfigManager,
+        power: &PowerManager,
+    ) {
+        let len = report.len as usize;
+        let buf = &report.data[..len.min(VENDOR_RX_PAYLOAD_CAPACITY)];
+        let route = preferred_response_route(router, report.route);
+
+        let event_queue_stats = EVENT_QUEUE.stats();
+        let vendor_rx_stats = VENDOR_RX_QUEUE.stats();
+
+        let mut response = CustomReport::default();
+        match parse_frame(buf) {
+            Ok(frame) => match handle_request(
+                frame,
+                router,
+                config,
+                power,
+                self.stats,
+                vendor_rx_stats,
+                event_queue_stats,
+                &mut response,
+            ) {
+                Ok(()) => {
+                    self.stats.rx_ok = self.stats.rx_ok.saturating_add(1);
+                    self.queue_response(route.as_ffi(), response);
+                }
+                Err(status) => {
+                    if status == CUSTOM_STATUS_INVALID_COMMAND {
+                        self.stats.rx_unsupported = self.stats.rx_unsupported.saturating_add(1);
+                    } else {
+                        self.stats.rx_invalid = self.stats.rx_invalid.saturating_add(1);
+                    }
+
+                    if status == CUSTOM_STATUS_INTERNAL_ERROR {
+                        let _ = encode_error_response(
+                            frame.command,
+                            frame.sequence,
+                            status,
+                            &mut response,
+                        );
+                    }
+                    if response.len != 0 {
+                        self.queue_response(route.as_ffi(), response);
+                    }
+                }
+            },
+            Err(_) => {
+                self.stats.rx_invalid = self.stats.rx_invalid.saturating_add(1);
+                if encode_error_response(0, 0, CUSTOM_STATUS_BAD_LENGTH, &mut response).is_ok() {
+                    self.queue_response(route.as_ffi(), response);
+                }
+            }
+        }
+    }
+
+    fn queue_response(&mut self, route: u8, report: CustomReport) {
+        if route == 0 {
+            self.stats.tx_dropped_no_route = self.stats.tx_dropped_no_route.saturating_add(1);
+            return;
+        }
+
+        self.pending_tx = Some(PendingVendorTx { route, report });
+        self.stats.tx_generated = self.stats.tx_generated.saturating_add(1);
     }
 }
 

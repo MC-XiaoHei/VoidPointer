@@ -6,6 +6,23 @@ pub struct MouseReport {
     pub wheel: i8,
 }
 
+pub const CUSTOM_REPORT_PAYLOAD_CAPACITY: usize = 64;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CustomReport {
+    pub len: u16,
+    pub data: [u8; CUSTOM_REPORT_PAYLOAD_CAPACITY],
+}
+
+impl Default for CustomReport {
+    fn default() -> Self {
+        Self {
+            len: 0,
+            data: [0u8; CUSTOM_REPORT_PAYLOAD_CAPACITY],
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct MouseButtons {
     pub left: bool,

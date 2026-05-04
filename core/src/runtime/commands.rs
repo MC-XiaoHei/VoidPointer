@@ -1,5 +1,5 @@
 use crate::ffi::bindings::*;
-use crate::hid::types::{HidSendStatus, MouseReport};
+use crate::hid::types::{CustomReport, HidSendStatus, MouseReport};
 use crate::power::PowerState;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -7,6 +7,10 @@ pub enum RuntimeCommand {
     SendMouse {
         route: vp_hid_route_t,
         report: MouseReport,
+    },
+    SendVendor {
+        route: vp_hid_route_t,
+        report: CustomReport,
     },
     PowerTransition {
         target: PowerState,
@@ -21,6 +25,11 @@ pub enum RuntimeCommandResult {
     MouseSent {
         route: vp_hid_route_t,
         report: MouseReport,
+        status: HidSendStatus,
+    },
+    VendorSent {
+        route: vp_hid_route_t,
+        report: CustomReport,
         status: HidSendStatus,
     },
     PowerTransitionDone {
@@ -47,6 +56,16 @@ impl RuntimeCommand {
                 };
 
                 RuntimeCommandResult::MouseSent {
+                    route,
+                    report,
+                    status: map_hid_status(status),
+                }
+            }
+            Self::SendVendor { route, report } => {
+                let status =
+                    unsafe { c_vp_hid_send_vendor(route, report.data.as_ptr(), report.len) };
+
+                RuntimeCommandResult::VendorSent {
                     route,
                     report,
                     status: map_hid_status(status),

@@ -9,11 +9,11 @@
 | Rust lifecycle | 已切到 `vp_core_init()` / `vp_core_poll()`；`c_vp_request_core_poll()` 已接到 TMOS event；临时 debug polling bridge 已移除；`core/src/utils/runtime.rs` 仍残留 legacy `tick()` 原型但未接入当前 Runtime | 仍需完善 deferred work 处理并清理 legacy 原型。 |
 | Input | 已有 Rust input/encoder 原型；新 Runtime 已通过低有效二态输入 + 电平 EXTI + debounce 接入按钮，通过 GPIOA 待处理服务补偿 CH585 PFIC 未再次派发的待处理中断标志；encoder EXTI 接入 wheel 到 BLE HID | mode switch GPIO 映射与 route policy、IMU INT。 |
 | Motion / Attitude | 已有 attitude/motion 模块和 LSM6DSV 原型 | 接入 IMU INT + async FIFO + latest sample cache。 |
-| Report / HID | 已有 report/hid 模块和 BLE HID 原型；新 Runtime 已打通最小 GPIO snapshot → BLE mouse buttons/wheel report，`RetryLater` 保留 pending | 扩展为 route-aware HID send、USB/2.4G stub、motion dx/dy 聚合、异步完成处理。 |
-| Route | 已有独立 Rust route 模块骨架，维护 BLE/dongle connected 与 USB state | 仍需 route selection、`usb_mouse_policy`、Vendor route 优先级、USB/2.4G 发送实现。 |
+| Report / HID | 已有 report/hid 模块和 BLE HID 原型；新 Runtime 已打通最小 GPIO snapshot → route-aware 单路 mouse report 发送，当前遵循“USB configured 时只走 USB，否则回落无线”策略；USB configured 时会关闭 BLE 广播并断开现有 BLE 连接，`RetryLater` 保留 pending | 仍需 2.4G stub 完整接入、motion dx/dy 聚合、异步完成处理、`usb_mouse_policy` 配置化。 |
+| Route | 已有独立 Rust route 模块骨架，维护 BLE/dongle connected 与 USB state；当前 mouse route 已按“USB configured 优先且独占，否则回落无线”运行，并在 USB configured 时联动关闭 BLE 广播/断开现有 BLE | 仍需 mode switch 驱动的 BLE/2.4G route selection、`usb_mouse_policy`、Vendor route 优先级、2.4G 发送实现。 |
 | Power | 已有独立 Rust power 模块骨架和简化 `Active` / `Suspend` / `Sleep` 转换；Power transition 已改为 RuntimeCommand 边界，不在 PowerManager 内直接调用 C API；power timeout 已安排 delayed poll 重新评估 | blocker、断连时间门控、平台 power API、wake/restore、配置参数仍需补齐。 |
 | Config | 已有 `ConfigManager` dirty flag 骨架 | 仍需 `DeviceConfig`、双槽读写、CRC、migration、runtime apply。 |
-| Vendor/WebHID | 已有 `VendorRuntime` pending RX 骨架；新增固定容量 vendor RX payload queue，callback 短路径复制最多 64B payload 后由 bottom-half drain | 仍需 vendor report protocol、命令解析、响应与保存流程；USBHS 512B payload/分片策略未完成。 |
+| Vendor/WebHID | 已有 `VendorRuntime` RX queue + 单包协议解析骨架；runtime 可在 `vp_core_poll()` 中解析统一 frame 并生成 route-aware 响应；当前已接入 `Ping` / `GetProtocolInfo` / `GetDeviceInfo` / `GetConfigInfo` / `GetRouteState` / `GetPowerState` / `GetDiagnostics` | 仍需多包分片、配置读写命令、USBHS 512B payload 策略、BLE Custom GATT / USB Custom HID 实际 transport backend。 |
 | FFI ABI | `platform/Bind/c_api.h` 已目标化，`bindgen`/`cbindgen` 已接入并生成 `rust_api.h` | 大量 C API 仍是 `UNSUPPORTED`，callback 多数只置位 pending/dirty。 |
 | Platform C | 有 CH585/LSM6DSV/BLE 原型 | 拆成底层 API，不持有业务状态。 |
 
@@ -23,7 +23,7 @@
 
 - [ ] 实现 ISR-safe 与 bottom-half 执行规则。（已建立固定容量 ISR event queue，C→Rust 快速 callback 不再直接借用 Runtime；具体业务事件仍需逐步接入真实 EXTI/I2C/Vendor 数据）
   - [x] ISR-safe Rust callback 只做短状态更新、事件入队、调用 C 的轻量 API。
-  - [ ] HID retry、I2C 读取请求、DataFlash 写入、WebHID 解析、电源切换放到 `vp_core_poll()`。（HID retry、Power transition、IMU FIFO read request 已走 poll/RuntimeCommand；HID RetryLater 现在使用延迟 TMOS poll 而非立即 tight retry；Vendor RX payload 已固定缓冲并在 poll 中 drain；DataFlash/WebHID 协议解析未完成）
+  - [ ] HID retry、I2C 读取请求、DataFlash 写入、WebHID 解析、电源切换放到 `vp_core_poll()`。（HID retry、Power transition、IMU FIFO read request 已走 poll/RuntimeCommand；HID RetryLater 现在使用延迟 TMOS poll 而非立即 tight retry；Vendor RX payload 已固定缓冲并在 poll 中解析单包协议与生成响应；DataFlash 保存、多包分片、配置会话状态机仍未完成）
   - [x] ISR 或 Rust 快速回调中如产生 deferred work，Rust 通过 C API 请求 TMOS event 调度 `vp_core_poll()`。
 - [ ] 接入 RTC 作为统一事件时间戳。（Rust runtime 与已接入 BLE 事件使用 RTC millis；EXTI/debounce/IMU/USB 平台事件待接入时仍需逐项验证）
   - [x] Rust 统一使用 C 提供的 RTC timestamp。
@@ -38,7 +38,7 @@
   - [x] 主循环只运行 `TMOS_SystemProcess()`/协议栈，不直接轮询业务状态。
 - [ ] 实现全局 Runtime 访问保护。
   - [x] 确定使用短临界区或 ISR event queue。
-  - [ ] 禁止在长耗时操作期间持有 Runtime 可变借用。（已为 HID mouse send、Power transition、IMU FIFO read request 建立 RuntimeCommand 边界，先释放 Runtime 借用再调用 C API；Flash/DataFlash 等长耗时调用仍需继续拆分）
+  - [ ] 禁止在长耗时操作期间持有 Runtime 可变借用。（已为 HID mouse send、Power transition、IMU FIFO read request、Vendor send response 建立 RuntimeCommand 边界，先释放 Runtime 借用再调用 C API；Flash/DataFlash 等长耗时调用仍需继续拆分）
 
 ---
 
@@ -50,7 +50,7 @@
 
 - [ ] 生命周期入口。
   - [ ] `vp_core_init()`：Rust Runtime 初始化、配置加载、初始状态同步。（入口函数、Runtime 初始化、初始 input snapshot/encoder sync 已完成；配置加载未完成）
-  - [ ] `vp_core_poll()`：Rust bottom-half，由 TMOS event 调度；处理 deferred work、HID retry、I2C 读取请求、配置任务、电源决策。（入口函数、TMOS event 调度、固定容量 event queue、HID/Power/IMU FIFO RuntimeCommand 边界、pass budget、电源/config/vendor 骨架、最小 BLE HID retry pending 已完成；DataFlash/WebHID 等未完成；临时 debug polling bridge 已移除）
+  - [ ] `vp_core_poll()`：Rust bottom-half，由 TMOS event 调度；处理 deferred work、HID retry、I2C 读取请求、配置任务、电源决策。（入口函数、TMOS event 调度、固定容量 event queue、HID/Power/IMU FIFO RuntimeCommand 边界、pass budget、电源/config/vendor 骨架、最小 BLE HID retry pending、单包 vendor protocol 解析/响应 已完成；DataFlash/多包分片等未完成；临时 debug polling bridge 已移除）
 - [ ] 输入入口。
   - [x] `vp_on_button_exti(button_id, level, timestamp)`。（ABI/callback 入队路径已完成；C GPIOA 低有效二态输入电平 EXTI 已接入）
   - [x] `vp_on_debounce_tick(timestamp)`。（ABI/callback 入队路径已完成；debounce tick 由 main runtime service 基于 RTC millis 驱动）
@@ -65,10 +65,10 @@
   - [x] `vp_on_ble_disconnected(reason, timestamp)`。
   - [ ] `vp_on_dongle_connected(timestamp)`。（ABI/callback 入队路径已完成；2.4G 协议栈未接入）
   - [ ] `vp_on_dongle_disconnected(timestamp)`。（ABI/callback 入队路径已完成；2.4G 协议栈未接入）
-  - [ ] `vp_on_usb_state_changed(state, timestamp)`。（ABI/callback 入队路径已完成；USB stack 未接入）
+  - [x] `vp_on_usb_state_changed(state, timestamp)`。（ABI/callback 入队路径已完成；USB state 变化已由 USBHS 平台事件回调到 Rust runtime）
   - [ ] `vp_on_hid_send_done(route, status, timestamp)`，如果发送采用异步完成模型。（ABI/callback 入队路径已完成；当前 BLE send 为同步返回）
 - [ ] WebHID / Vendor 入口。
-  - [ ] `vp_on_vendor_report_rx(route, ptr, len, timestamp)`。（payload 固定缓冲复制与 callback 入队路径已完成；协议解析未完成，当前只支持最多 64B 单包）
+  - [ ] `vp_on_vendor_report_rx(route, ptr, len, timestamp)`。（payload 固定缓冲复制、callback 入队、单包 frame 解析、统一响应生成已完成；当前只支持最多 64B 单包，分片/配置会话未完成）
 
 ### 1.2 Rust → C imported hardware APIs
 
@@ -98,10 +98,10 @@
   - [ ] 中止 I2C 事务。
 - [ ] HID API。
   - [ ] 按 `../RESOURCE_PROFILE.md` 中的 BLE/USB HID profile 实现目标 mouse/vendor report 接口。
-  - [ ] 查询 route ready。
-  - [ ] 发送 mouse report。
-  - [ ] 发送 vendor report。
-  - [ ] BLE/2.4G/USB route enable/disable。
+  - [x] 查询 route ready。（BLE/USB 已接入；BLE 在 USB configured 时会被压成 not ready；2.4G 仍为 stub）
+  - [x] 发送 mouse report。（已接入 route-aware `c_vp_hid_send_mouse()`；当前 USB/BLE 可用，2.4G 仍为 stub）
+  - [x] 发送 vendor report。（当前 USB vendor 已接入；BLE/2.4G vendor 仍未实现）
+  - [x] BLE/2.4G/USB route enable/disable。（当前 BLE route enable/reset 已接入，用于 USB configured 时停广播/断连；USB/2.4G 仍未实现）
 - [ ] Power API。
   - [ ] 准备进入 `Suspend`。
   - [ ] 执行进入 `Suspend`。
@@ -128,7 +128,7 @@
 - [ ] 用事件化输入 callback 替代主路径中的同步 `c_get_input_status()`。（按键与 encoder 主路径已走 EXTI/debounce；事件处理中的 GPIO 读取仍用于 debounce 采样、初始 sync 与 encoder 状态兜底同步）
 - [ ] 用 GPIO/EXTI/Timer API 替代输入业务中的直接 GPIO 快照轮询。（已使用目标 `c_vp_gpio_read()`；button EXTI/debounce 与 encoder EXTI 已接入；ModeSwitch 未完成）
 - [ ] 用 IMU INT + async FIFO + `vp_on_imu_sample()` 替代主路径中的同步 `c_read_sflp_game_rotation_raw()`。（callback/event queue 与 `c_vp_imu_read_fifo_async()` RuntimeCommand 请求路径已完成；C 异步 I2C/FIFO 状态机未完成）
-- [ ] 将 BLE-only `c_send_ble_hid_mouse_report()` 扩展或替换为 route-aware `c_vp_hid_send_mouse(route, ...)`。
+- [x] 将 BLE-only `c_send_ble_hid_mouse_report()` 扩展或替换为 route-aware `c_vp_hid_send_mouse(route, ...)`。
 - [x] 保留 RTC API 能力，并按目标 API 命名提供 `c_vp_rtc_tick/millis/micros()`。
 - [ ] 为每个新增 Rust→C API 标注 ISR-safe 或 bottom-half only。
 - [x] 为每个新增 C→Rust callback 确认 `cbindgen` 生成声明稳定可用。
@@ -214,19 +214,18 @@
 
 > BLE HID mouse report、USB vendor HID endpoint/report 依据见 `../RESOURCE_PROFILE.md`。
 
-- [x] 封装 BLE HID mouse report 发送。
-- [ ] 实现 USB HID mouse report 发送。
-- [ ] 实现 USB Vendor HID report 收发。
+- [x] 实现 USB HID mouse report 发送。
+- [x] 实现 USB Vendor HID report 收发。
 - [ ] 2.4G dongle report 发送保留 stub，返回 `Unsupported` 或 `NotConnected`，待 dongle 协议栈选型后补齐。
-- [ ] 将底层发送结果映射为统一状态。（BLE route 已映射，USB/2.4G 仍待实现）
+- [ ] 将底层发送结果映射为统一状态。（BLE/USB route 已映射，2.4G 仍待实现）
   - [x] `Sent`。
   - [x] `RetryLater`。
   - [x] `NotConnected`。
   - [x] `Fatal`。
 - [x] BLE connected/disconnected 事件回调 Rust。
-- [ ] USB attach/detach/configured 事件回调 Rust。
+- [x] USB attach/detach/configured 事件回调 Rust。（当前 USBHS 已接入 attached/configured/suspended；runtime 已据此执行单路 route 选择与 BLE 停广播/断连策略）
 - [ ] 2.4G dongle connected/disconnected 事件回调 Rust。
-- [ ] Vendor report RX 只传 raw bytes 给 Rust。
+- [x] Vendor report RX 只传 raw bytes 给 Rust。
 
 
 ### 2.6 Power
@@ -428,6 +427,7 @@
 - [ ] 实现 route selection。
   - [ ] Mode switch = BLE → 优先 BLE。
   - [ ] Mode switch = 2.4G → 优先 Dongle。
+  - [x] 当前最小策略：USB configured 优先且独占，否则回落 BLE（2.4G v1 stub 视为不可用）。
   - [ ] USB 行为由配置决定。
 - [ ] 实现 USB mouse policy。
   - [ ] 默认 `usb_mouse_policy = Disabled` 时 USB configured 禁用全部 mouse report。
@@ -435,6 +435,9 @@
   - [ ] `Enabled` 时 mouse report 全部开启，并默认走 USB。
   - [ ] 允许 WebHID 配置。
 - [ ] 实现 route ready 判断。
+  - [x] BLE route ready 已接入，并在 USB configured 时强制为 not ready。
+  - [x] USB route ready 已接入，基于 USB configured 状态。
+  - [ ] 2.4G route ready 仍待实现。
 - [ ] 实现 route error recovery。
 
 ### 3.6 PowerManager
@@ -527,17 +530,17 @@
 ### 3.8 WebHID / Vendor 命令
 
 - [ ] 定义 vendor report 协议。
-- [ ] 命令：get device info。
-- [ ] 命令：get current config。
+- [x] 命令：get device info。（当前为临时占位 payload，固定字段布局仍待定义）
+- [x] 命令：get current config。（当前以 `GetConfigInfo` 形式提供 config version / dirty flag / payload size / CRC 占位信息；`ReadConfig` 尚未实现）
 - [ ] 命令：set runtime config。
 - [ ] 命令：save config。
 - [ ] 命令：reset config。
 - [ ] 命令：start calibration。
 - [ ] 命令：get sensor status。
-- [ ] 命令：get battery/power status。
+- [x] 命令：get battery/power status。（当前以 `GetPowerState` 形式提供 power state / USB state / wireless state / timeout diagnostics）
 - [ ] 命令：get firmware version。
-- [ ] Rust 解析命令并生成 response。
-- [ ] C 只收发 raw vendor report。
+- [x] Rust 解析命令并生成 response。（当前已覆盖 `Ping` / `GetProtocolInfo` / `GetDeviceInfo` / `GetConfigInfo` / `GetRouteState` / `GetPowerState` / `GetDiagnostics`；配置写会话、多包分片未完成）
+- [x] C 只收发 raw vendor report。
 - [ ] 配置写入期间阻止进入 `Suspend`/`Sleep`；config dirty 未保存时允许 `Suspend` 但禁止 `Sleep`。
 
 ### 3.9 Logging / Diagnostics
@@ -549,7 +552,7 @@
   - [ ] IMU sample dropped。
   - [ ] HID retry/fatal。
   - [ ] config CRC failure。
-- [ ] 提供 WebHID debug status 查询。
+- [x] 提供 WebHID debug status 查询。（当前 `GetDiagnostics` 已提供 protocol/vendor queue/event queue 基础计数）
 
 ---
 

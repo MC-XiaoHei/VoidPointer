@@ -333,6 +333,27 @@ extern void HidDev_Register(hidDevCfg_t *pCfg, hidDevCB_t *pCBs);
 extern void HidDev_RegisterReports(uint8_t numReports, hidRptMap_t *pRpt);
 
 /*********************************************************************
+ * @fn      HidDev_IsSecureConnected
+ *
+ * @brief   Returns whether the HID link is connected and security is complete.
+ *
+ * @return  TRUE if connected and secure, otherwise FALSE.
+ */
+extern uint8_t HidDev_IsSecureConnected(void);
+
+/*********************************************************************
+ * @fn      HidDev_IsReportNotifyEnabled
+ *
+ * @brief   Returns whether notifications are enabled for the given HID report.
+ *
+ * @param   id - HID report ID.
+ * @param   type - HID report type.
+ *
+ * @return  TRUE if the report CCCD has notify enabled on the active link.
+ */
+extern uint8_t HidDev_IsReportNotifyEnabled(uint8_t id, uint8_t type);
+
+/*********************************************************************
  * @fn      HidDev_Report
  *
  * @brief   Send a HID report.

@@ -1,18 +1,21 @@
 pub mod commands;
 pub mod events;
 
+use crate::attitude::types::SflpGameRotationRaw;
+use crate::attitude::{clear_current_attitude, update_current_attitude_from_raw};
 use crate::config::ConfigManager;
 use crate::ffi::bindings::{
-    VP_HID_ROUTE_BLE, c_vp_request_core_poll, c_vp_request_core_poll_after, c_vp_rtc_millis,
+    VP_STATUS_OK, c_vp_hid_route_ready, c_vp_request_core_poll, c_vp_request_core_poll_after,
+    c_vp_rtc_millis,
 };
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::input::types::InputManager;
 use crate::power::PowerManager;
-use crate::route::{HidRouter, UsbState};
+use crate::route::{HidRoute, HidRouter, UsbState};
 use crate::runtime::commands::{RuntimeCommand, RuntimeCommandResult};
 use crate::runtime::events::{EventQueue, RuntimeEvent};
 use crate::utils::global::MainLoopGlobal;
-use crate::vendor::VendorRuntime;
+use crate::vendor::{PendingVendorTx, VendorRuntime};
 use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 const HID_RETRY_DELAY_MS: u32 = 8;
@@ -38,6 +41,46 @@ impl DirtyFlags {
     pub fn any(self) -> bool {
         self.input || self.motion || self.report || self.power || self.config
     }
+
+    pub fn mark_input(&mut self) {
+        self.input = true;
+    }
+
+    pub fn clear_input(&mut self) {
+        self.input = false;
+    }
+
+    pub fn mark_motion(&mut self) {
+        self.motion = true;
+    }
+
+    pub fn clear_motion(&mut self) {
+        self.motion = false;
+    }
+
+    pub fn mark_report(&mut self) {
+        self.report = true;
+    }
+
+    pub fn clear_report(&mut self) {
+        self.report = false;
+    }
+
+    pub fn mark_power(&mut self) {
+        self.power = true;
+    }
+
+    pub fn clear_power(&mut self) {
+        self.power = false;
+    }
+
+    pub fn mark_config(&mut self) {
+        self.config = true;
+    }
+
+    pub fn clear_config(&mut self) {
+        self.config = false;
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -52,8 +95,20 @@ pub struct PendingFlags {
 
 impl PendingFlags {
     pub fn any(self) -> bool {
-        self.events || self.imu_fifo_read || self.vendor_rx || self.config_save || self.power_eval
+        self.events
+            || self.hid_retry
+            || self.imu_fifo_read
+            || self.vendor_rx
+            || self.config_save
+            || self.power_eval
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct LatestImuSample {
+    pub raw: SflpGameRotationRaw,
+    pub timestamp_ms: u32,
+    pub valid: bool,
 }
 
 pub struct Runtime {
@@ -68,6 +123,7 @@ pub struct Runtime {
     pub last_sent_buttons: u8,
     pub last_activity_ms: AtomicU32,
     pub power_eval_deadline_ms: Option<u32>,
+    pub latest_imu_sample: LatestImuSample,
 }
 
 impl Runtime {
@@ -75,6 +131,7 @@ impl Runtime {
         let now = unsafe { c_vp_rtc_millis() };
         let mut input = InputManager::new();
         let _ = input.sync_snapshot();
+        clear_current_attitude();
 
         Self {
             router: HidRouter::new(),
@@ -88,7 +145,12 @@ impl Runtime {
             last_sent_buttons: 0,
             last_activity_ms: AtomicU32::new(now),
             power_eval_deadline_ms: None,
+            latest_imu_sample: LatestImuSample::default(),
         }
+    }
+
+    pub fn enable_input_interrupts(&mut self) {
+        self.input.enable_interrupts();
     }
 
     pub fn request_poll() {
@@ -104,7 +166,7 @@ impl Runtime {
         self.last_activity_ms.store(timestamp_ms, Ordering::Release);
         if ENABLE_POWER_MANAGER {
             self.power_eval_deadline_ms = None;
-            self.dirty.power = true;
+            self.dirty.mark_power();
             self.pending.power_eval = true;
         }
     }
@@ -136,20 +198,19 @@ impl Runtime {
     pub fn apply_command_result(&mut self, result: RuntimeCommandResult) {
         match result {
             RuntimeCommandResult::MouseSent {
-                route,
+                route: _,
                 report,
                 status,
             } => {
-                if route != VP_HID_ROUTE_BLE as u8 {
-                    return;
+                if status == HidSendStatus::Sent {
+                    self.pending_wheel = self.pending_wheel.saturating_sub(report.wheel as i16);
+                    self.last_sent_buttons = report.buttons.pack();
                 }
 
-                self.dirty.report = false;
+                self.dirty.clear_report();
 
                 match status {
                     HidSendStatus::Sent => {
-                        self.pending_wheel = self.pending_wheel.saturating_sub(report.wheel as i16);
-                        self.last_sent_buttons = report.buttons.pack();
                         self.pending.hid_retry = false;
                     }
                     HidSendStatus::RetryLater => {
@@ -161,15 +222,34 @@ impl Runtime {
                     }
                 }
             }
+            RuntimeCommandResult::VendorSent {
+                route,
+                report,
+                status,
+            } => match status {
+                HidSendStatus::Sent => {
+                    self.pending.hid_retry = false;
+                }
+                HidSendStatus::RetryLater => {
+                    self.vendor
+                        .requeue_pending_tx(PendingVendorTx { route, report });
+                    self.pending.hid_retry = true;
+                    Self::request_poll_after(HID_RETRY_DELAY_MS);
+                }
+                HidSendStatus::NotConnected | HidSendStatus::Fatal => {
+                    self.pending.hid_retry = false;
+                }
+            },
             RuntimeCommandResult::PowerTransitionDone { target, accepted } => {
                 self.power_eval_deadline_ms = None;
                 self.power.apply_transition_result(target, accepted);
                 self.pending.power_eval = false;
-                self.dirty.power = false;
+                self.dirty.clear_power();
             }
-            RuntimeCommandResult::ImuFifoReadRequested { status: _ } => {
-                // 未真正启动异步读时丢弃请求，避免 bottom-half 紧重试
-                self.pending.imu_fifo_read = false;
+            RuntimeCommandResult::ImuFifoReadRequested { status } => {
+                if status != VP_STATUS_OK as u8 {
+                    self.pending.imu_fifo_read = false;
+                }
             }
         }
 
@@ -178,6 +258,7 @@ impl Runtime {
         }
 
         if self.pending.events
+            || self.pending.hid_retry
             || self.pending.imu_fifo_read
             || self.pending.vendor_rx
             || self.pending.config_save
@@ -203,8 +284,24 @@ impl Runtime {
         }
 
         if self.pending.vendor_rx {
-            self.vendor.poll();
+            self.vendor
+                .poll(&self.router, &mut self.config, &self.power);
             self.pending.vendor_rx = false;
+        }
+
+        if let Some(tx) = self.vendor.take_pending_tx() {
+            if unsafe { c_vp_hid_route_ready(tx.route) } != 0 {
+                self.pending.hid_retry = false;
+                return Some(RuntimeCommand::SendVendor {
+                    route: tx.route,
+                    report: tx.report,
+                });
+            }
+
+            self.vendor.requeue_pending_tx(tx);
+            self.pending.hid_retry = true;
+            Self::request_poll_after(HID_RETRY_DELAY_MS);
+            return None;
         }
 
         if self.pending.imu_fifo_read {
@@ -214,65 +311,44 @@ impl Runtime {
         if self.pending.config_save || self.dirty.config {
             self.config.poll();
             self.pending.config_save = false;
-            self.dirty.config = self.config.is_dirty();
+            self.dirty.clear_config();
         }
 
-        let now = unsafe { c_vp_rtc_millis() };
-        let power_eval_due = self
-            .power_eval_deadline_ms
-            .is_some_and(|deadline| deadline_due(now, deadline));
-
-        if ENABLE_POWER_MANAGER && (self.pending.power_eval || self.dirty.power || power_eval_due) {
-            let last_activity = self.last_activity_ms.load(Ordering::Acquire);
-            if power_eval_due {
-                self.power_eval_deadline_ms = None;
-            }
-            if let Some(transition) =
-                self.power
-                    .poll(now, last_activity, self.config.is_dirty(), &self.router)
-            {
-                self.power_eval_deadline_ms = None;
-                return Some(RuntimeCommand::PowerTransition {
-                    target: transition.target,
-                });
-            }
-            self.schedule_next_power_eval(now, last_activity);
-            self.pending.power_eval = false;
-            self.dirty.power = false;
-        } else if ENABLE_POWER_MANAGER {
-            if let Some(deadline) = self.power_eval_deadline_ms {
-                if !self.pending.hid_retry {
-                    Self::request_poll_after(deadline_remaining_ms(now, deadline));
-                }
-            }
+        if ENABLE_POWER_MANAGER {
+            self.poll_power();
         }
-
-        self.dirty.input = false;
-        self.dirty.motion = false;
-        self.dirty.report = false;
 
         None
     }
 
-    fn schedule_next_power_eval(&mut self, now: u32, last_activity: u32) {
-        if let Some(delay_ms) =
-            self.power
-                .next_eval_delay_ms(now, last_activity, self.config.is_dirty(), &self.router)
-        {
-            self.power_eval_deadline_ms = Some(now.wrapping_add(delay_ms));
-            if !self.pending.hid_retry {
-                Self::request_poll_after(delay_ms);
-            }
-        } else {
-            self.power_eval_deadline_ms = None;
+    fn reschedule_power_eval_deadline(&mut self) {
+        if !ENABLE_POWER_MANAGER {
+            return;
         }
+
+        let now = unsafe { c_vp_rtc_millis() };
+        let Some(deadline) = self.power_eval_deadline_ms else {
+            return;
+        };
+
+        let delay_ms = deadline_remaining_ms(now, deadline);
+        Self::request_poll_after(delay_ms);
     }
 
-    fn reschedule_power_eval_deadline(&self) {
+    fn poll_power(&mut self) {
+        let now = unsafe { c_vp_rtc_millis() };
+
         if let Some(deadline) = self.power_eval_deadline_ms {
-            let now = unsafe { c_vp_rtc_millis() };
-            Self::request_poll_after(deadline_remaining_ms(now, deadline));
+            if !deadline_due(now, deadline) {
+                let delay_ms = deadline_remaining_ms(now, deadline);
+                Self::request_poll_after(delay_ms);
+                return;
+            }
         }
+
+        self.power_eval_deadline_ms = None;
+        self.pending.power_eval = false;
+        self.dirty.clear_power();
     }
 
     fn drain_events(&mut self) {
@@ -301,21 +377,35 @@ impl Runtime {
                 self.router.set_ble_connected(true);
                 self.mark_activity(timestamp);
             }
+            RuntimeEvent::BleInputReady { timestamp } => {
+                self.mark_activity(timestamp);
+                self.dirty.mark_report();
+            }
             RuntimeEvent::BleDisconnected { timestamp, .. } => {
                 self.router.set_ble_connected(false);
                 self.mark_activity(timestamp);
+                self.dirty.mark_report();
             }
             RuntimeEvent::DongleConnected { timestamp } => {
                 self.router.set_dongle_connected(true);
                 self.mark_activity(timestamp);
+                self.dirty.mark_report();
             }
             RuntimeEvent::DongleDisconnected { timestamp, .. } => {
                 self.router.set_dongle_connected(false);
                 self.mark_activity(timestamp);
+                self.dirty.mark_report();
             }
             RuntimeEvent::UsbStateChanged { state, timestamp } => {
-                self.router.set_usb_state(UsbState::from(state));
+                let usb_state = UsbState::from(state);
+                self.router.set_usb_state(usb_state);
                 self.mark_activity(timestamp);
+                log::info!(
+                    "USB state changed: {:?}, wired_active={}",
+                    usb_state,
+                    matches!(usb_state, UsbState::Configured)
+                );
+                self.dirty.mark_report();
             }
             RuntimeEvent::ButtonExti {
                 button_id,
@@ -324,18 +414,18 @@ impl Runtime {
             } => {
                 self.mark_activity(timestamp);
                 if self.input.on_button_exti(button_id, level != 0) {
-                    self.dirty.input = true;
+                    self.dirty.mark_input();
                 }
             }
             RuntimeEvent::ModeSwitchExti { timestamp, .. } => {
                 self.mark_activity(timestamp);
-                self.dirty.input = true;
+                self.dirty.mark_input();
             }
             RuntimeEvent::DebounceTick { timestamp } => {
                 self.mark_activity(timestamp);
                 if self.input.on_debounce_tick() {
-                    self.dirty.input = true;
-                    self.dirty.report = true;
+                    self.dirty.mark_input();
+                    self.dirty.mark_report();
                 }
             }
             RuntimeEvent::EncoderExti {
@@ -345,23 +435,47 @@ impl Runtime {
             } => {
                 self.mark_activity(timestamp);
                 if self.input.on_encoder_exti(a_level != 0, b_level != 0) {
-                    self.dirty.input = true;
-                    self.dirty.report = true;
+                    self.dirty.mark_input();
+                    self.dirty.mark_report();
                 }
             }
             RuntimeEvent::ImuInt { timestamp } => {
                 self.mark_activity(timestamp);
-                self.pending.imu_fifo_read = true;
-                self.dirty.motion = true;
+                if !self.pending.imu_fifo_read {
+                    self.pending.imu_fifo_read = true;
+                }
+                self.dirty.mark_motion();
             }
-            RuntimeEvent::ImuSample { timestamp, .. } => {
+            RuntimeEvent::ImuSample {
+                raw_x,
+                raw_y,
+                raw_z,
+                timestamp,
+            } => {
                 self.mark_activity(timestamp);
-                self.dirty.motion = true;
-                self.dirty.report = true;
+                let raw = SflpGameRotationRaw {
+                    x: raw_x,
+                    y: raw_y,
+                    z: raw_z,
+                };
+                let _ = update_current_attitude_from_raw(raw);
+                self.latest_imu_sample = LatestImuSample {
+                    raw,
+                    timestamp_ms: timestamp,
+                    valid: true,
+                };
+                self.dirty.mark_motion();
+                self.dirty.mark_report();
             }
-            RuntimeEvent::ImuFifoDone { timestamp, .. } => {
+            RuntimeEvent::ImuFifoDone {
+                status, timestamp, ..
+            } => {
                 self.mark_activity(timestamp);
                 self.pending.imu_fifo_read = false;
+                if status != VP_STATUS_OK as u8 {
+                    self.latest_imu_sample.valid = false;
+                    clear_current_attitude();
+                }
             }
             RuntimeEvent::HidSendDone { timestamp, .. } => {
                 self.mark_activity(timestamp);
@@ -377,6 +491,7 @@ impl Runtime {
 
     fn poll_input_and_hid(&mut self) -> Option<RuntimeCommand> {
         let input = self.input.get_current_input();
+        self.dirty.clear_input();
         let buttons = MouseButtons {
             left: input.left,
             right: input.right,
@@ -392,10 +507,11 @@ impl Runtime {
         if input.wheel_delta != 0 || packed_buttons != self.last_sent_buttons {
             let now = unsafe { c_vp_rtc_millis() };
             self.mark_activity(now);
-            self.dirty.report = true;
+            self.dirty.mark_report();
         }
 
-        if !self.router.is_ble_connected() {
+        let route = self.router.preferred_mouse_route();
+        if route == HidRoute::None {
             self.pending.hid_retry = false;
             return None;
         }
@@ -403,7 +519,13 @@ impl Runtime {
         if self.pending_wheel == 0
             && packed_buttons == self.last_sent_buttons
             && !self.pending.hid_retry
+            && !self.dirty.report
         {
+            return None;
+        }
+
+        if unsafe { c_vp_hid_route_ready(route.as_ffi()) } == 0 {
+            self.pending.hid_retry = false;
             return None;
         }
 
@@ -416,7 +538,7 @@ impl Runtime {
         };
 
         Some(RuntimeCommand::SendMouse {
-            route: VP_HID_ROUTE_BLE as u8,
+            route: route.as_ffi(),
             report,
         })
     }
