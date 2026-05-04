@@ -14,7 +14,7 @@
 #include "HAL.h"
 #include "main.h"
 #include "hiddev.h"
-#include "hidmouse.h"
+#include "ble_hid_app.h"
 #include "lsm6dsv.h"
 #include "rust_api.h"
 #include "c_api.h"
@@ -35,7 +35,6 @@ extern void GPIOA_ServicePendingInterrupts(void);
 
 __HIGH_CODE
 __attribute__((noinline)) void Main_Circulation() {
-    // ReSharper disable once CppDFAEndlessLoop
     while (1) {
         RuntimeTask_Service();
         TMOS_SystemProcess();
@@ -99,7 +98,6 @@ static void RuntimeTask_Service(void) {
     ServiceRequestedRuntimePoll();
 }
 
-// ReSharper disable once CppParameterNeverUsed
 uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events) {
     (void)task_id;
     if (events & RUNTIME_CORE_POLL_EVT) {
@@ -207,7 +205,7 @@ int main() {
 
     GAPRole_PeripheralInit();
     HidDev_Init();
-    HidEmu_Init();
+    BleHidApp_Init();
 
     USBHS_HidDevice_Init();
 

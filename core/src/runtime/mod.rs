@@ -6,7 +6,7 @@ use crate::attitude::{clear_current_attitude, update_current_attitude_from_raw};
 use crate::config::ConfigManager;
 use crate::ffi::bindings::{
     VP_STATUS_OK, c_vp_hid_route_ready, c_vp_request_core_poll, c_vp_request_core_poll_after,
-    c_vp_rtc_millis,
+    c_vp_rtc_millis, vp_hid_route_t,
 };
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::input::types::InputManager;
@@ -290,18 +290,15 @@ impl Runtime {
         }
 
         if let Some(tx) = self.vendor.take_pending_tx() {
-            if unsafe { c_vp_hid_route_ready(tx.route) } != 0 {
-                self.pending.hid_retry = false;
-                return Some(RuntimeCommand::SendVendor {
-                    route: tx.route,
-                    report: tx.report,
-                });
+            if !self.route_ready(tx.route) {
+                return self.defer_vendor_retry(tx);
             }
 
-            self.vendor.requeue_pending_tx(tx);
-            self.pending.hid_retry = true;
-            Self::request_poll_after(HID_RETRY_DELAY_MS);
-            return None;
+            self.pending.hid_retry = false;
+            return Some(RuntimeCommand::SendVendor {
+                route: tx.route,
+                report: tx.report,
+            });
         }
 
         if self.pending.imu_fifo_read {
@@ -375,13 +372,16 @@ impl Runtime {
         match event {
             RuntimeEvent::BleConnected { timestamp } => {
                 self.router.set_ble_connected(true);
+                self.router.set_ble_input_ready(false);
                 self.mark_activity(timestamp);
             }
             RuntimeEvent::BleInputReady { timestamp } => {
+                self.router.set_ble_input_ready(true);
                 self.mark_activity(timestamp);
                 self.dirty.mark_report();
             }
             RuntimeEvent::BleDisconnected { timestamp, .. } => {
+                self.router.set_ble_input_ready(false);
                 self.router.set_ble_connected(false);
                 self.mark_activity(timestamp);
                 self.dirty.mark_report();
@@ -489,6 +489,31 @@ impl Runtime {
         }
     }
 
+    fn route_ready(&self, route: vp_hid_route_t) -> bool {
+        unsafe { c_vp_hid_route_ready(route) != 0 }
+    }
+
+    /// 当鼠标路由不存在或尚未 ready 时，不能让 `dirty.report` 持续自旋。
+    ///
+    /// 这种状态下不存在有意义的“立即重试”路径。这里要主动收敛本次
+    /// 发送尝试，等待下一次真正有意义的状态事件重新唤醒，例如：
+    /// BLE input-ready、USB 状态变化、dongle 链路变化，或者新的输入活动。
+    fn defer_report_until_route_event(&mut self) -> Option<RuntimeCommand> {
+        self.pending.hid_retry = false;
+        self.dirty.clear_report();
+        None
+    }
+
+    /// vendor pending tx 与鼠标 report 不同：它已经明确存在一笔待发负载，
+    /// 因此 route not-ready 时不应该直接丢掉本次发送机会，而应保留待发包，
+    /// 并用退避定时器等待后续 ready 窗口。
+    fn defer_vendor_retry(&mut self, tx: PendingVendorTx) -> Option<RuntimeCommand> {
+        self.vendor.requeue_pending_tx(tx);
+        self.pending.hid_retry = true;
+        Self::request_poll_after(HID_RETRY_DELAY_MS);
+        None
+    }
+
     fn poll_input_and_hid(&mut self) -> Option<RuntimeCommand> {
         let input = self.input.get_current_input();
         self.dirty.clear_input();
@@ -512,8 +537,7 @@ impl Runtime {
 
         let route = self.router.preferred_mouse_route();
         if route == HidRoute::None {
-            self.pending.hid_retry = false;
-            return None;
+            return self.defer_report_until_route_event();
         }
 
         if self.pending_wheel == 0
@@ -524,9 +548,8 @@ impl Runtime {
             return None;
         }
 
-        if unsafe { c_vp_hid_route_ready(route.as_ffi()) } == 0 {
-            self.pending.hid_retry = false;
-            return None;
+        if !self.route_ready(route.as_ffi()) {
+            return self.defer_report_until_route_event();
         }
 
         let wheel = self.pending_wheel.clamp(-127, 127) as i8;

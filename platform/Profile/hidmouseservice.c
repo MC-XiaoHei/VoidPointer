@@ -176,7 +176,7 @@ static gattAttribute_t hidAttrTbl[] = {
 
     // HID Information characteristic
     {{ATT_BT_UUID_SIZE, hidInfoUUID},
-     GATT_PERMIT_ENCRYPT_READ,
+     GATT_PERMIT_READ,
      0,
      (uint8_t *)hidInfo},
 
@@ -188,7 +188,7 @@ static gattAttribute_t hidAttrTbl[] = {
 
     // HID Control Point characteristic
     {{ATT_BT_UUID_SIZE, hidControlPointUUID},
-     GATT_PERMIT_ENCRYPT_WRITE,
+     GATT_PERMIT_WRITE,
      0,
      &hidControlPoint},
 
@@ -200,7 +200,7 @@ static gattAttribute_t hidAttrTbl[] = {
 
     // HID Protocol Mode characteristic
     {{ATT_BT_UUID_SIZE, hidProtocolModeUUID},
-     GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE,
+     GATT_PERMIT_READ | GATT_PERMIT_WRITE,
      0,
      &hidProtocolMode},
 
@@ -212,7 +212,7 @@ static gattAttribute_t hidAttrTbl[] = {
 
     // HID Report Map characteristic
     {{ATT_BT_UUID_SIZE, hidReportMapUUID},
-     GATT_PERMIT_ENCRYPT_READ,
+     GATT_PERMIT_READ,
      0,
      (uint8_t *)hidReportMap},
 
@@ -232,13 +232,13 @@ static gattAttribute_t hidAttrTbl[] = {
 
     // HID Report characteristic, mouse input
     {{ATT_BT_UUID_SIZE, hidReportUUID},
-     GATT_PERMIT_ENCRYPT_READ,
+     GATT_PERMIT_READ,
      0,
      &hidReportMouseIn},
 
     // HID Report characteristic client characteristic configuration
     {{ATT_BT_UUID_SIZE, clientCharCfgUUID},
-     GATT_PERMIT_READ | GATT_PERMIT_ENCRYPT_WRITE,
+     GATT_PERMIT_READ | GATT_PERMIT_WRITE,
      0,
      (uint8_t *)&hidReportMouseInClientCharCfg},
 
@@ -256,7 +256,7 @@ static gattAttribute_t hidAttrTbl[] = {
 
     // Feature Report
     {{ATT_BT_UUID_SIZE, hidReportUUID},
-     GATT_PERMIT_ENCRYPT_READ | GATT_PERMIT_ENCRYPT_WRITE,
+     GATT_PERMIT_READ | GATT_PERMIT_WRITE,
      0,
      &hidReportFeature},
 

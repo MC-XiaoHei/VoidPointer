@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 void USBHS_HidDevice_Init(void);
+void USBHS_HidDevice_ResetLinkState(void);
 uint8_t USBHS_HidDevice_SendMouseReport(const uint8_t* report, uint16_t len);
 uint8_t USBHS_HidDevice_SendVendorReport(const uint8_t* report, uint16_t len);
 

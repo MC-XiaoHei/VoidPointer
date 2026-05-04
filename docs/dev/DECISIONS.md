@@ -69,6 +69,21 @@
 - GPIOA IF 可能已经锁存但 PFIC 不再派发后续 GPIOA IRQ；主循环允许服务 `R16_PA_INT_IF & R16_PA_INT_EN` 中的待处理 GPIOA 硬件事实，并复用同一个 GPIOA handler，不做 GPIO 电平扫描造事件。
 - 编码器 A/B 按“任意边沿输入”实现：如有可靠 both-edge 能力则直接映射；否则在平台层通过读当前电平后重配下一边沿模拟，并由 Rust 正交状态机兜底非法跳变，必要时增加短周期采样兜底。
 
+## 5.5 BLE reconnect / route-ready / C app split decisions
+
+- BLE bonded reconnect 问题的根因不是 bond 参数、主机缓存或 HID 权限本身，而是 runtime 在 `route == None` 或 `route not ready` 时没有收敛 `dirty.report`，导致 `vp_core_poll()` 自旋重调度并干扰 BLE 安全恢复窗口。
+- `BLE connected` 与 `BLE input-ready` 必须分离建模；只有 `input-ready` 才允许 BLE 参与 mouse/custom route selection。
+- mouse report 与 vendor pending tx 的 defer 语义必须分离：
+  - mouse report 在 route unavailable / not-ready 时直接收敛本次发送尝试，等待后续真实状态事件重新唤醒；
+  - vendor pending tx 保留待发包，并通过 backoff retry 等待后续 ready 窗口。
+- USB 进入 `Configured` 时采用 wired-priority：关闭 BLE 广播并断开现有 BLE；退出 `Configured` 后恢复 BLE 广播。
+- C 侧 BLE app 命名不再使用误导性的 `hidmouse.*`；当前工程统一使用 `ble_hid_app.*` 作为 TMOS/HID glue，对外接口统一命名为 `BleHidApp_*`。
+- C 侧 BLE app 继续拆成三块稳定边界：
+  - `ble_hid_app.c`：TMOS task/event glue、profile bring-up、HID callback 注册；
+  - `ble_gap_policy.c`：BLE connection handle、advertising allow、GAP state、断连/复播策略；
+  - `ble_hid_app_config.h`：默认参数、pairing/bonding 参数、连接参数和 policy timing 常量集中定义。
+- 以后如需扩展 2.4G 或更复杂 route policy，优先复用“glue 层 + policy 层 + Rust route/runtime 层”这个边界，而不是把路由策略重新塞回单个 C app 文件。
+
 ## 6. FFI / ABI decisions
 
 - `vp_timestamp_t` 使用 `uint32_t` RTC millis，按 wrapping time 处理回绕。

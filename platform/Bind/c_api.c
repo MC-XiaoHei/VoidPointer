@@ -1,3 +1,7 @@
+/********************************** (C) COPYRIGHT *******************************
+ * File Name          : c_api.c
+ * Description        : C platform bindings for Rust core
+ *******************************************************************************/
 #include "c_api.h"
 
 #include "HAL.h"  // IWYU pragma: keep
@@ -9,7 +13,7 @@
 #include "rust_api.h"
 #include <hiddev.h>
 #include <hidmouseservice.h>
-#include "hidmouse.h"
+#include "ble_hid_app.h"
 #include <stdio.h>
 #include "usbhs_hid_device.h"
 #include "lsm6dsv.h"
@@ -233,9 +237,9 @@ vp_status_t c_vp_exti_set_edge(const vp_input_id_t  input_id,
 
     vp_button_id_t button_id;
     if (input_id_to_button_id(input_id, &button_id)) {
-        // 低有效二态输入使用电平触发 GPIO 中断。Rust 用
-        // Falling/Rising 表达下一次语义转换；CH585 平台映射为
-        // LowLevel/HighLevel，以避开机械触点上不可靠的一次性边沿锁存。
+        // 低有效二态输入使用电平触发 GPIO 中断。Rust 用 Falling/Rising
+        // 表达下一次语义转换；CH585 平台映射为 LowLevel/HighLevel，
+        // 以避开机械触点上不可靠的一次性边沿锁存。
         if (edge == VP_EXTI_EDGE_FALLING) {
             mode = GPIO_ITMode_LowLevel;
         } else if (edge == VP_EXTI_EDGE_RISING) {
@@ -336,14 +340,30 @@ void c_vp_request_core_poll_after(const uint32_t ms) {
 }
 
 void Platform_NotifyUsbStateChanged(const vp_usb_state_t state) {
-    if (current_usb_state == state) {
+    const vp_usb_state_t previous_state = current_usb_state;
+    const vp_usb_state_t effective_state =
+        (state == VP_USB_STATE_SUSPENDED) ? VP_USB_STATE_DETACHED : state;
+
+    if (previous_state == effective_state) {
         return;
     }
 
-    current_usb_state = state;
-    vp_on_usb_state_changed(state, c_vp_rtc_millis());
-}
+    if (effective_state == VP_USB_STATE_DETACHED &&
+        previous_state != VP_USB_STATE_DETACHED) {
+        USBHS_HidDevice_ResetLinkState();
+    }
 
+    current_usb_state = effective_state;
+
+    if (effective_state == VP_USB_STATE_CONFIGURED) {
+        (void)BleHidApp_SetAdvertisingEnabled(FALSE);
+        (void)BleHidApp_Disconnect();
+    } else if (previous_state == VP_USB_STATE_CONFIGURED) {
+        (void)BleHidApp_SetAdvertisingEnabled(TRUE);
+    }
+
+    vp_on_usb_state_changed(effective_state, c_vp_rtc_millis());
+}
 
 vp_status_t c_vp_i2c_init(void) { return VP_STATUS_UNSUPPORTED; }
 

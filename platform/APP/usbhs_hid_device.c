@@ -376,7 +376,7 @@ static void usbhs_handle_setup(void) {
     }
 }
 
-void USBHS_HidDevice_Init(void) {
+static void usbhs_reset_link_state(void) {
     g_dev_config = 0u;
     g_dev_addr = 0u;
     g_dev_sleep_status = 0u;
@@ -386,6 +386,12 @@ void USBHS_HidDevice_Init(void) {
     g_hid_protocol[1] = 1u;
     g_ep0_desc_ptr = NULL;
     g_ep0_desc_remaining = 0u;
+    R8_USB2_DEV_AD = 0u;
+    usbhs_ep_init();
+}
+
+void USBHS_HidDevice_Init(void) {
+    usbhs_reset_link_state();
 
     R16_CLK_SYS_CFG |= (RB_CLK_SYS_MOD & 0x40) | RB_XROM_SCLK_SEL | RB_OSC32M_SEL;
     R8_USBHS_PLL_CTRL = USBHS_PLL_EN;
@@ -394,10 +400,15 @@ void USBHS_HidDevice_Init(void) {
     R8_USB2_CTRL = USBHS_UD_RST_LINK | USBHS_UD_PHY_SUSPENDM;
     R8_USB2_INT_EN = USBHS_UDIE_BUS_RST | USBHS_UDIE_SUSPEND |
                      USBHS_UDIE_TRANSFER | USBHS_UDIE_LINK_RDY;
-    usbhs_ep_init();
     R8_USB2_BASE_MODE = USBHS_UD_SPEED_HIGH;
     R8_USB2_CTRL = USBHS_UD_DEV_EN | USBHS_UD_DMA_EN | USBHS_UD_PHY_SUSPENDM;
     PFIC_EnableIRQ(USB2_DEVICE_IRQn);
+}
+
+void USBHS_HidDevice_ResetLinkState(void) {
+    R8_USB2_CTRL = USBHS_UD_RST_LINK | USBHS_UD_PHY_SUSPENDM;
+    usbhs_reset_link_state();
+    R8_USB2_CTRL = USBHS_UD_DEV_EN | USBHS_UD_DMA_EN | USBHS_UD_PHY_SUSPENDM;
 }
 
 uint8_t USBHS_HidDevice_SendMouseReport(const uint8_t* report, uint16_t len) {

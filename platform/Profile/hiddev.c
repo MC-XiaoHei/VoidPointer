@@ -18,7 +18,7 @@
 #include "battservice.h"
 #include "scanparamservice.h"
 #include "devinfoservice.h"
-#include "hidmouse.h"
+#include "ble_hid_app.h"
 #include "hidmouseservice.h"
 #include "hiddev.h"
 #include "rust_api.h"
@@ -32,7 +32,7 @@
 
 // TRUE to run scan parameters refresh notify test
 #define DEFAULT_SCAN_PARAM_NOTIFY_TEST    TRUE
-#define VP_BLE_BRINGUP_DISABLE_AUTO_SYNC_WL FALSE
+#define VP_BLE_BRINGUP_DISABLE_AUTO_SYNC_WL TRUE
 #define VP_BLE_BRINGUP_ERASE_BONDS_AT_BOOT FALSE
 
 // Advertising intervals (units of 625us, 160=100ms)
@@ -117,6 +117,7 @@ static void hidDevBattCB(uint8_t event);
 static void hidDevScanParamCB(uint8_t event);
 static void hidDevBattPeriodicTask(void);
 static void hidDevLogAddr(const uint8_t *addr);
+static void hidDevRefreshSecurityState(uint16_t connHandle, const char *reason);
 
 static hidRptMap_t *hidDevRptByHandle(uint16_t handle);
 static hidRptMap_t *hidDevRptById(uint8_t id, uint8_t type);
@@ -179,12 +180,12 @@ void HidDev_Init()
 #else
         uint8_t syncWL = TRUE;
 #endif
-
-        // If a bond is created, the HID Device should write the address of the
-        // HID Host in the HID Device controller's white list and set the HID
-        // Device controller's advertising filter policy to 'process scan and
-        // connection requests only from devices in the White List'.
+        uint8_t  syncRL = TRUE;
+        uint8_t  bondFailAction = GAPBOND_FAIL_INITIATE_PAIRING;
         GAPBondMgr_SetParameter(GAPBOND_AUTO_SYNC_WL, sizeof(uint8_t), &syncWL);
+        GAPBondMgr_SetParameter(GAPBOND_AUTO_SYNC_RL, sizeof(uint8_t), &syncRL);
+        GAPBondMgr_SetParameter(GAPBOND_BOND_FAIL_ACTION, sizeof(uint8_t),
+                                &bondFailAction);
     }
 
     // Set up services
@@ -733,11 +734,18 @@ static void hidDevProcessGAPMsg(gapRoleEvent_t *pEvent)
 
         case GAP_LINK_ESTABLISHED_EVENT:
         {
+            hidDevRefreshSecurityState(gapConnHandle, "gap_link_established");
             break;
         }
 
         case GAP_LINK_TERMINATED_EVENT:
         {
+            break;
+        }
+
+        case GAP_AUTHENTICATION_COMPLETE_EVENT:
+        {
+            hidDevRefreshSecurityState(gapConnHandle, "gap_auth_complete");
             break;
         }
 
@@ -835,6 +843,7 @@ static void hidDevGapStateCB(gapRole_States_t newState, gapRoleEvent_t *pEvent)
 
         // connection not secure yet
         hidDevConnSecure = FALSE;
+        hidDevRefreshSecurityState(gapConnHandle, "state_cb_connected");
     }
     // if disconnected
     else if(hidDevGapState == GAPROLE_CONNECTED &&
@@ -895,6 +904,7 @@ static void hidDevPairStateCB(uint16_t connHandle, uint8_t state, uint8_t status
         if(status == SUCCESS)
         {
             hidDevConnSecure = TRUE;
+            hidDevRefreshSecurityState(connHandle, "pair_complete");
             if(HidDev_IsReportNotifyEnabled(HID_RPT_ID_MOUSE_IN, HID_REPORT_TYPE_INPUT))
             {
                 vp_on_ble_input_ready(c_vp_rtc_millis());
@@ -908,6 +918,7 @@ static void hidDevPairStateCB(uint16_t connHandle, uint8_t state, uint8_t status
         if(status == SUCCESS)
         {
             hidDevConnSecure = TRUE;
+            hidDevRefreshSecurityState(connHandle, "pair_bonded");
             if(HidDev_IsReportNotifyEnabled(HID_RPT_ID_MOUSE_IN, HID_REPORT_TYPE_INPUT))
             {
                 vp_on_ble_input_ready(c_vp_rtc_millis());
@@ -955,6 +966,20 @@ static void hidDevPasscodeCB(uint8_t *deviceAddr, uint16_t connectionHandle,
         // Send passcode response
         GAPBondMgr_PasscodeRsp(connectionHandle, SUCCESS, passkey);
     }
+}
+
+static void hidDevRefreshSecurityState(uint16_t connHandle, const char *reason)
+{
+    uint8_t connected = linkDB_Up(connHandle);
+    uint8_t encrypted = linkDB_State(connHandle, LINK_ENCRYPTED);
+    uint8_t authenticated = linkDB_State(connHandle, LINK_AUTHENTICATED);
+    uint8_t secure = (encrypted || authenticated) ? TRUE : FALSE;
+
+    (void)reason;
+    (void)connected;
+    (void)encrypted;
+    (void)authenticated;
+    hidDevConnSecure = secure;
 }
 
 /*********************************************************************

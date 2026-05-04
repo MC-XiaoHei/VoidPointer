@@ -279,7 +279,16 @@ IMU INT 到来时，C 不直接读 FIFO，而是调用 `vp_on_imu_int()`。Rust 
 | `c_vp_hid_route_enable(route, enabled)` | 否 | 开关 route。 |
 | `c_vp_hid_route_reset(route)` | 否 | route 错误恢复。 |
 
-HID report 内容只由 Rust 决定，C 不修改 buttons/dx/dy/wheel 语义。C 可做 HID 物理范围安全修正，例如避免发送 `-128`，但首选由 Rust report 层处理。
+### 8.4 路由 ready 与发送收敛约束
+
+- `connected` 不等于 `route ready`。特别是 BLE：链路已建立不代表 HID 输入路径已经 secure/notify-ready。
+- Rust route policy 应显式区分“链路存在”和“报告路径可用”，避免过早把 BLE 作为活动 HID route。
+- 当 `c_vp_hid_route_ready(route) == 0` 或当前 `route == None` 时，runtime 不得仅仅 early-return 并保留会立即再次触发 poll 的发送脏状态。
+- 对 mouse/vendor 等需要 route 才能完成的发送工作，若当前 route 不可用或未 ready，应该：
+  - 收敛本次发送尝试；
+  - 清除或消费掉会导致立即自旋重试的 pending/dirty 状态；
+  - 等待下一次真正有意义的状态事件重新唤醒，例如 BLE input-ready、USB state changed、dongle connected、或新的输入活动。
+- 只有底层明确返回 `RetryLater` 且存在合理的短期恢复路径时，才应使用延时 retry，而不是无条件立即自旋。
 
 ---
 
@@ -370,6 +379,8 @@ Rust 不应在快速 callback 中：
 但它的**实际执行入口**是主循环侧的 runtime service，而不是 TMOS 事件处理函数直接调用。这是当前项目已验证的稳定调度结构。
 
 如果 `vp_core_poll()` 处理后仍有 pending work，应再次调用 `c_vp_request_core_poll()`。
+
+额外约束：如果某项工作在当前 route / ready 条件下根本不可能完成，则 `vp_core_poll()` 不得让对应 dirty/pending 状态持续触发立即 poll。必须显式收敛本次尝试，等待下一次真实状态事件重新唤醒。
 
 ---
 

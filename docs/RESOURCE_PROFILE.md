@@ -32,7 +32,7 @@
 | `resources/main/CH585/EXAM/BLE/HID_Mouse/APP/hidmouse.c` | BLE HID mouse app、GAP 参数、HidDev_Report 使用方式。 |
 | `resources/main/CH585/EXAM/BLE/HID_Mouse/APP/hidmouse_main.c` | BLE HID mouse 初始化流程。 |
 | `platform/Profile/hidmouseservice.c` | 当前工程拷贝/改造后的 HID mouse service。 |
-| `platform/APP/hidmouse.c` | 当前工程 HID mouse glue。 |
+| `platform/APP/ble_hid_app.c` | 当前工程 BLE HID app / GAP / advertising glue。 |
 
 ### 1.4 USB HID / Vendor HID
 
