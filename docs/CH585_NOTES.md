@@ -46,7 +46,7 @@
 | `USBHS_UDIF_BUS_RST` | `CH585SFR.h`, `ch585_usbhs_device.c` | USB bus reset | clear configured; reinit endpoints |
 | `R8_USB2_WAKE_CTRL`, `USBHS_UD_UD_REMOTE_WKUP` | `CH585SFR.h` | USBHS remote wake register | 若需要 remote wake，后续补充实现细节 |
 
-### Project USB state mapping decision
+### Project USB state mapping
 
 基于上述来源，VoidPointer v1 采用保守 USB state mapping：
 
@@ -198,6 +198,9 @@ GPIOA service 在调用 Rust 前会先屏蔽触发的二态输入。Rust debounc
 
 ## Open questions / TBD
 
+下面这些是芯片、平台或板级验证项，不是项目负责人拍板问题
+它们留在这里，是因为主题属于长期硬件依据和平台能力边界
+
 | 问题 | 当前状态 | 需要回填到哪里 |
 | --- | --- | --- |
 | USBHS 物理 detach 判断 | 项目 v1 映射已定：不把 `BUS_RST`/suspend 当 detach；仅启动无 link-ready 或有明确 VBUS/link-lost/板级信号时上报 `Detached`。仍需后续实机验证是否有可靠 link-lost source | USB platform implementation notes |
@@ -208,12 +211,14 @@ GPIOA service 在调用 Rust 前会先屏蔽触发的二态输入。Rust debounc
 | RTC 在不同 `R16_POWER_PLAN` 组合下的保持条件 | RTC wake 示例存在；具体 power domain 保持矩阵需进一步从 datasheet/实测确认 | power platform notes |
 | `CH585SCH.pdf` 中项目板 USB/按键/电源连接与 VoidPointer 最终 PCB 的对应关系 | 仅粗看了示例板原理图，未逐页整理 | board bring-up notes |
 
-## Possible conflicts / backfill points
+## Cross-document alignment
 
-| 现有设计点 | 资料结论 | 是否冲突 | 回填建议 |
-| --- | --- | --- | --- |
-| 编码器 A/B 配置为双边沿外部中断 | StdPeriph GPIO IT API 没有 both-edge enum，只能 rising/falling/level；wake 有 any-edge 但普通 EXTI 未确认 | 潜在实现风险，不是设计冲突 | 在 FFI/platform 文档中说明 `Both` 由平台模拟，编码器可能需要定时采样兜底 |
-| USBHS 512 bytes / FS 64 bytes | Compatibility HID 示例完全对齐 | 无冲突 | 可在 `VENDOR_PROTOCOL.md` 回填物理层依据 |
-| USB configured 保持 Active | USBHS 示例 configured 后进入持续 service loop；低功耗 Sleep 会要求 USBHS 寄存器复位 | 无冲突，反而支持 | 在 `POWER_STATE_MACHINE.md` 强调 configured 不进低功耗 |
-| DataFlash 双槽 | CH585 DataFlash 32KB，官方 EEPROM API 可读写擦 | 无冲突 | 在 `CONFIG_SPEC.md` 回填 CH585 page/block/alignment 约束，尤其 4KB erase 保守策略 |
-| `vp_timestamp_t = uint32_t RTC millis` | RTC 32K counter + conversion helper 存在，sleep wake 示例存在 | 无冲突 | 在 FFI/timebase 文档补充 wrapping millis 语义 |
+下面这些结论已经有明确的长期主入口，这里只保留 CH585 侧依据，不再把本节写成实现备忘录。
+
+| 主题 | CH585 侧稳定依据 | 主入口文档 |
+| --- | --- | --- |
+| 编码器 `Both` 语义 | StdPeriph 普通 GPIO IRQ API 没有原生 both-edge，`vp_exti_edge_t::Both` 需要平台层模拟；低功耗 wake 的 any-edge 不能直接等同普通 EXTI both-edge | `FFI_ABI.md` |
+| USBHS 512 bytes / FS 64 bytes | Compatibility HID 示例与描述符证明 HS 512-byte、FS 64-byte payload 能力 | `VENDOR_PROTOCOL.md` |
+| USB configured 保持 `Active` | USBHS configured 后进入持续 service loop，Sleep 路径还要求 USBHS 寄存器恢复 | `POWER_STATE_MACHINE.md` |
+| DataFlash 双槽与 4KB 保守擦除策略 | DataFlash 容量 32KB；page 为 256 bytes；初版按 4KB erase block 对齐最稳妥 | `CONFIG_SPEC.md` |
+| `vp_timestamp_t = uint32_t RTC millis` | RTC 32K counter、换算 helper 和 sleep wake 示例都支持统一 millis timebase；上层需按 wrapping time 处理 | `FFI_ABI.md` |

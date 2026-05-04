@@ -20,6 +20,8 @@
 
 当前硬件使用 USBHS 口，因此 USB 配置通道按 USBHS 能力设计；仍保留 FS fallback 认知，避免后续平台差异。
 
+Vendor route 优先级规则见 `ROUTE_STATE_MACHINE.md`，其长期结论是：USB > 当前物理模式开关对应无线 route > 另一个无线 route。
+
 ## 3. 分层
 
 | 层 | 职责 |

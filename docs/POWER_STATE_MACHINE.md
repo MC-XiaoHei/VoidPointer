@@ -1,6 +1,6 @@
 # Power State Machine
 
-本文定义 VoidPointer 固件电源状态机。当前结论来自 `dev/DECISIONS.md`、`DESIGN.md`、`CONFIG_SPEC.md`、`FFI_ABI.md`、`RESOURCE_PROFILE.md` 和 `dev/TASKLIST.md`。
+本文定义 VoidPointer 固件电源状态机，只记录长期有效的状态语义、转换条件和职责边界。当前实现进度和差距看 `dev/TASKLIST.md`。
 
 ## 1. 状态模型
 

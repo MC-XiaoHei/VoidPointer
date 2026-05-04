@@ -1,451 +1,301 @@
-# VoidPointer FFI API 规格
+# VoidPointer FFI 与 ABI 约束
 
-本文档只描述目标状态下的 C/Rust FFI API。当前工程中已有的 demo/legacy API 不在本文档中作为目标 API 描述；需要迁移或替换的内容记录在 `dev/TASKLIST.md`。
+本文档只描述长期有效的 FFI 边界规则
+当前实现进度、迁移任务和临时差距不放在这里，统一看 `dev/TASKLIST.md`
 
----
+## 1. 总体原则
 
-## 1. API 设计原则
+- C 是平台执行层
+- Rust 是业务决策层
+- `platform/Bind/c_api.h` 是 Rust 调 C 的唯一声明源
+- Rust 导出的函数由 `cbindgen` 生成 `platform/Bind/rust_api.h`
+- 不手写和工具生成结果重复的声明
+- 跨 FFI 的命名保持稳定前缀
+  - Rust 调 C 使用 `c_vp_*`
+  - C 调 Rust 使用 `vp_*`
 
-- C 是硬件执行层：提供 GPIO、EXTI、Timer、RTC、TMOS、I2C、IMU、HID、RF/USB、DataFlash、Power 等底层 API。
-- Rust 是逻辑层：持有输入、motion、report、route、power、config 等业务状态机。
-- Rust 调 C 的 API 以 `c_vp_*` 前缀命名。
-- C 调 Rust 的 callback 以 `vp_*` 前缀命名。
-- Rust 调 C 的声明源头是 `platform/Bind/c_api.h`，由 `bindgen` 自动生成 Rust bindings。
-- C 调 Rust 的声明源头是 Rust exported functions，由 `cbindgen` 自动生成 `platform/Bind/rust_api.h`。
-- 不手写 `rust_api.h`。
-- 不在 Rust 中手写和 `c_api.h` 重复的 extern 声明。
-- 所有跨 FFI struct 使用固定布局。
-- 所有跨 FFI enum 使用固定底层整数表示。
-- ISR-safe API 必须可在中断上下文调用；非 ISR-safe API 只能在 `vp_core_poll()` 或普通 task 上下文调用。
+## 2. ABI 规则
 
----
+- timestamp 统一使用 RTC 毫秒
+- `vp_timestamp_t` 固定为 `uint32_t`，并按 wrapping time 处理回绕
+- bool 统一使用 `uint8_t`，取值 `0` 或 `1`
+- HID 与 vendor report 长度统一使用 `uint16_t`
+- flash 与 config buffer 长度统一使用 `uint32_t`
+- buffer 统一使用指针加长度
+- Rust 不保存 ISR callback 传入的裸指针
+- 跨 FFI struct 使用固定布局
+- 跨 FFI enum 使用固定底层整数表示
+- 持久化多字节字段统一使用 little-endian
+- v1 不做 ABI version 校验
 
-## 2. 通用 ABI 类型
+## 3. 执行上下文规则
 
-### 2.1 基本约定
+### 3.1 ISR-safe
 
-- timestamp 统一使用 RTC。
-- 事件 callback 默认携带 `vp_timestamp_t`。
-- bool 字段跨 struct 时使用 `uint8_t`，取值 `0/1`。
-- buffer 使用 pointer + length。
-- Rust 不保存 ISR callback 传入的裸指针。
-- 所有多字节持久化字段使用 little-endian；运行期 FFI struct 使用目标 ABI 原生布局，但必须由工具生成声明。
+ISR-safe API 必须满足两点：
 
-### 2.2 通用类型
+- 可以在中断上下文调用
+- 不做阻塞、分配或重逻辑
 
-| 类型 | 建议 C 表示 | 说明 |
+### 3.2 bottom-half only
+
+非 ISR-safe API 只能在 `vp_core_poll()` 或普通 task 语境调用
+不能在 GPIO、Timer、I2C 完成中断等硬中断路径直接执行
+
+### 3.3 `vp_core_poll()` 约束
+
+- `vp_core_poll()` 是 Rust bottom-half 入口
+- 它由 C 侧事件调度，不是忙等轮询函数
+- 它严格不可重入
+- C 侧请求 poll 时只能置位或合并事件，不能直接在请求点调用 `vp_core_poll()`
+
+## 4. C 与 Rust 的职责边界
+
+### 4.1 C 负责什么
+
+C 提供以下平台能力：
+
+- GPIO 与 EXTI
+- Timer、RTC、TMOS
+- I2C 与 IMU 访问
+- HID、USB、BLE 和后续 2.4G 平台动作
+- Power 与 DataFlash 平台动作
+
+C 只负责硬件事实和执行动作，不持有产品业务状态
+
+### 4.2 Rust 负责什么
+
+Rust 负责以下业务逻辑：
+
+- 输入状态机
+- 编码器与按键消抖
+- 姿态处理与映射
+- 报告聚合
+- 路由策略
+- 电源状态机
+- 配置与 Vendor 命令解析
+
+Rust 根据状态做决策，再通过 FFI 调 C 执行动作
+
+额外约束：
+
+- `vp_core_poll()` 严格不可重入
+- callback 之间不共享业务状态
+- 如确实需要跨 callback 共享底层结构，必须由底层自行保证 ISR-safe
+
+## 5. 通用类型
+
+| 类型 | C 表示 | 说明 |
 | --- | --- | --- |
-| `vp_timestamp_t` | `uint32_t` | RTC millis。按 32-bit wrapping time 处理回绕。 |
-| `vp_bool_t` | `uint8_t` | FFI struct 内 bool，`0=false`，`1=true`。 |
-| `vp_status_t` | `uint8_t` enum | 通用返回状态。 |
+| `vp_timestamp_t` | `uint32_t` | RTC 毫秒，按 wrapping time 处理回绕 |
+| `vp_bool_t` | `uint8_t` | FFI bool |
+| `vp_status_t` | `uint8_t` enum | 通用状态码 |
+| `vp_hid_send_status_t` | `uint8_t` enum | HID 发送结果，独立于 `vp_status_t` |
 
-### 2.3 通用状态码
+### `vp_status_t`
 
 | 值 | 名称 | 说明 |
 | --- | --- | --- |
-| `0` | `VP_STATUS_OK` | 成功。 |
-| `1` | `VP_STATUS_BUSY` | 资源忙。 |
-| `2` | `VP_STATUS_INVALID_ARG` | 参数非法。 |
-| `3` | `VP_STATUS_NOT_READY` | 外设或协议栈未就绪。 |
-| `4` | `VP_STATUS_IO_ERROR` | 底层 I/O 错误。 |
-| `5` | `VP_STATUS_UNSUPPORTED` | 当前平台/模式不支持。 |
+| `0` | `VP_STATUS_OK` | 成功 |
+| `1` | `VP_STATUS_BUSY` | 资源忙 |
+| `2` | `VP_STATUS_INVALID_ARG` | 参数非法 |
+| `3` | `VP_STATUS_NOT_READY` | 外设或协议栈未就绪 |
+| `4` | `VP_STATUS_IO_ERROR` | 底层 I/O 错误 |
+| `5` | `VP_STATUS_UNSUPPORTED` | 当前平台或模式不支持 |
 
----
+## 6. C 调 Rust 的入口
 
-## 3. C → Rust exported callbacks
+这些函数由 Rust 实现，C 在中断、协议栈回调或 task 中调用
 
-这些函数由 Rust 实现，通过 `cbindgen` 生成到 `platform/Bind/rust_api.h`，C 层在中断、协议栈事件或 TMOS task 中调用。
-
-### 3.1 生命周期
+### 6.1 生命周期
 
 | API | 上下文 | 说明 |
 | --- | --- | --- |
-| `vp_core_init()` | task | 初始化 Rust Runtime、加载配置、初始化状态机。 |
-| `vp_core_poll()` | TMOS task | Rust bottom-half，处理 deferred work。 |
+| `vp_core_init()` | task | 初始化 Runtime 与初始状态 |
+| `vp_core_poll()` | TMOS task | 执行 Rust bottom-half |
 
-`vp_core_poll()` 由 C 的专用 TMOS event 调度。它不是硬件轮询函数，只处理 Rust 内部 pending work。
+### 6.2 输入事件
 
-### 3.2 输入事件
-
-| API | 上下文 | ISR-safe | 说明 |
+| API | 典型上下文 | ISR-safe | 说明 |
 | --- | --- | --- | --- |
-| `vp_on_button_exti(button_id, level, timestamp)` | GPIO EXTI | 是 | 普通按键 EXTI 唤醒。 |
-| `vp_on_mode_switch_exti(level, timestamp)` | GPIO EXTI | 是 | 物理模式开关 EXTI 唤醒。 |
-| `vp_on_debounce_tick(timestamp)` | Timer ISR | 是 | 共享 1ms debounce tick。 |
-| `vp_on_encoder_exti(a_level, b_level, timestamp)` | GPIO EXTI | 是 | 编码器 A/B 任意边沿。 |
+| `vp_on_button_exti(button_id, level, timestamp)` | GPIO EXTI | 是 | 普通按键输入 |
+| `vp_on_mode_switch_exti(level, timestamp)` | GPIO EXTI | 是 | 物理模式开关输入 |
+| `vp_on_debounce_tick(timestamp)` | Timer ISR | 是 | 共享 debounce tick |
+| `vp_on_encoder_exti(a_level, b_level, timestamp)` | GPIO EXTI | 是 | 编码器输入 |
 
-#### `button_id`
+### 6.3 IMU 事件
 
-| 值 | 名称 |
-| --- | --- |
-| `0` | Left |
-| `1` | Right |
-| `2` | Middle |
-| `3` | Action |
-| `4` | Laser |
-
-#### `vp_input_id_t`
-
-| 值 | 名称 | 说明 |
+| API | 典型上下文 | 说明 |
 | --- | --- | --- |
-| `0` | Left | 左键输入。 |
-| `1` | Right | 右键输入。 |
-| `2` | Middle | 中键输入。 |
-| `3` | Action | Action 键输入。 |
-| `4` | Laser | Laser 键输入。 |
-| `5` | ModeSwitch | 物理模式开关输入。 |
-| `6` | EncoderA | 编码器 A 相。 |
-| `7` | EncoderB | 编码器 B 相。 |
-| `8` | ImuInt1 | LSM6DSV INT1。是否实际连接由 PCB 决定。 |
-| `9` | ImuInt2 | LSM6DSV INT2。是否实际连接由 PCB 决定。 |
+| `vp_on_imu_int(timestamp)` | GPIO EXTI | IMU 唤醒事实 |
+| `vp_on_imu_sample(raw_x, raw_y, raw_z, timestamp)` | I2C completion 或 task | 上报最新姿态原始样本 |
+| `vp_on_imu_fifo_done(status, dropped_count, timestamp)` | I2C completion 或 task | 上报一次 FIFO 读取结束 |
 
-USB attach/configured/suspend 状态通过 USB stack callback 上报，不作为 GPIO input id。
+### 6.4 路由与连接事件
 
-#### `vp_output_id_t`
-
-| 值 | 名称 | 说明 |
+| API | 典型上下文 | 说明 |
 | --- | --- | --- |
-| `0` | Laser | 激光输出控制。 |
+| `vp_on_ble_connected(timestamp)` | protocol callback | BLE 已连接 |
+| `vp_on_ble_input_ready(timestamp)` | protocol callback | BLE 输入路径 ready |
+| `vp_on_ble_disconnected(reason, timestamp)` | protocol callback | BLE 已断开 |
+| `vp_on_dongle_connected(timestamp)` | protocol callback | 2.4G 已连接 |
+| `vp_on_dongle_disconnected(reason, timestamp)` | protocol callback | 2.4G 已断开 |
+| `vp_on_usb_state_changed(state, timestamp)` | USB callback | USB 状态变化 |
+| `vp_on_hid_send_done(route, status, timestamp)` | protocol callback | 异步发送完成事件 |
+| `vp_on_vendor_report_rx(route, ptr, len, timestamp)` | protocol callback | 收到 vendor report |
 
-当前只定义 Laser。充电灯目前不走 MCU；后续如需 MCU 控制 LED/RF/power rail，再扩展该 enum。
+## 7. Rust 调 C 的接口类别
 
-### 3.3 IMU 事件
+这些函数由 C 实现并声明在 `platform/Bind/c_api.h`
 
-| API | 上下文 | ISR-safe | 说明 |
-| --- | --- | --- | --- |
-| `vp_on_imu_int(timestamp)` | GPIO EXTI | 是 | LSM6DSV INT 唤醒。Rust 决定是否请求 FIFO 读取。 |
-| `vp_on_imu_sample(raw_x, raw_y, raw_z, timestamp)` | I2C completion/task | 是/短路径 | C 读取到最新 SFLP sample 后回调 Rust。 |
-| `vp_on_imu_fifo_done(status, dropped_count, timestamp)` | I2C completion/task | 可选 | FIFO 读取批次完成通知。 |
+### 7.1 GPIO 与 EXTI
 
-`raw_x/raw_y/raw_z` 是 LSM6DSV SFLP game rotation 输出的 half-float bits，类型为 `uint16_t`。
+- `c_vp_gpio_read()`
+- `c_vp_gpio_read_inputs()`
+- `c_vp_gpio_write()`
+- `c_vp_exti_mask()`
+- `c_vp_exti_unmask()`
+- `c_vp_exti_clear_pending()`
+- `c_vp_exti_set_edge()`
 
-### 3.4 连接与路由事件
+关键约束：
 
-| API | 上下文 | 说明 |
-| --- | --- | --- |
-| `vp_on_ble_connected(timestamp)` | protocol callback | BLE 已连接。 |
-| `vp_on_ble_disconnected(reason, timestamp)` | protocol callback | BLE 已断开。 |
-| `vp_on_dongle_connected(timestamp)` | protocol callback | 2.4G dongle 已连接。 |
-| `vp_on_dongle_disconnected(reason, timestamp)` | protocol callback | 2.4G dongle 已断开。 |
-| `vp_on_usb_state_changed(state, timestamp)` | USB callback | USB attach/configured/detach 状态变化。 |
+- 普通低有效二态输入的 `Falling` 与 `Rising` 表示下一次语义转换
+- 平台可以把它们映射为高低电平触发，而不是机械地映射成边沿
+- `Both` 主要服务编码器，平台可以用重配下一边沿模拟
 
-### 3.5 HID 完成事件
+### 7.2 Timer、RTC 与调度
 
-如果底层 HID 发送是同步返回，则无需该 callback。如果底层发送是异步完成，则使用：
+- `c_vp_debounce_timer_start()`
+- `c_vp_debounce_timer_stop()`
+- `c_vp_rtc_tick()`
+- `c_vp_rtc_millis()`
+- `c_vp_rtc_micros()`
+- `c_vp_rtc_set_wake_after()`
+- `c_vp_request_core_poll()`
+- `c_vp_request_core_poll_after()`
 
-| API | 上下文 | 说明 |
-| --- | --- | --- |
-| `vp_on_hid_send_done(route, status, timestamp)` | protocol callback | HID 发送完成或失败。 |
+关键约束：
 
-### 3.6 Vendor/WebHID RX
+- 请求 poll 只负责调度，不负责现场执行
+- RTC 是跨模块统一时间源
 
-| API | 上下文 | 说明 |
-| --- | --- | --- |
-| `vp_on_vendor_report_rx(route, ptr, len, timestamp)` | protocol callback | 收到 vendor report。Rust 复制/入队后在 `vp_core_poll()` 解析。 |
+### 7.3 I2C 与 IMU
 
----
+- `c_vp_i2c_init()`
+- `c_vp_i2c_recover_bus()`
+- `c_vp_i2c_abort()`
+- `c_vp_imu_config_active()`
+- `c_vp_imu_config_suspend()`
+- `c_vp_imu_config_sleep()`
+- `c_vp_imu_read_fifo_async()`
+- `c_vp_imu_read_whoami()`
 
-## 4. Rust → C imported APIs
+关键约束：
 
-这些函数由 C 在 `platform/Bind/c_api.h` 中声明和实现，由 `bindgen` 生成 Rust bindings。
+- IMU 中断只上报事实，不在 ISR 内直接读 FIFO
+- FIFO 读取是否发生，由 Rust 在 bottom-half 决定
 
----
+### 7.4 HID 与 route
 
-## 5. GPIO / EXTI API
-
-### 5.1 GPIO 输入
-
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_gpio_read(input_id)` | 是 | 读取单个输入电平。 |
-| `c_vp_gpio_read_inputs(out_snapshot)` | 是 | 批量读取输入电平。 |
-
-`input_id` 包括普通按键、ModeSwitch、编码器 A/B、IMU INT 等硬件输入。
-
-### 5.2 GPIO 输出
-
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_gpio_write(output_id, level)` | 是 | 写 GPIO 输出，例如 Laser。 |
-
-### 5.3 EXTI 控制
-
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_exti_mask(input_id)` | 是 | 屏蔽指定输入 EXTI。 |
-| `c_vp_exti_unmask(input_id)` | 是 | 重新开启指定输入 EXTI。 |
-| `c_vp_exti_clear_pending(input_id)` | 是 | 清除指定输入 pending。 |
-| `c_vp_exti_set_edge(input_id, edge)` | 是 | 设置下一次语义转换；平台可按输入类型映射为边沿、电平触发或模拟实现。 |
-
-### 5.4 EXTI edge 类型
-
-#### `vp_exti_edge_t`
-
-| 值 | 名称 | 说明 |
-| --- | --- | --- |
-| `0` | `Rising` | 上升沿。 |
-| `1` | `Falling` | 下降沿。 |
-| `2` | `Both` | 任意边沿。平台层负责映射或模拟。 |
-
-CH585 WCH 标准外设 API 原生提供低电平/高电平/下降沿/上升沿触发，未直接提供双边沿；`Both` 是否可用由平台层按具体输入实现。普通低有效二态输入（按键/自锁开关）把 `Falling`/`Rising` 视作“下一次语义转换”而非强制硬件边沿：平台可映射为低电平/高电平触发，以避开机械触点上的 GPIOA 边沿锁存问题。编码器 A/B 需要 `Both`，当前由平台层按当前电平重配下一边沿模拟。
-
----
-
-## 6. Timer / RTC / TMOS API
-
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_debounce_timer_start()` | 是 | 启动共享 debounce tick 来源。 |
-| `c_vp_debounce_timer_stop()` | 是 | 停止共享 debounce tick 来源。 |
-| `c_vp_rtc_tick()` | 是 | 读取 RTC tick。 |
-| `c_vp_rtc_millis()` | 是 | 读取 RTC millis。 |
-| `c_vp_rtc_micros()` | 是 | 读取 RTC micros，可选调试用。 |
-| `c_vp_rtc_set_wake_after(ms)` | 否 | 配置 RTC 唤醒。 |
-| `c_vp_request_core_poll()` | 是 | 合并/触发 TMOS event，调度 `vp_core_poll()`。 |
-
-`c_vp_request_core_poll()` 必须只做置位或合并 event，不得直接调用 `vp_core_poll()`。
-
----
-
-## 7. I2C / IMU API
-
-### 7.1 I2C
-
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_i2c_init()` | 否 | 初始化 I2C master。 |
-| `c_vp_i2c_recover_bus()` | 否 | I2C bus recovery。 |
-| `c_vp_i2c_abort()` | 否 | 中止当前 I2C 事务。 |
-
-### 7.2 IMU profile
-
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_imu_config_active()` | 否 | 配置 Active profile。 |
-| `c_vp_imu_config_suspend()` | 否 | 配置 Suspend profile。 |
-| `c_vp_imu_config_sleep()` | 否 | 配置 Sleep wake profile。 |
-
-### 7.3 IMU FIFO
-
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_imu_read_fifo_async(max_samples)` | 否 | 请求异步读取 FIFO。完成后 C 回调 `vp_on_imu_sample()`。 |
-| `c_vp_imu_read_whoami(out_id)` | 否 | 读取 WHO_AM_I，用于诊断/初始化。 |
-
-IMU INT 到来时，C 不直接读 FIFO，而是调用 `vp_on_imu_int()`。Rust 在 `vp_core_poll()` 中根据状态请求 `c_vp_imu_read_fifo_async()`。
-
----
-
-## 8. HID / Route API
-
-### 8.1 类型
+- `c_vp_hid_route_ready()`
+- `c_vp_hid_send_mouse()`
+- `c_vp_hid_send_vendor()`
+- `c_vp_hid_route_enable()`
+- `c_vp_hid_route_reset()`
 
 #### `vp_hid_route_t`
 
 | 值 | 名称 |
 | --- | --- |
-| `0` | None |
-| `1` | BLE |
-| `2` | Dongle2G4 |
-| `3` | USB |
+| `0` | `None` |
+| `1` | `BLE` |
+| `2` | `Dongle2G4` |
+| `3` | `USB` |
 
 #### `vp_hid_send_status_t`
 
 | 值 | 名称 | 说明 |
 | --- | --- | --- |
-| `0` | Sent | 已发送或已入底层发送队列。 |
-| `1` | RetryLater | 暂时不可发送。 |
-| `2` | NotConnected | route 未连接。 |
-| `3` | Fatal | 不可恢复错误。 |
+| `0` | `Sent` | 已发送或已进入底层队列 |
+| `1` | `RetryLater` | 暂时不可发送 |
+| `2` | `NotConnected` | route 不可用 |
+| `3` | `Fatal` | 不可恢复错误 |
 
-### 8.2 Mouse report
+关键约束：
 
-目标 mouse report 字段：
+- `connected` 不等于 `route ready`
+- 尤其是 BLE，链路存在不代表输入路径已经 secure 或 notify-ready
+- route 不可用时，runtime 必须收敛本次发送尝试，不能靠脏状态自旋重试
+- 只有底层明确返回 `RetryLater` 且存在合理恢复窗口时，才允许延时重试
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `buttons` | `uint8_t` | bit0 left, bit1 right, bit2 middle。 |
-| `dx` | `int8_t` | X delta。 |
-| `dy` | `int8_t` | Y delta。 |
-| `wheel` | `int8_t` | wheel delta。 |
+### 7.5 Power 与 DataFlash
 
-### 8.3 API
+- `c_vp_power_prepare_suspend()`
+- `c_vp_power_enter_suspend()`
+- `c_vp_power_prepare_sleep()`
+- `c_vp_power_enter_sleep()`
+- `c_vp_power_restore_from_sleep()`
+- `c_vp_wake_source_enable()`
+- `c_vp_flash_config_region()`
+- `c_vp_flash_read()`
+- `c_vp_flash_erase()`
+- `c_vp_flash_write()`
 
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_hid_route_ready(route)` | 否 | 查询 route 是否可发送。 |
-| `c_vp_hid_send_mouse(route, buttons, dx, dy, wheel)` | 否 | 发送 mouse report。 |
-| `c_vp_hid_send_vendor(route, ptr, len)` | 否 | 发送 vendor report。`len` 使用 `uint16_t`。 |
-| `c_vp_hid_route_enable(route, enabled)` | 否 | 开关 route。 |
-| `c_vp_hid_route_reset(route)` | 否 | route 错误恢复。 |
+关键约束：
 
-### 8.4 路由 ready 与发送收敛约束
+- 是否进入 `Active`、`Suspend`、`Sleep` 由 Rust 判断
+- C 只执行平台动作，不替代状态决策
 
-- `connected` 不等于 `route ready`。特别是 BLE：链路已建立不代表 HID 输入路径已经 secure/notify-ready。
-- Rust route policy 应显式区分“链路存在”和“报告路径可用”，避免过早把 BLE 作为活动 HID route。
-- 当 `c_vp_hid_route_ready(route) == 0` 或当前 `route == None` 时，runtime 不得仅仅 early-return 并保留会立即再次触发 poll 的发送脏状态。
-- 对 mouse/vendor 等需要 route 才能完成的发送工作，若当前 route 不可用或未 ready，应该：
-  - 收敛本次发送尝试；
-  - 清除或消费掉会导致立即自旋重试的 pending/dirty 状态；
-  - 等待下一次真正有意义的状态事件重新唤醒，例如 BLE input-ready、USB state changed、dongle connected、或新的输入活动。
-- 只有底层明确返回 `RetryLater` 且存在合理的短期恢复路径时，才应使用延时 retry，而不是无条件立即自旋。
+## 8. 常用枚举的语义约束
 
----
+### `vp_button_id_t`
 
-## 9. Power API
+`vp_button_id_t` 固定表示这些实体按钮：
 
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_power_prepare_suspend()` | 否 | 准备进入 Suspend。 |
-| `c_vp_power_enter_suspend()` | 否 | 执行 Suspend。 |
-| `c_vp_power_prepare_sleep()` | 否 | 准备进入 Sleep。 |
-| `c_vp_power_enter_sleep()` | 否 | 执行 Sleep。 |
-| `c_vp_power_restore_from_sleep()` | 否 | wake 后恢复平台外设。 |
-| `c_vp_wake_source_enable(source, enabled)` | 否 | 配置 wake source。 |
+- `Left`
+- `Right`
+- `Middle`
+- `Action`
+- `Laser`
 
-是否进入 `Active`/`Suspend`/`Sleep` 由 Rust 判断，C 只执行。
+### `vp_input_id_t`
 
----
+`vp_input_id_t` 只表示真实硬件输入，例如：
 
-## 10. DataFlash API
+- 按键
+- 模式开关
+- 编码器 A/B
+- IMU INT
 
-### 10.1 Storage info
+USB 状态通过 USB callback 上报，不作为 GPIO input id
 
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_flash_config_region(out_info)` | 否 | 查询配置区起始、长度、page size、write alignment。 |
+### `vp_output_id_t`
 
-### 10.2 Read/write
+当前只定义 `Laser`
+如需增加可控 LED 或其他 power rail，再扩展该枚举
 
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_flash_read(offset, ptr, len)` | 否 | 从 config region 读取。`offset` / `len` 使用 `uint32_t`。 |
-| `c_vp_flash_erase(offset, len)` | 否 | 擦除 config region 内指定范围。`offset` / `len` 使用 `uint32_t`。 |
-| `c_vp_flash_write(offset, ptr, len)` | 否 | 写入 config region。`offset` / `len` 使用 `uint32_t`。 |
+### `vp_exti_edge_t`
 
-C 只按 offset/len 操作，不解析配置 header/payload。
+`vp_exti_edge_t` 只暴露：
 
----
+- `Rising`
+- `Falling`
+- `Both`
 
-## 11. Debug / Diagnostics API
+对普通低有效二态输入，`Rising` 与 `Falling` 表示下一次语义转换
+平台可以把它们映射为高低电平触发，而不是机械地映射成边沿
 
-| API | ISR-safe | 说明 |
-| --- | --- | --- |
-| `c_vp_debug_print(ptr, len)` | 视实现而定 | Rust logger/panic 输出。ISR 中应避免长输出。 |
-| `c_vp_platform_reset(reason)` | 否 | 可选：请求平台复位。 |
+### `vp_wake_source_t`
 
----
+`vp_wake_source_t` 只用于平台唤醒源控制和 debug / diagnostics 表达，不承担业务状态建模职责
 
-## 12. 调度约定
+## 9. 文档边界
 
-### 12.1 快速 callback
+本文档只回答三类问题：
 
-C ISR 或协议栈回调调用 Rust callback 后，Rust 可以：
+- FFI 的职责怎么分
+- 哪些接口可以在什么上下文调用
+- 哪些 ABI 约束不能随意改变
 
-- 更新短状态。
-- 推入 SPSC event queue。
-- 更新 latest-sample cache。
-- 设置 dirty/pending flag。
-- 调用 ISR-safe C API。
-- 调用 `c_vp_request_core_poll()`。
-
-Rust 不应在快速 callback 中：
-
-- 写 DataFlash。
-- 发送 HID report。
-- 阻塞等待 I2C。
-- 解析复杂 WebHID 命令。
-- 执行 sleep enter。
-
-### 12.2 `vp_core_poll()`
-
-`vp_core_poll()` 必须运行在非 ISR 上下文，但当前稳定实现并不是“收到 TMOS event 就立刻在 TMOS task 内直接执行”。实际流程是：
-
-1. Rust callback / C 平台逻辑调用 `c_vp_request_core_poll()`。
-2. `RuntimeTask_RequestPoll()` 仅置位 `runtime_poll_request_pending`。
-3. 主循环 `Main_Circulation()` 每轮执行两次 `RuntimeTask_Service()`，分别位于 `TMOS_SystemProcess()` 前后。
-4. `RuntimeTask_Service()` 先补服务 GPIOA 锁存中断、推进 debounce 软时基，再在 `runtime_poll_request_pending != 0` 时调用 `vp_core_poll()`。
-5. `RuntimeTask_RequestPollAfter(ms)` 在 `ms > 0` 时通过 TMOS timer 投递 `RUNTIME_CORE_POLL_EVT`；`RuntimeTask_ProcessEvent()` 收到事件后只把 `runtime_poll_request_pending` 置位，真正的 `vp_core_poll()` 仍由下一轮 `RuntimeTask_Service()` 执行。
-
-因此，`vp_core_poll()` 的职责保持不变：
-
-- event queue。
-- HID report send/retry。
-- IMU FIFO async read request。
-- WebHID command parse。
-- config save。
-- power transition。
-
-但它的**实际执行入口**是主循环侧的 runtime service，而不是 TMOS 事件处理函数直接调用。这是当前项目已验证的稳定调度结构。
-
-如果 `vp_core_poll()` 处理后仍有 pending work，应再次调用 `c_vp_request_core_poll()`。
-
-额外约束：如果某项工作在当前 route / ready 条件下根本不可能完成，则 `vp_core_poll()` 不得让对应 dirty/pending 状态持续触发立即 poll。必须显式收敛本次尝试，等待下一次真实状态事件重新唤醒。
-
----
-
-## 13. 生成工具要求
-
-- `bindgen` 输入：`platform/Bind/c_api.h`。
-- `cbindgen` 输出：`platform/Bind/rust_api.h`。
-- 新增 Rust exported function 后必须确保 `cbindgen` 能生成稳定 C 声明。
-- 新增 C API 后必须确保 `bindgen` 能生成 no_std 可用 bindings。
-- CI/构建应保证 `rust_api.h` 与 Rust exported ABI 同步。
-
----
-
-## 14. ABI implementation checklist
-
-本节是 FFI 实现前检查项；后续以本文为 FFI/ABI 单一入口。
-
-### 14.1 Fixed types
-
-| 类型 | 底层类型 / 状态 |
-| --- | --- |
-| `vp_timestamp_t` | `uint32_t` RTC millis，已确认。 |
-| `vp_bool_t` | `uint8_t`，`0=false`，`1=true`。 |
-| `vp_status_t` | `uint8_t` enum。 |
-| `vp_button_id_t` | `uint8_t` enum：Left / Right / Middle / Action / Laser。 |
-| `vp_input_id_t` | `uint8_t` enum：button / mode / encoder / IMU inputs；USB 状态通过 USB stack callback。 |
-| `vp_output_id_t` | `uint8_t` enum：当前只定义 Laser。 |
-| `vp_exti_edge_t` | `uint8_t` enum：Rising / Falling / Both。 |
-| `vp_hid_route_t` | `uint8_t` enum。 |
-| `vp_hid_send_status_t` | `uint8_t` enum。 |
-| `vp_usb_state_t` | `uint8_t` enum：Detached / Attached / Configured / Suspended / Error。 |
-| `vp_wake_source_t` | diagnostics-only bitmask，不参与业务决策。 |
-| `vp_power_state_t` | 不跨 FFI 暴露。 |
-| `vp_flash_status_t` | 不使用，统一返回 `vp_status_t`。 |
-
-### 14.2 Pointer and buffer ownership
-
-- C → Rust callback 中的 `ptr,len` 只在 callback 期间有效。
-- Rust 必须立即复制 vendor report，不保存裸指针。
-- Rust → C flash write / HID vendor send 的 `ptr,len` 在函数返回前有效，C 不保存指针；如果底层异步，C 必须复制。
-- `out_*` 参数由调用方分配，由被调用方写入。
-- HID/vendor report length 使用 `uint16_t`。
-- flash/config buffer length 使用 `uint32_t`。
-
-### 14.3 Context rules
-
-| 上下文 | 允许行为 |
-| --- | --- |
-| ISR | 只做短路径、不可阻塞、不可 malloc、不可 flash。 |
-| protocol callback | 不阻塞，允许入队。 |
-| TMOS task / `vp_core_poll()` | 允许 HID send、I2C request、config parse、power transition。 |
-| init task | 允许初始化硬件和 Runtime。 |
-
-### 14.4 Reentrancy rules
-
-- `vp_core_poll()` 严格不可重入；如果执行期间再次请求 poll，只能合并 pending event，下次再运行。
-- 不要求 C 层额外序列化所有 Rust callback。
-- callback 设计原则是互相不共享业务状态；即使被中断打断，也不应破坏状态。
-- 如果实现中确实存在共享底层结构，例如事件队列、latest sample cache、pending flags，则该结构本身必须 ISR-safe / reentrant-tolerant。
-- ISR callback 只做极短路径。
-- Runtime 长耗时操作不能持有全局 mutable borrow。
-- 复杂状态变更集中在 `vp_core_poll()`。
-
-### 14.5 ABI version
-
-v1 不需要 ABI version 运行时校验。
-
-原因：C/Rust FFI header 全部自动生成且一起编译，不存在独立分发造成的版本漂移问题。可以保留编译期注释或常量，但不要求运行时校验。
+更细的状态机和平台参数分别放在 `POWER_STATE_MACHINE.md`、`ROUTE_STATE_MACHINE.md`、`RESOURCE_PROFILE.md` 和 `CH585_NOTES.md`

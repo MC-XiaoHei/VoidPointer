@@ -1,6 +1,6 @@
 # Route State Machine
 
-本文定义 BLE / 2.4G / USB route 的目标行为。当前内容是 Draft，部分策略需要项目负责人确认。
+本文定义 BLE / 2.4G / USB route 的目标行为。这里记录长期有效的 route 规则；当前实现进度和未完成项看 `dev/TASKLIST.md`。
 
 ## 1. Route 类型
 
@@ -57,6 +57,11 @@ v1 route 实现范围已确认：
 | USB configured 且 `usb_mouse_policy = Enabled` | USB。 |
 | USB 未 configured | 由物理开关选择 BLE 或 2.4G。 |
 
+补充规则：
+
+- `USB configured` 时采用 wired priority。
+- 当前实现下，进入 `Configured` 后会关闭 BLE 广播并断开现有 BLE 连接。
+
 ### 4.2 Vendor/WebHID route
 
 结论：Vendor/WebHID 三个 route 都支持：
@@ -75,7 +80,16 @@ v1 route 实现范围已确认：
 
 Vendor/config 会话不作为特殊 power blocker；如果设备满足普通 idle 条件，允许进入 `Suspend`。收到新的 vendor report 时再唤醒处理。
 
-## 5. BLE 状态
+### 5.1 BLE connected 与 input-ready
+
+BLE route 需要把链路连接和输入路径可发送分开建模：
+
+- `connected` 表示链路存在
+- `input-ready` 表示 HID notify / security / profile 路径已经可发送
+
+因此 `connected` 不等于 route ready。只有进入 input-ready 后，mouse report 和 vendor reply 才能把 BLE 当成真正可发送的 route。
+
+### 5.2 BLE 运行规则
 
 建议状态：
 
