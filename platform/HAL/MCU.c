@@ -13,6 +13,7 @@
 /******************************************************************************/
 /* 头文件包含 */
 #include "HAL.h"
+#include "c_api.h"
 
 tmosTaskID halTaskID;
 uint32_t   g_LLE_IRQLibHandlerLocation;
@@ -102,7 +103,8 @@ void CH58x_BLEInit(void) {
     uint8_t     i;
     bleConfig_t cfg;
     if (tmos_memcmp(VER_LIB, VER_FILE, strlen(VER_FILE)) == FALSE) {
-        PRINT("head file error...\n");
+        VP_LOG_ERROR("hal_ble",
+                     "ble library version mismatch");
         while (1);
     }
 
@@ -121,7 +123,7 @@ void CH58x_BLEInit(void) {
 #if (defined(BLE_SNV)) && (BLE_SNV == TRUE)
     if ((BLE_SNV_ADDR + BLE_SNV_BLOCK * BLE_SNV_NUM) >
         (0x78000 - FLASH_ROM_MAX_SIZE)) {
-        PRINT("SNV config error...\n");
+        VP_LOG_ERROR("hal_ble", "snv config out of range");
         while (1);
     }
     cfg.SNVAddr = (uint32_t)BLE_SNV_ADDR;
@@ -162,7 +164,8 @@ void CH58x_BLEInit(void) {
     // BLE_Lib 占用了VTF Interrupt 2号和3号
     i = BLE_LibInit(&cfg);
     if (i) {
-        PRINT("LIB init error code: %x ...\n", i);
+        VP_LOG_ERROR("hal_ble", "ble library init failed;code=0x%02x",
+                     i);
         while (1);
     }
 }
@@ -224,7 +227,7 @@ tmosEvents HAL_ProcessEvent(tmosTaskID task_id, tmosEvents events) {
 #endif
     }
     if (events & HAL_TEST_EVENT) {
-        PRINT("* \n");
+        VP_LOG_DEBUG("hal", "hal test tick");
         tmos_start_task(halTaskID, HAL_TEST_EVENT, MS1_TO_SYSTEM_TIME(1000));
         return events ^ HAL_TEST_EVENT;
     }

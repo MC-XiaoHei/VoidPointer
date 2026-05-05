@@ -21,6 +21,7 @@
 #include "ble_hid_app.h"
 #include "hidmouseservice.h"
 #include "hiddev.h"
+#include "c_api.h"
 #include "rust_api.h"
 
 /*********************************************************************
@@ -116,7 +117,6 @@ static void hidDevPasscodeCB(uint8_t *deviceAddr, uint16_t connectionHandle,
 static void hidDevBattCB(uint8_t event);
 static void hidDevScanParamCB(uint8_t event);
 static void hidDevBattPeriodicTask(void);
-static void hidDevLogAddr(const uint8_t *addr);
 static void hidDevRefreshSecurityState(uint16_t connHandle, const char *reason);
 
 static hidRptMap_t *hidDevRptByHandle(uint16_t handle);
@@ -170,7 +170,7 @@ void HidDev_Init()
 
 #if VP_BLE_BRINGUP_ERASE_BONDS_AT_BOOT
     GAPBondMgr_SetParameter(GAPBOND_ERASE_ALLBONDS, 0, NULL);
-    PRINT("Erase all bonds at boot\n");
+    VP_LOG_INFO("hiddev", "bonds erased at boot");
 #endif
 
     // Setup the GAP Bond Manager
@@ -1015,25 +1015,6 @@ static void hidDevBattCB(uint8_t event)
  */
 static void hidDevScanParamCB(uint8_t event)
 {
-}
-
-static void hidDevLogAddr(const uint8_t *addr)
-{
-    if(addr == NULL)
-    {
-        PRINT("<null>\n");
-        return;
-    }
-
-    for(int i = 0; i < B_ADDR_LEN; ++i)
-    {
-        PRINT("%02x", addr[i]);
-        if(i + 1 < B_ADDR_LEN)
-        {
-            PRINT(":");
-        }
-    }
-    PRINT("\n");
 }
 
 /*********************************************************************

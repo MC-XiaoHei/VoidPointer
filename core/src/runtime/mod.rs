@@ -403,8 +403,8 @@ impl Runtime {
                 let usb_state = UsbState::from(state);
                 self.router.set_usb_state(usb_state);
                 self.mark_activity(timestamp);
-                log::info!(
-                    "USB state changed: {:?}, wired_active={}",
+                log::debug!(
+                    "usb state changed;state={:?},wired_active={}",
                     usb_state,
                     matches!(usb_state, UsbState::Configured)
                 );

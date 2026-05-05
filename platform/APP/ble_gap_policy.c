@@ -7,6 +7,7 @@
 #include "ble_gap_policy.h"
 #include "ble_hid_app.h"
 #include "ble_hid_app_config.h"
+#include "c_api.h"
 
 #include "hiddev.h"
 #include "hidmouseservice.h"
@@ -28,9 +29,11 @@ void BleGapPolicy_Init(uint8_t task_id) {
 
 uint8_t BleGapPolicy_SetAdvertisingEnabled(uint8_t enabled) {
     bleGapPolicyAdvertisingAllowed = enabled ? TRUE : FALSE;
-    PRINT("BLE advertising allowed=%u state=%u started=%u handle=%u\n",
-          bleGapPolicyAdvertisingAllowed, bleGapPolicyGapState,
-          bleGapPolicyGapStarted, bleGapPolicyConnHandle);
+    VP_LOG_DEBUG(
+        "ble_gap",
+        "advertising policy updated;allowed=%u,state=%u,started=%u,handle=%u",
+        bleGapPolicyAdvertisingAllowed, bleGapPolicyGapState,
+        bleGapPolicyGapStarted, bleGapPolicyConnHandle);
     BleGapPolicy_ApplyAdvertising();
     return SUCCESS;
 }
@@ -72,12 +75,12 @@ void BleGapPolicy_HandleGapState(gapRole_States_t newState, gapRoleEvent_t* pEve
             bleGapPolicyGapStarted = TRUE;
             GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddr);
             GAP_ConfigDeviceAddr(ADDRTYPE_STATIC, ownAddr);
-            PRINT("Initialized..\n");
+            VP_LOG_INFO("ble_gap", "ble stack initialized");
             BleGapPolicy_ApplyAdvertising();
         } break;
 
         case GAPROLE_ADVERTISING:
-            PRINT("Advertising..\n");
+            VP_LOG_DEBUG("ble_gap", "gap state changed;state=advertising");
             break;
 
         case GAPROLE_CONNECTED:
@@ -85,7 +88,8 @@ void BleGapPolicy_HandleGapState(gapRole_States_t newState, gapRoleEvent_t* pEve
                 gapEstLinkReqEvent_t* event = (gapEstLinkReqEvent_t*)pEvent;
 
                 bleGapPolicyConnHandle = event->connectionHandle;
-                PRINT("Connected..\n");
+                VP_LOG_INFO("ble_gap", "connected;handle=%u",
+                            bleGapPolicyConnHandle);
                 vp_on_ble_connected(c_vp_rtc_millis());
 #if BLE_GAP_POLICY_PARAM_UPDATE_ENABLED
                 tmos_start_task(bleGapPolicyTaskId, START_PARAM_UPDATE_EVT,
@@ -102,7 +106,8 @@ void BleGapPolicy_HandleGapState(gapRole_States_t newState, gapRoleEvent_t* pEve
 #if BLE_GAP_POLICY_PARAM_UPDATE_ENABLED
                 tmos_stop_task(bleGapPolicyTaskId, START_PARAM_UPDATE_EVT);
 #endif
-                PRINT("Disconnected.. reason=%x\n", pEvent->linkTerminate.reason);
+                VP_LOG_INFO("ble_gap", "disconnected;reason=0x%02x",
+                            pEvent->linkTerminate.reason);
                 bleGapPolicyConnHandle = GAP_CONNHANDLE_INIT;
                 vp_on_ble_disconnected(pEvent->linkTerminate.reason,
                                        c_vp_rtc_millis());
@@ -112,7 +117,7 @@ void BleGapPolicy_HandleGapState(gapRole_States_t newState, gapRoleEvent_t* pEve
 
         case GAPROLE_ERROR:
             bleGapPolicyConnHandle = GAP_CONNHANDLE_INIT;
-            PRINT("Error..\n");
+            VP_LOG_ERROR("ble_gap", "gap role error");
             break;
 
         default:
@@ -124,7 +129,8 @@ void BleGapPolicy_HandleReportNotifyEnabled(uint8_t id, uint8_t type,
                                             uint16_t uuid) {
     if (uuid == GATT_CLIENT_CHAR_CFG_UUID && id == HID_RPT_ID_MOUSE_IN &&
         type == HID_REPORT_TYPE_INPUT) {
-        PRINT("BLE report notify enabled: id=%u type=%u\n", id, type);
+        VP_LOG_DEBUG("ble_gap",
+                     "input notify enabled;id=%u,type=%u", id, type);
         vp_on_ble_input_ready(c_vp_rtc_millis());
     }
 }

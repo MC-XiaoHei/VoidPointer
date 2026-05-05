@@ -5,7 +5,6 @@ use crate::ffi::bindings::{
     c_vp_gpio_read,
 };
 use crate::input::encoder::RotaryEncoder;
-use log::info;
 
 const DEBOUNCE_STABLE_TICKS: u8 = 5;
 const DEBOUNCED_TWO_STATE_INPUTS: usize = 4;
@@ -274,12 +273,12 @@ fn stop_debounce_timer() {
 
 fn log_button_change(input_id: u8, pressed: bool) {
     if input_id == VP_INPUT_ACTION as u8 {
-        if pressed {
-            info!("Action pressed");
-        } else {
-            info!("Action released");
-        }
+        info_action_state(pressed);
     }
+}
+
+fn info_action_state(pressed: bool) {
+    log::debug!("button state changed;button=action,pressed={}", pressed);
 }
 
 fn button_id_to_input_id(button_id: u8) -> Option<u8> {

@@ -23,7 +23,7 @@ fn main() {
         .clang_arg("-I../platform/HAL/include")
         .clang_arg("-I../platform/StdPeriphDriver/inc")
         .generate()
-        .expect("No libclang found. Please install LLVM and set LIBCLANG_PATH env var.");
+        .expect("Error while generating bindings.");
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings

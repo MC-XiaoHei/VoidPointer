@@ -17,6 +17,7 @@
 #include "ble_hid_app.h"
 #include "ble_hid_app_config.h"
 #include "hidmouseservice.h"
+#include "c_api.h"
 
 static uint8_t bleHidAppTaskId = INVALID_TASK_ID;
 
@@ -108,7 +109,8 @@ uint16_t BleHidApp_ProcessEvent(uint8_t task_id, uint16_t events) {
     }
 
     if (events & START_PARAM_UPDATE_EVT) {
-        PRINT("ConnParamUpdate start\n");
+        VP_LOG_DEBUG("ble_hid",
+                     "connection parameter update requested");
         GAPRole_PeripheralConnParamUpdateReq(
             BleGapPolicy_GetConnectionHandle(), BLE_GAP_POLICY_CONN_INTERVAL_MIN,
             BLE_GAP_POLICY_CONN_INTERVAL_MAX, BLE_GAP_POLICY_CONN_LATENCY,
@@ -117,9 +119,9 @@ uint16_t BleHidApp_ProcessEvent(uint8_t task_id, uint16_t events) {
     }
 
     if (events & START_PHY_UPDATE_EVT) {
-        PRINT("Send Phy Update %x...\n",
-              GAPRole_UpdatePHY(BleGapPolicy_GetConnectionHandle(), 0,
-                                GAP_PHY_BIT_LE_2M, GAP_PHY_BIT_LE_2M, 0));
+        VP_LOG_DEBUG("ble_hid", "phy update requested;result=0x%02x",
+                     GAPRole_UpdatePHY(BleGapPolicy_GetConnectionHandle(), 0,
+                                       GAP_PHY_BIT_LE_2M, GAP_PHY_BIT_LE_2M, 0));
         return (events ^ START_PHY_UPDATE_EVT);
     }
 
@@ -185,10 +187,10 @@ static uint8_t bleHidAppRptCB(uint8_t id, uint8_t type, uint16_t uuid,
 static void bleHidAppEvtCB(uint8_t evt) {
     switch (evt) {
         case HID_DEV_SUSPEND_EVT:
-            PRINT("HID suspend\n");
+            VP_LOG_INFO("ble_hid", "hid state changed;state=suspended");
             break;
         case HID_DEV_EXIT_SUSPEND_EVT:
-            PRINT("HID exit suspend\n");
+            VP_LOG_INFO("ble_hid", "hid state changed;state=resumed");
             break;
         default:
             break;

@@ -142,7 +142,7 @@ void RuntimeTask_StopDebounceTimer(void) {
 void RuntimeTask_Init() {
     runtime_task_id = TMOS_ProcessEventRegister(RuntimeTask_ProcessEvent);
     if (runtime_task_id == 0xFF) {
-        PRINT("Runtime task register failed\n");
+        VP_LOG_ERROR("runtime", "task registration failed");
         return;
     }
     RuntimeTask_RequestPoll();
@@ -192,7 +192,8 @@ int main() {
     GPIOA_ResetBits(GPIO_Pin_0);
     GPIOA_ResetBits(GPIO_Pin_1);
 
-    PRINT("%s\n", (const char*)VER_LIB);
+    VP_LOG_INFO("main", "ble library version;version=%s",
+                (const char*)VER_LIB);
 
     CH58x_BLEInit();
     HAL_Init();
@@ -200,7 +201,9 @@ int main() {
 
 #if !VP_USB_BRINGUP_DISABLE_IMU
     I2C_Hardware_Init();
-    if (!LSM6DSV_Init()) PRINT("IMU init failed\n");
+    if (!LSM6DSV_Init()) {
+        VP_LOG_ERROR("main", "imu initialization failed");
+    }
 #endif
 
     GAPRole_PeripheralInit();
