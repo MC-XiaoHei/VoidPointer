@@ -1,3 +1,7 @@
+/********************************** (C) COPYRIGHT *******************************
+ * File Name          : c_api.h
+ * Description        : C platform bindings shared with Rust core
+ *******************************************************************************/
 #ifndef VOIDPOINTER_C_API_H
 #define VOIDPOINTER_C_API_H
 
@@ -184,5 +188,14 @@ vp_status_t c_vp_platform_reset(uint32_t reason);
 #ifdef __cplusplus
 }
 #endif
+
+#define VP_LOG_ERROR(module, fmt, ...) \
+    printf("[ERROR] [C:%s] " fmt "\n", module, ##__VA_ARGS__)
+#define VP_LOG_WARN(module, fmt, ...) \
+    printf("[WARN] [C:%s] " fmt "\n", module, ##__VA_ARGS__)
+#define VP_LOG_INFO(module, fmt, ...) \
+    printf("[INFO] [C:%s] " fmt "\n", module, ##__VA_ARGS__)
+#define VP_LOG_DEBUG(module, fmt, ...) \
+    printf("[DEBUG] [C:%s] " fmt "\n", module, ##__VA_ARGS__)
 
 #endif
