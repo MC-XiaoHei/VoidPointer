@@ -104,7 +104,7 @@ void UART3_Reset(void) { R8_UART3_IER = RB_IER_RESET; }
  *
  * @return  none
  */
-void UART3_SendString(uint8_t *buf, uint16_t l) {
+void UART3_SendString(uint8_t* buf, uint16_t l) {
     uint16_t len = l;
 
     while (len) {
@@ -124,7 +124,7 @@ void UART3_SendString(uint8_t *buf, uint16_t l) {
  *
  * @return  读取数据长度
  */
-uint16_t UART3_RecvString(uint8_t *buf) {
+uint16_t UART3_RecvString(uint8_t* buf) {
     uint16_t len = 0;
 
     while (R8_UART3_RFC) {

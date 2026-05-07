@@ -264,8 +264,8 @@ void RTC_InitTime(uint16_t y, uint16_t mon, uint16_t d, uint16_t h, uint16_t m,
  * @param   pm      - 获取到的分钟，MAX_M = 59
  * @param   ps      - 获取到的秒，MAX_S = 59
  */
-void RTC_GetTime(uint16_t *py, uint16_t *pmon, uint16_t *pd, uint16_t *ph,
-                 uint16_t *pm, uint16_t *ps);
+void RTC_GetTime(uint16_t* py, uint16_t* pmon, uint16_t* pd, uint16_t* ph,
+                 uint16_t* pm, uint16_t* ps);
 
 /**
  * @brief   基于LSE/LSI时钟，配置当前RTC 周期数

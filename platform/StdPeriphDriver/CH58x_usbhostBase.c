@@ -21,8 +21,8 @@ _RootHubDev   ThisUsbDev;  //ROOT口
 _DevOnHubPort DevOnHubPort
     [HUB_MAX_PORTS];  // 假定:不超过1个外部HUB,每个外部HUB不超过HUB_MAX_PORTS个端口(多了不管)
 
-uint8_t *pHOST_RX_RAM_Addr;
-uint8_t *pHOST_TX_RAM_Addr;
+uint8_t* pHOST_RX_RAM_Addr;
+uint8_t* pHOST_TX_RAM_Addr;
 
 /*获取设备描述符*/
 __attribute__((aligned(4))) const uint8_t SetupGetDevDescr[] = {
@@ -388,11 +388,11 @@ uint8_t USBHostTransact(uint8_t endp_pid, uint8_t tog, uint32_t timeout) {
  * @return  ERR_USB_BUF_OVER    IN状态阶段出错
  *          ERR_SUCCESS         数据交换成功
  */
-uint8_t HostCtrlTransfer(uint8_t *DataBuf, uint8_t *RetLen) {
+uint8_t HostCtrlTransfer(uint8_t* DataBuf, uint8_t* RetLen) {
     uint16_t RemLen = 0;
     uint8_t  s, RxLen, RxCnt, TxCnt;
-    uint8_t *pBuf;
-    uint8_t *pLen;
+    uint8_t* pBuf;
+    uint8_t* pLen;
 
     pBuf = DataBuf;
     pLen = RetLen;
@@ -489,11 +489,11 @@ uint8_t HostCtrlTransfer(uint8_t *DataBuf, uint8_t *RetLen) {
  *
  * @return  none
  */
-void CopySetupReqPkg(const uint8_t *pReqPkt)  // 复制控制传输的请求包
+void CopySetupReqPkg(const uint8_t* pReqPkt)  // 复制控制传输的请求包
 {
     uint8_t i;
     for (i = 0; i != sizeof(USB_SETUP_REQ); i++) {
-        ((uint8_t *)pSetupReq)[i] = *pReqPkt;
+        ((uint8_t*)pSetupReq)[i] = *pReqPkt;
         pReqPkt++;
     }
 }

@@ -94,7 +94,7 @@ extern void ScanParam_Register(scanParamServiceCB_t pfnServiceCB);
  * @return  bStatus_t
  */
 extern bStatus_t ScanParam_SetParameter(uint8_t param, uint8_t len,
-                                        void *value);
+                                        void* value);
 
 /*********************************************************************
  * @fn      ScanParam_GetParameter
@@ -109,7 +109,7 @@ extern bStatus_t ScanParam_SetParameter(uint8_t param, uint8_t len,
  *
  * @return  bStatus_t
  */
-extern bStatus_t ScanParam_GetParameter(uint8_t param, void *value);
+extern bStatus_t ScanParam_GetParameter(uint8_t param, void* value);
 
 /*********************************************************************
  * @fn      ScanParam_RefreshNotify

@@ -79,7 +79,7 @@
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-extern uint32_t FLASH_EEPROM_CMD(uint8_t cmd, uint32_t StartAddr, void *Buffer,
+extern uint32_t FLASH_EEPROM_CMD(uint8_t cmd, uint32_t StartAddr, void* Buffer,
                                  uint32_t Length);
 
 /**
@@ -154,7 +154,7 @@ extern uint32_t FLASH_EEPROM_CMD(uint8_t cmd, uint32_t StartAddr, void *Buffer,
  */
 __attribute__((always_inline)) RV_STATIC_INLINE uint32_t
 EEPROM_ERASE(uint32_t StartAddr, uint32_t Length) {
-    if ((*((uint32_t *)0x7F024) & 0x0F) == 0x08) {
+    if ((*((uint32_t*)0x7F024) & 0x0F) == 0x08) {
         if (Length % EEPROM_BLOCK_SIZE) {
             while (1);
         }

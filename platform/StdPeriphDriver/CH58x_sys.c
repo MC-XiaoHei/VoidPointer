@@ -31,7 +31,7 @@ void SetSysClock(SYS_CLKTypeDef sc) {
     uint16_t clk_sys_cfg;
     uint8_t  i;
     uint8_t  x32M_c;
-    chip_info = ((*(uint32_t *)ROM_CFG_CHIP_ID));
+    chip_info = ((*(uint32_t*)ROM_CFG_CHIP_ID));
     R32_SAFE_MODE_CTRL |= RB_XROM_312M_SEL;
     R8_SAFE_MODE_CTRL &= ~RB_SAFE_AUTO_EN;
     sys_safe_access_enable();
@@ -212,9 +212,7 @@ void MachineMode_Call(MachineMode_Call_func func) {
  *
  * @return  none
  */
-void SetPI_func() {
-    write_csr(0xbc0, 0x25);
-}
+void SetPI_func() { write_csr(0xbc0, 0x25); }
 
 /*********************************************************************
  * @fn      SYS_EnablePI
@@ -296,7 +294,7 @@ void SYS_ResetExecute(void) {
  * @return  none
  */
 __HIGH_CODE
-void SYS_DisableAllIrq(uint32_t *pirqv) {
+void SYS_DisableAllIrq(uint32_t* pirqv) {
     *pirqv = (PFIC->ISR[0] >> 8) | (PFIC->ISR[1] << 24);
     PFIC->IRER[0] = 0xffffffff;
     PFIC->IRER[1] = 0xffffffff;
@@ -483,7 +481,7 @@ void mDelaymS(uint16_t t) {
 }
 
 #ifdef DEBUG
-int _write(int fd, char *buf, int size) {
+int _write(int fd, char* buf, int size) {
     int i;
     for (i = 0; i < size; i++) {
 #if DEBUG == Debug_UART0
@@ -512,9 +510,9 @@ int _write(int fd, char *buf, int size) {
  *
  * @return  size: Data length
  */
-__attribute__((used)) void *_sbrk(ptrdiff_t incr) {
+__attribute__((used)) void* _sbrk(ptrdiff_t incr) {
     extern char  _end[];
-    static char *curbrk = _end;
+    static char* curbrk = _end;
 
     if ((curbrk + incr < _end) || ((uint32_t)curbrk + incr > (__get_SP() - 64)))
         return NULL - 1;
@@ -531,8 +529,8 @@ __attribute__((used)) void *_sbrk(ptrdiff_t incr) {
  * @return  dst
  */
 __HIGH_CODE
-void *__wrap_memcpy(void *dst, void *src, size_t size) {
-    __MCPY(dst, src, (void *)((uint32_t)src + size));
+void* __wrap_memcpy(void* dst, void* src, size_t size) {
+    __MCPY(dst, src, (void*)((uint32_t)src + size));
     return dst;
 }
 

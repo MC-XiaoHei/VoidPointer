@@ -104,7 +104,7 @@ void UART0_Reset(void) { R8_UART0_IER = RB_IER_RESET; }
  *
  * @return  none
  */
-void UART0_SendString(uint8_t *buf, uint16_t l) {
+void UART0_SendString(uint8_t* buf, uint16_t l) {
     uint16_t len = l;
 
     while (len) {
@@ -124,7 +124,7 @@ void UART0_SendString(uint8_t *buf, uint16_t l) {
  *
  * @return  读取数据长度
  */
-uint16_t UART0_RecvString(uint8_t *buf) {
+uint16_t UART0_RecvString(uint8_t* buf) {
     uint16_t len = 0;
 
     while (R8_UART0_RFC) {

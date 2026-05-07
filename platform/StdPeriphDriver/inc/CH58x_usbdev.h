@@ -25,10 +25,10 @@ extern "C" {
 #define DEF_USB_SET_PROTOCOL 0x0B /* set protocol for bios type */
 
 /* 以下缓存区是USB模块收发使用的数据缓冲区，总共9个通道（9块缓存），用户可根据实际使用的通道数定义相应缓存区 */
-extern uint8_t *pEP0_RAM_Addr;  //ep0(64)+ep4_out(64)+ep4_in(64)
-extern uint8_t *pEP1_RAM_Addr;  //ep1_out(64)+ep1_in(64)
-extern uint8_t *pEP2_RAM_Addr;  //ep2_out(64)+ep2_in(64)
-extern uint8_t *pEP3_RAM_Addr;  //ep3_out(64)+ep3_in(64)
+extern uint8_t* pEP0_RAM_Addr;  //ep0(64)+ep4_out(64)+ep4_in(64)
+extern uint8_t* pEP1_RAM_Addr;  //ep1_out(64)+ep1_in(64)
+extern uint8_t* pEP2_RAM_Addr;  //ep2_out(64)+ep2_in(64)
+extern uint8_t* pEP3_RAM_Addr;  //ep3_out(64)+ep3_in(64)
 
 #define pSetupReqPak     ((PUSB_SETUP_REQ)pEP0_RAM_Addr)
 #define pEP0_DataBuf     (pEP0_RAM_Addr)

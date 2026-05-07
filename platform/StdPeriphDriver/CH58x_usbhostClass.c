@@ -45,7 +45,7 @@ __attribute__((aligned(4))) uint8_t Com_Buffer
  *
  * @return  端点数
  */
-uint8_t AnalyzeHidIntEndp(uint8_t *buf, uint8_t HubPortIndex) {
+uint8_t AnalyzeHidIntEndp(uint8_t* buf, uint8_t HubPortIndex) {
     uint8_t i, s, l;
     s = 0;
 
@@ -99,7 +99,7 @@ uint8_t AnalyzeHidIntEndp(uint8_t *buf, uint8_t HubPortIndex) {
  *
  * @return  0
  */
-uint8_t AnalyzeBulkEndp(uint8_t *buf, uint8_t HubPortIndex) {
+uint8_t AnalyzeBulkEndp(uint8_t* buf, uint8_t HubPortIndex) {
     uint8_t i, s1, s2, l;
     s1 = 0;
     s2 = 2;
@@ -556,7 +556,7 @@ uint8_t EnumHubPort() {
                      (1 << (HUB_PORT_RESET & 0x07)));  // 端口正在复位则等待
             mDelaymS(100);
             s = HubClearPortFeature(i, HUB_C_PORT_RESET);  // 清除复位完成标志
-                //             s = HubSetPortFeature( i, HUB_PORT_ENABLE );                              // 启用HUB端口
+            //             s = HubSetPortFeature( i, HUB_PORT_ENABLE );                              // 启用HUB端口
             s = HubClearPortFeature(
                 i, HUB_C_PORT_CONNECTION);  // 清除连接或移除变化标志
             if (s != ERR_SUCCESS) {
@@ -680,13 +680,13 @@ uint16_t SearchTypeDevice(uint8_t type) {
  *
  * @return  错误码
  */
-uint8_t SETorOFFNumLock(uint8_t *buf) {
+uint8_t SETorOFFNumLock(uint8_t* buf) {
     uint8_t tmp[] = {0x21, 0x09, 0x00, 0x02, 0x00, 0x00, 0x01, 0x00};
     uint8_t len, s;
     if ((buf[2] == 0x53) &
         ((buf[0] | buf[1] | buf[3] | buf[4] | buf[5] | buf[6] | buf[7]) == 0)) {
         for (s = 0; s != sizeof(tmp); s++) {
-            ((uint8_t *)pSetupReq)[s] = tmp[s];
+            ((uint8_t*)pSetupReq)[s] = tmp[s];
         }
         s = HostCtrlTransfer(Com_Buffer, &len);  // 执行控制传输
         if (s != ERR_SUCCESS) {

@@ -38,10 +38,10 @@
  *
  * @return  none
  */
-void FLASH_ROM_READ(uint32_t StartAddr, void *Buffer, uint32_t len) {
+void FLASH_ROM_READ(uint32_t StartAddr, void* Buffer, uint32_t len) {
     uint32_t  i, Length = (len + 3) >> 2;
-    uint32_t *pCode = (uint32_t *)StartAddr;
-    uint32_t *pBuf = (uint32_t *)Buffer;
+    uint32_t* pCode = (uint32_t*)StartAddr;
+    uint32_t* pBuf = (uint32_t*)Buffer;
 
     for (i = 0; i < Length; i++) {
         *pBuf++ = *pCode++;
@@ -167,7 +167,7 @@ void UserOptionByte_Active(void) {
  *
  * @return  0-SUCCESS  (!0)-FAILURE
  */
-void GET_UNIQUE_ID(uint8_t *Buffer) {
+void GET_UNIQUE_ID(uint8_t* Buffer) {
     uint16_t temp;
     FLASH_EEPROM_CMD(CMD_GET_ROM_INFO, ROM_CFG_MAC_ADDR, Buffer, 0);
     temp = (Buffer[0] | (Buffer[1] << 8)) + (Buffer[2] | (Buffer[3] << 8)) +

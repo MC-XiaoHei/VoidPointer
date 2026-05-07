@@ -89,9 +89,9 @@ void PWMX_16bit_ACTOUT(uint8_t ch, uint16_t da, PWMX_PolarTypeDef pr,
         for (i = 0; i < 6; i++) {
             if ((ch >> i) & 1) {
                 if (i < 4) {
-                    *((volatile uint16_t *)((&R16_PWM4_DATA) + i)) = da;
+                    *((volatile uint16_t*)((&R16_PWM4_DATA) + i)) = da;
                 } else {
-                    *((volatile uint16_t *)((&R16_PWM8_DATA) + (i - 4))) = da;
+                    *((volatile uint16_t*)((&R16_PWM8_DATA) + (i - 4))) = da;
                 }
             }
         }
@@ -121,7 +121,7 @@ void PWMX_ACTOUT(uint8_t ch, uint8_t da, PWMX_PolarTypeDef pr,
         (pr) ? (R8_PWM_POLAR |= (ch)) : (R8_PWM_POLAR &= ~(ch));
         for (i = 0; i < 8; i++) {
             if ((ch >> i) & 1) {
-                *((volatile uint8_t *)((&R8_PWM4_DATA) + i)) = da;
+                *((volatile uint8_t*)((&R8_PWM4_DATA) + i)) = da;
             }
         }
         R8_PWM_OUT_EN |= (ch);

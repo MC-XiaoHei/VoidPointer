@@ -122,7 +122,7 @@ uint8_t SPI0_MasterRecvByte(void) {
  *
  * @return  none
  */
-void SPI0_MasterTrans(uint8_t *pbuf, uint16_t len) {
+void SPI0_MasterTrans(uint8_t* pbuf, uint16_t len) {
     uint16_t sendlen;
 
     sendlen = len;
@@ -149,7 +149,7 @@ void SPI0_MasterTrans(uint8_t *pbuf, uint16_t len) {
  *
  * @return  none
  */
-void SPI0_MasterRecv(uint8_t *pbuf, uint16_t len) {
+void SPI0_MasterRecv(uint8_t* pbuf, uint16_t len) {
     uint16_t readlen;
 
     readlen = len;
@@ -176,7 +176,7 @@ void SPI0_MasterRecv(uint8_t *pbuf, uint16_t len) {
  *
  * @return  none
  */
-void SPI0_MasterDMATrans(uint8_t *pbuf, uint16_t len) {
+void SPI0_MasterDMATrans(uint8_t* pbuf, uint16_t len) {
     R8_SPI0_CTRL_MOD &= ~RB_SPI_FIFO_DIR;
     R32_SPI0_DMA_BEG = (uint32_t)pbuf;
     R32_SPI0_DMA_END = (uint32_t)(pbuf + len);
@@ -197,7 +197,7 @@ void SPI0_MasterDMATrans(uint8_t *pbuf, uint16_t len) {
  *
  * @return  none
  */
-void SPI0_MasterDMARecv(uint8_t *pbuf, uint16_t len) {
+void SPI0_MasterDMARecv(uint8_t* pbuf, uint16_t len) {
     R8_SPI0_CTRL_MOD |= RB_SPI_FIFO_DIR;
     R32_SPI0_DMA_BEG = (uint32_t)pbuf;
     R32_SPI0_DMA_END = (uint32_t)(pbuf + len);
@@ -261,7 +261,7 @@ void SPI0_SlaveSendByte(uint8_t d) {
  * @return  none
  */
 __HIGH_CODE
-void SPI0_SlaveRecv(uint8_t *pbuf, uint16_t len) {
+void SPI0_SlaveRecv(uint8_t* pbuf, uint16_t len) {
     uint16_t revlen;
 
     revlen = len;
@@ -287,7 +287,7 @@ void SPI0_SlaveRecv(uint8_t *pbuf, uint16_t len) {
  * @return  none
  */
 __HIGH_CODE
-void SPI0_SlaveTrans(uint8_t *pbuf, uint16_t len) {
+void SPI0_SlaveTrans(uint8_t* pbuf, uint16_t len) {
     uint16_t sendlen;
 
     sendlen = len;
@@ -313,7 +313,7 @@ void SPI0_SlaveTrans(uint8_t *pbuf, uint16_t len) {
  *
  * @return  none
  */
-void SPI0_SlaveDMARecv(uint8_t *pbuf, uint16_t len) {
+void SPI0_SlaveDMARecv(uint8_t* pbuf, uint16_t len) {
     R8_SPI0_CTRL_MOD |= RB_SPI_FIFO_DIR;
     R32_SPI0_DMA_BEG = (uint32_t)pbuf;
     R32_SPI0_DMA_END = (uint32_t)(pbuf + len);
@@ -334,7 +334,7 @@ void SPI0_SlaveDMARecv(uint8_t *pbuf, uint16_t len) {
  *
  * @return  none
  */
-void SPI0_SlaveDMATrans(uint8_t *pbuf, uint16_t len) {
+void SPI0_SlaveDMATrans(uint8_t* pbuf, uint16_t len) {
     R8_SPI0_CTRL_MOD &= ~RB_SPI_FIFO_DIR;
     R32_SPI0_DMA_BEG = (uint32_t)pbuf;
     R32_SPI0_DMA_END = (uint32_t)(pbuf + len);

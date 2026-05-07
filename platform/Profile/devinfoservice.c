@@ -150,7 +150,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
         {ATT_BT_UUID_SIZE, primaryServiceUUID}, /* type */
         GATT_PERMIT_READ, /* permissions */
         0, /* handle */
-        (uint8_t *)&devInfoService /* pValue */
+        (uint8_t*)&devInfoService /* pValue */
     },
 
     // System ID Declaration
@@ -163,7 +163,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfoSystemIdUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfoSystemId},
+     (uint8_t*)devInfoSystemId},
 
     // Model Number String Declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -175,7 +175,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfoModelNumberUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfoModelNumber},
+     (uint8_t*)devInfoModelNumber},
 
     // Serial Number String Declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -187,7 +187,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfoSerialNumberUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfoSerialNumber},
+     (uint8_t*)devInfoSerialNumber},
 
     // Firmware Revision String Declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -199,7 +199,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfoFirmwareRevUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfoFirmwareRev},
+     (uint8_t*)devInfoFirmwareRev},
 
     // Hardware Revision String Declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -211,7 +211,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfoHardwareRevUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfoHardwareRev},
+     (uint8_t*)devInfoHardwareRev},
 
     // Software Revision String Declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -223,7 +223,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfoSoftwareRevUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfoSoftwareRev},
+     (uint8_t*)devInfoSoftwareRev},
 
     // Manufacturer Name String Declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -235,7 +235,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfoMfrNameUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfoMfrName},
+     (uint8_t*)devInfoMfrName},
 
     // IEEE 11073-20601 Regulatory Certification Data List Declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -247,7 +247,7 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfo11073CertUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfo11073Cert},
+     (uint8_t*)devInfo11073Cert},
 
     // PnP ID Declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -259,13 +259,13 @@ static gattAttribute_t devInfoAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, devInfoPnpIdUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)devInfoPnpId}};
+     (uint8_t*)devInfoPnpId}};
 
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-static bStatus_t devInfo_ReadAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
-                                    uint8_t *pValue, uint16_t *pLen,
+static bStatus_t devInfo_ReadAttrCB(uint16_t connHandle, gattAttribute_t* pAttr,
+                                    uint8_t* pValue, uint16_t* pLen,
                                     uint16_t offset, uint16_t maxLen,
                                     uint8_t method);
 
@@ -316,7 +316,7 @@ bStatus_t DevInfo_AddService(void) {
  *
  * @return  bStatus_t
  */
-bStatus_t DevInfo_SetParameter(uint8_t param, uint8_t len, void *value) {
+bStatus_t DevInfo_SetParameter(uint8_t param, uint8_t len, void* value) {
     bStatus_t ret = SUCCESS;
 
     switch (param) {
@@ -345,7 +345,7 @@ bStatus_t DevInfo_SetParameter(uint8_t param, uint8_t len, void *value) {
  *
  * @return  bStatus_t
  */
-bStatus_t DevInfo_GetParameter(uint8_t param, void *value) {
+bStatus_t DevInfo_GetParameter(uint8_t param, void* value) {
     bStatus_t ret = SUCCESS;
 
     switch (param) {
@@ -407,8 +407,8 @@ bStatus_t DevInfo_GetParameter(uint8_t param, void *value) {
  *
  * @return      Success or Failure
  */
-static bStatus_t devInfo_ReadAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
-                                    uint8_t *pValue, uint16_t *pLen,
+static bStatus_t devInfo_ReadAttrCB(uint16_t connHandle, gattAttribute_t* pAttr,
+                                    uint8_t* pValue, uint16_t* pLen,
                                     uint16_t offset, uint16_t maxLen,
                                     uint8_t method) {
     bStatus_t status = SUCCESS;

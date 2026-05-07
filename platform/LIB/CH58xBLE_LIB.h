@@ -67,10 +67,10 @@ typedef void (*pfnLibStatusErrorCB)(uint8_t code, uint32_t status);
 // Define function type that process event
 typedef tmosEvents (*pTaskEventHandlerFn)(tmosTaskID taskID, tmosEvents event);
 // Define function type that read flash
-typedef uint32_t (*pfnFlashReadCB)(uint32_t addr, uint32_t num, uint32_t *pBuf);
+typedef uint32_t (*pfnFlashReadCB)(uint32_t addr, uint32_t num, uint32_t* pBuf);
 // Define function type that write flash
 typedef uint32_t (*pfnFlashWriteCB)(uint32_t addr, uint32_t num,
-                                    uint32_t *pBuf);
+                                    uint32_t* pBuf);
 // Define function type that get system clock count
 typedef uint32_t (*pfnGetSysClock)(void);
 // Define function type that enable/disable system clock interrupt
@@ -88,11 +88,11 @@ typedef struct tag_ble_config {
     uint8_t  SNVNum;  // SNV flash block number ( default 1 )
     uint8_t
         BufNumber;  // Maximum number of sent and received packages cached by the controller( default 5 )
-        // Must be greater than the number of connections.
+    // Must be greater than the number of connections.
     uint16_t
         BufMaxLen;  // Maximum length (in octets) of the data portion of each HCI data packet( default 27 )
-        // SC enable,must be greater than 69
-        // ATT_MTU = BufMaxLen-4,Range[23,ATT_MAX_MTU_SIZE]
+    // SC enable,must be greater than 69
+    // ATT_MTU = BufMaxLen-4,Range[23,ATT_MAX_MTU_SIZE]
     uint8_t
         TxNumEvent;  // Maximum number of TX data in a connection event ( default 1 )
     uint8_t
@@ -235,8 +235,8 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define PUBLIC_KEY_LEN            64
 
 //! Maximum Advertising Packet Length
-#define B_MAX_ADV_LEN             31  // maximum legacy advertising packet length
-#define B_MAX_ADV_EXT_LEN         460  // maximum extended advertising packet length
+#define B_MAX_ADV_LEN     31  // maximum legacy advertising packet length
+#define B_MAX_ADV_EXT_LEN 460  // maximum extended advertising packet length
 #define B_MAX_ADV_PERIODIC_LEN \
     460  // maximum periodic advertising packet length
 
@@ -255,12 +255,12 @@ extern const uint8_t VER_LIB[];  // LIB version
 /** BLE_STATUS_VALUES BLE Default BLE Status Values
  * returned as bStatus_t
  */
-#define bleInvalidTaskID          INVALID_TASK  //!< Task ID isn't setup properly
-#define bleEecKeyRequestRejected  0x06  //!< key missing
-#define bleNotReady               0x10  //!< Not ready to perform task
+#define bleInvalidTaskID         INVALID_TASK  //!< Task ID isn't setup properly
+#define bleEecKeyRequestRejected 0x06  //!< key missing
+#define bleNotReady              0x10  //!< Not ready to perform task
 #define bleAlreadyInRequestedMode 0x11  //!< Already performing that task
-#define bleIncorrectMode          0x12  //!< Not setup properly to perform that task
-#define bleMemAllocError          0x13  //!< Memory allocation error occurred
+#define bleIncorrectMode 0x12  //!< Not setup properly to perform that task
+#define bleMemAllocError 0x13  //!< Memory allocation error occurred
 #define bleNotConnected \
     0x14  //!< Can't perform function when not in a connection
 #define bleNoResources       0x15  //!< There are no resource available
@@ -305,180 +305,180 @@ extern const uint8_t VER_LIB[];  // LIB version
 /**
  * GATT Descriptors
  */
-#define GATT_CHAR_EXT_PROPS_UUID        0x2900  // Characteristic Extended Properties
-#define GATT_CHAR_USER_DESC_UUID        0x2901  // Characteristic User Description
-#define GATT_CLIENT_CHAR_CFG_UUID       0x2902  // Client Characteristic Configuration
-#define GATT_SERV_CHAR_CFG_UUID         0x2903  // Server Characteristic Configuration
-#define GATT_CHAR_FORMAT_UUID           0x2904  // Characteristic Presentation Format
-#define GATT_CHAR_AGG_FORMAT_UUID       0x2905  // Characteristic Aggregate Format
-#define GATT_VALID_RANGE_UUID           0x2906  // Valid Range
-#define GATT_EXT_REPORT_REF_UUID        0x2907  // External Report Reference Descriptor
-#define GATT_REPORT_REF_UUID            0x2908  // Report Reference Descriptor
+#define GATT_CHAR_EXT_PROPS_UUID  0x2900  // Characteristic Extended Properties
+#define GATT_CHAR_USER_DESC_UUID  0x2901  // Characteristic User Description
+#define GATT_CLIENT_CHAR_CFG_UUID 0x2902  // Client Characteristic Configuration
+#define GATT_SERV_CHAR_CFG_UUID   0x2903  // Server Characteristic Configuration
+#define GATT_CHAR_FORMAT_UUID     0x2904  // Characteristic Presentation Format
+#define GATT_CHAR_AGG_FORMAT_UUID 0x2905  // Characteristic Aggregate Format
+#define GATT_VALID_RANGE_UUID     0x2906  // Valid Range
+#define GATT_EXT_REPORT_REF_UUID 0x2907  // External Report Reference Descriptor
+#define GATT_REPORT_REF_UUID     0x2908  // Report Reference Descriptor
 
 /**
  * GATT Characteristics
  */
-#define DEVICE_NAME_UUID                0x2A00  // Device Name
-#define APPEARANCE_UUID                 0x2A01  // Appearance
-#define PERI_PRIVACY_FLAG_UUID          0x2A02  // Peripheral Privacy Flag
-#define RECONNECT_ADDR_UUID             0x2A03  // Reconnection Address
+#define DEVICE_NAME_UUID         0x2A00  // Device Name
+#define APPEARANCE_UUID          0x2A01  // Appearance
+#define PERI_PRIVACY_FLAG_UUID   0x2A02  // Peripheral Privacy Flag
+#define RECONNECT_ADDR_UUID      0x2A03  // Reconnection Address
 #define PERI_CONN_PARAM_UUID \
     0x2A04  // Peripheral Preferred Connection Parameters
 #define SERVICE_CHANGED_UUID            0x2A05  // Service Changed
 #define CENTRAL_ADDRESS_RESOLUTION_UUID 0x2AA6  // Central Address Resolution
-#define RL_PRIVATE_ADDR_ONLY_UUID       0x2AC9  // Resolvable Private Address Only
-#define ENC_DATA_KEY_MATERIAL_UUID      0x2B88  // Encrypted Data Key Material
-#define LE_GATT_SEC_LEVELS_UUID         0x2BF5  // LE GATT Security Levels
+#define RL_PRIVATE_ADDR_ONLY_UUID  0x2AC9  // Resolvable Private Address Only
+#define ENC_DATA_KEY_MATERIAL_UUID 0x2B88  // Encrypted Data Key Material
+#define LE_GATT_SEC_LEVELS_UUID    0x2BF5  // LE GATT Security Levels
 
 /**
  * GATT Service UUIDs
  */
-#define IMMEDIATE_ALERT_SERV_UUID       0x1802  // Immediate Alert
-#define LINK_LOSS_SERV_UUID             0x1803  // Link Loss
-#define TX_PWR_LEVEL_SERV_UUID          0x1804  // Tx Power
-#define CURRENT_TIME_SERV_UUID          0x1805  // Current Time Service
-#define REF_TIME_UPDATE_SERV_UUID       0x1806  // Reference Time Update Service
-#define NEXT_DST_CHANGE_SERV_UUID       0x1807  // Next DST Change Service
-#define GLUCOSE_SERV_UUID               0x1808  // Glucose
-#define THERMOMETER_SERV_UUID           0x1809  // Health Thermometer
-#define DEVINFO_SERV_UUID               0x180A  // Device Information
-#define NWA_SERV_UUID                   0x180B  // Network Availability
-#define HEARTRATE_SERV_UUID             0x180D  // Heart Rate
-#define PHONE_ALERT_STS_SERV_UUID       0x180E  // Phone Alert Status Service
-#define BATT_SERV_UUID                  0x180F  // Battery Service
-#define BLOODPRESSURE_SERV_UUID         0x1810  // Blood Pressure
-#define ALERT_NOTIF_SERV_UUID           0x1811  // Alert Notification Service
-#define HID_SERV_UUID                   0x1812  // Human Interface Device
-#define SCAN_PARAM_SERV_UUID            0x1813  // Scan Parameters
-#define RSC_SERV_UUID                   0x1814  // Running Speed and Cadence
-#define CSC_SERV_UUID                   0x1816  // Cycling Speed and Cadence
-#define CYCPWR_SERV_UUID                0x1818  // Cycling Power
-#define LOC_NAV_SERV_UUID               0x1819  // Location and Navigation
+#define IMMEDIATE_ALERT_SERV_UUID  0x1802  // Immediate Alert
+#define LINK_LOSS_SERV_UUID        0x1803  // Link Loss
+#define TX_PWR_LEVEL_SERV_UUID     0x1804  // Tx Power
+#define CURRENT_TIME_SERV_UUID     0x1805  // Current Time Service
+#define REF_TIME_UPDATE_SERV_UUID  0x1806  // Reference Time Update Service
+#define NEXT_DST_CHANGE_SERV_UUID  0x1807  // Next DST Change Service
+#define GLUCOSE_SERV_UUID          0x1808  // Glucose
+#define THERMOMETER_SERV_UUID      0x1809  // Health Thermometer
+#define DEVINFO_SERV_UUID          0x180A  // Device Information
+#define NWA_SERV_UUID              0x180B  // Network Availability
+#define HEARTRATE_SERV_UUID        0x180D  // Heart Rate
+#define PHONE_ALERT_STS_SERV_UUID  0x180E  // Phone Alert Status Service
+#define BATT_SERV_UUID             0x180F  // Battery Service
+#define BLOODPRESSURE_SERV_UUID    0x1810  // Blood Pressure
+#define ALERT_NOTIF_SERV_UUID      0x1811  // Alert Notification Service
+#define HID_SERV_UUID              0x1812  // Human Interface Device
+#define SCAN_PARAM_SERV_UUID       0x1813  // Scan Parameters
+#define RSC_SERV_UUID              0x1814  // Running Speed and Cadence
+#define CSC_SERV_UUID              0x1816  // Cycling Speed and Cadence
+#define CYCPWR_SERV_UUID           0x1818  // Cycling Power
+#define LOC_NAV_SERV_UUID          0x1819  // Location and Navigation
 
 /**
  * GATT Characteristic UUIDs
  */
-#define ALERT_LEVEL_UUID                0x2A06  // Alert Level
-#define TX_PWR_LEVEL_UUID               0x2A07  // Tx Power Level
-#define DATE_TIME_UUID                  0x2A08  // Date Time
-#define DAY_OF_WEEK_UUID                0x2A09  // Day of Week
-#define DAY_DATE_TIME_UUID              0x2A0A  // Day Date Time
-#define EXACT_TIME_256_UUID             0x2A0C  // Exact Time 256
-#define DST_OFFSET_UUID                 0x2A0D  // DST Offset
-#define TIME_ZONE_UUID                  0x2A0E  // Time Zone
-#define LOCAL_TIME_INFO_UUID            0x2A0F  // Local Time Information
-#define TIME_WITH_DST_UUID              0x2A11  // Time with DST
-#define TIME_ACCURACY_UUID              0x2A12  // Time Accuracy
-#define TIME_SOURCE_UUID                0x2A13  // Time Source
-#define REF_TIME_INFO_UUID              0x2A14  // Reference Time Information
-#define TIME_UPDATE_CTRL_PT_UUID        0x2A16  // Time Update Control Point
-#define TIME_UPDATE_STATE_UUID          0x2A17  // Time Update State
-#define GLUCOSE_MEAS_UUID               0x2A18  // Glucose Measurement
-#define BATT_LEVEL_UUID                 0x2A19  // Battery Level
-#define TEMP_MEAS_UUID                  0x2A1C  // Temperature Measurement
-#define TEMP_TYPE_UUID                  0x2A1D  // Temperature Type
-#define IMEDIATE_TEMP_UUID              0x2A1E  // Intermediate Temperature
-#define MEAS_INTERVAL_UUID              0x2A21  // Measurement Interval
-#define BOOT_KEY_INPUT_UUID             0x2A22  // Boot Keyboard Input Report
-#define SYSTEM_ID_UUID                  0x2A23  // System ID
-#define MODEL_NUMBER_UUID               0x2A24  // Model Number String
-#define SERIAL_NUMBER_UUID              0x2A25  // Serial Number String
-#define FIRMWARE_REV_UUID               0x2A26  // Firmware Revision String
-#define HARDWARE_REV_UUID               0x2A27  // Hardware Revision String
-#define SOFTWARE_REV_UUID               0x2A28  // Software Revision String
-#define MANUFACTURER_NAME_UUID          0x2A29  // Manufacturer Name String
+#define ALERT_LEVEL_UUID           0x2A06  // Alert Level
+#define TX_PWR_LEVEL_UUID          0x2A07  // Tx Power Level
+#define DATE_TIME_UUID             0x2A08  // Date Time
+#define DAY_OF_WEEK_UUID           0x2A09  // Day of Week
+#define DAY_DATE_TIME_UUID         0x2A0A  // Day Date Time
+#define EXACT_TIME_256_UUID        0x2A0C  // Exact Time 256
+#define DST_OFFSET_UUID            0x2A0D  // DST Offset
+#define TIME_ZONE_UUID             0x2A0E  // Time Zone
+#define LOCAL_TIME_INFO_UUID       0x2A0F  // Local Time Information
+#define TIME_WITH_DST_UUID         0x2A11  // Time with DST
+#define TIME_ACCURACY_UUID         0x2A12  // Time Accuracy
+#define TIME_SOURCE_UUID           0x2A13  // Time Source
+#define REF_TIME_INFO_UUID         0x2A14  // Reference Time Information
+#define TIME_UPDATE_CTRL_PT_UUID   0x2A16  // Time Update Control Point
+#define TIME_UPDATE_STATE_UUID     0x2A17  // Time Update State
+#define GLUCOSE_MEAS_UUID          0x2A18  // Glucose Measurement
+#define BATT_LEVEL_UUID            0x2A19  // Battery Level
+#define TEMP_MEAS_UUID             0x2A1C  // Temperature Measurement
+#define TEMP_TYPE_UUID             0x2A1D  // Temperature Type
+#define IMEDIATE_TEMP_UUID         0x2A1E  // Intermediate Temperature
+#define MEAS_INTERVAL_UUID         0x2A21  // Measurement Interval
+#define BOOT_KEY_INPUT_UUID        0x2A22  // Boot Keyboard Input Report
+#define SYSTEM_ID_UUID             0x2A23  // System ID
+#define MODEL_NUMBER_UUID          0x2A24  // Model Number String
+#define SERIAL_NUMBER_UUID         0x2A25  // Serial Number String
+#define FIRMWARE_REV_UUID          0x2A26  // Firmware Revision String
+#define HARDWARE_REV_UUID          0x2A27  // Hardware Revision String
+#define SOFTWARE_REV_UUID          0x2A28  // Software Revision String
+#define MANUFACTURER_NAME_UUID     0x2A29  // Manufacturer Name String
 #define IEEE_11073_CERT_DATA_UUID \
     0x2A2A  // IEEE 11073-20601 Regulatory Certification Data List
-#define CURRENT_TIME_UUID                    0x2A2B  // Current Time
-#define SCAN_REFRESH_UUID                    0x2A31  // Scan Refresh
-#define BOOT_KEY_OUTPUT_UUID                 0x2A32  // Boot Keyboard Output Report
-#define BOOT_MOUSE_INPUT_UUID                0x2A33  // Boot Mouse Input Report
-#define GLUCOSE_CONTEXT_UUID                 0x2A34  // Glucose Measurement Context
-#define BLOODPRESSURE_MEAS_UUID              0x2A35  // Blood Pressure Measurement
-#define IMEDIATE_CUFF_PRESSURE_UUID          0x2A36  // Intermediate Cuff Pressure
-#define HEARTRATE_MEAS_UUID                  0x2A37  // Heart Rate Measurement
-#define BODY_SENSOR_LOC_UUID                 0x2A38  // Body Sensor Location
-#define HEARTRATE_CTRL_PT_UUID               0x2A39  // Heart Rate Control Point
-#define NETWORK_AVAIL_UUID                   0x2A3E  // Network Availability
-#define ALERT_STATUS_UUID                    0x2A3F  // Alert Status
-#define RINGER_CTRL_PT_UUID                  0x2A40  // Ringer Control Point
-#define RINGER_SETTING_UUID                  0x2A41  // Ringer Setting
-#define ALERT_CAT_ID_BMASK_UUID              0x2A42  // Alert Category ID Bit Mask
-#define ALERT_CAT_ID_UUID                    0x2A43  // Alert Category ID
-#define ALERT_NOTIF_CTRL_PT_UUID             0x2A44  // Alert Notification Control Point
-#define UNREAD_ALERT_STATUS_UUID             0x2A45  // Unread Alert Status
-#define NEW_ALERT_UUID                       0x2A46  // New Alert
-#define SUP_NEW_ALERT_CAT_UUID               0x2A47  // Supported New Alert Category
-#define SUP_UNREAD_ALERT_CAT_UUID            0x2A48  // Supported Unread Alert Category
-#define BLOODPRESSURE_FEATURE_UUID           0x2A49  // Blood Pressure Feature
-#define HID_INFORMATION_UUID                 0x2A4A  // HID Information
-#define REPORT_MAP_UUID                      0x2A4B  // Report Map
-#define HID_CTRL_PT_UUID                     0x2A4C  // HID Control Point
-#define REPORT_UUID                          0x2A4D  // Report
-#define PROTOCOL_MODE_UUID                   0x2A4E  // Protocol Mode
-#define SCAN_INTERVAL_WINDOW_UUID            0x2A4F  // Scan Interval Window
-#define PNP_ID_UUID                          0x2A50  // PnP ID
-#define GLUCOSE_FEATURE_UUID                 0x2A51  // Glucose Feature
-#define RECORD_CTRL_PT_UUID                  0x2A52  // Record Access Control Point
-#define RSC_MEAS_UUID                        0x2A53  // RSC Measurement
-#define RSC_FEATURE_UUID                     0x2A54  // RSC Feature
-#define SC_CTRL_PT_UUID                      0x2A55  // SC Control Point
-#define CSC_MEAS_UUID                        0x2A5B  // CSC Measurement
-#define CSC_FEATURE_UUID                     0x2A5C  // CSC Feature
-#define SENSOR_LOC_UUID                      0x2A5D  // Sensor Location
-#define CYCPWR_MEAS_UUID                     0x2A63  // Cycling Power Measurement
-#define CYCPWR_VECTOR_UUID                   0x2A64  // Cycling Power Vector
-#define CYCPWR_FEATURE_UUID                  0x2A65  // Cycling Power Feature
-#define CYCPWR_CTRL_PT_UUID                  0x2A66  // Cycling Power Control Point
-#define LOC_SPEED_UUID                       0x2A67  // Location and Speed
-#define NAV_UUID                             0x2A68  // Navigation
-#define POS_QUALITY_UUID                     0x2A69  // Position Quality
-#define LN_FEATURE_UUID                      0x2A6A  // LN Feature
-#define LN_CTRL_PT_UUID                      0x2A6B  // LN Control Point
-#define ELE_UUID                             0x2A6C  // Elevation
-#define PRESSURE_UUID                        0x2A6D  // Pressure
-#define TEMP_UUID                            0x2A6E  // Temperature
-#define HUMI_UUID                            0x2A6F  // Humidity
-#define TRUE_WIND_SPEED_UUID                 0x2A70  // True Wind Speed
-#define TRUE_WIND_DIRECTION_UUID             0x2A71  // True Wind Direction
-#define URI_UUID                             0x2AB6  // URI
-#define MEDIA_STATE_UUID                     0x2BA3  // Media State
-#define MEDIA_CTRL_PT_UUID                   0x2BA4  // Media Control Point
-#define MEDIA_CTRL_PT_OS_UUID                0x2BA5  // Media Control Point Opcodes Supported
-#define CALL_STATE_UUID                      0x2BBD  // Call State
-#define CALL_CTRL_PT_UUID                    0x2BBE  // Call Control Point
-#define CALL_CTRL_PT_OO_UUID                 0x2BBF  // Call Control Point Optional Opcodes
-#define TERM_REASON_UUID                     0x2BC0  // Termination Reason
-#define INCOMING_CALL_UUID                   0x2BC1  // Incoming Call
-#define MUTE_UUID                            0x2BC3  // Mute
-#define ESL_ADDR_UUID                        0x2BF6  // ESL Address
-#define AP_SYNC_KEY_MATERIAL_UUID            0x2BF7  // AP Sync Key Material
-#define ESL_RSP_KEY_MATERIAL_UUID            0x2BF8  // ESL Response Key Material
-#define ESL_CURR_ABS_TIME_UUID               0x2BF9  // ESL Current Absolute Time
-#define ESL_DISPLAY_INFO_UUID                0x2BFA  // ESL Display Information
-#define ESL_IMAGE_INFO_UUID                  0x2BFB  // ESL Image Information
-#define ESL_SENSOR_INFO_UUID                 0x2BFC  // ESL Sensor Information
-#define ESL_LED_INFO_UUID                    0x2BFD  // ESL LED Information
-#define ESL_CTL_POINT_UUID                   0x2BFE  // ESL Control Point
+#define CURRENT_TIME_UUID           0x2A2B  // Current Time
+#define SCAN_REFRESH_UUID           0x2A31  // Scan Refresh
+#define BOOT_KEY_OUTPUT_UUID        0x2A32  // Boot Keyboard Output Report
+#define BOOT_MOUSE_INPUT_UUID       0x2A33  // Boot Mouse Input Report
+#define GLUCOSE_CONTEXT_UUID        0x2A34  // Glucose Measurement Context
+#define BLOODPRESSURE_MEAS_UUID     0x2A35  // Blood Pressure Measurement
+#define IMEDIATE_CUFF_PRESSURE_UUID 0x2A36  // Intermediate Cuff Pressure
+#define HEARTRATE_MEAS_UUID         0x2A37  // Heart Rate Measurement
+#define BODY_SENSOR_LOC_UUID        0x2A38  // Body Sensor Location
+#define HEARTRATE_CTRL_PT_UUID      0x2A39  // Heart Rate Control Point
+#define NETWORK_AVAIL_UUID          0x2A3E  // Network Availability
+#define ALERT_STATUS_UUID           0x2A3F  // Alert Status
+#define RINGER_CTRL_PT_UUID         0x2A40  // Ringer Control Point
+#define RINGER_SETTING_UUID         0x2A41  // Ringer Setting
+#define ALERT_CAT_ID_BMASK_UUID     0x2A42  // Alert Category ID Bit Mask
+#define ALERT_CAT_ID_UUID           0x2A43  // Alert Category ID
+#define ALERT_NOTIF_CTRL_PT_UUID    0x2A44  // Alert Notification Control Point
+#define UNREAD_ALERT_STATUS_UUID    0x2A45  // Unread Alert Status
+#define NEW_ALERT_UUID              0x2A46  // New Alert
+#define SUP_NEW_ALERT_CAT_UUID      0x2A47  // Supported New Alert Category
+#define SUP_UNREAD_ALERT_CAT_UUID   0x2A48  // Supported Unread Alert Category
+#define BLOODPRESSURE_FEATURE_UUID  0x2A49  // Blood Pressure Feature
+#define HID_INFORMATION_UUID        0x2A4A  // HID Information
+#define REPORT_MAP_UUID             0x2A4B  // Report Map
+#define HID_CTRL_PT_UUID            0x2A4C  // HID Control Point
+#define REPORT_UUID                 0x2A4D  // Report
+#define PROTOCOL_MODE_UUID          0x2A4E  // Protocol Mode
+#define SCAN_INTERVAL_WINDOW_UUID   0x2A4F  // Scan Interval Window
+#define PNP_ID_UUID                 0x2A50  // PnP ID
+#define GLUCOSE_FEATURE_UUID        0x2A51  // Glucose Feature
+#define RECORD_CTRL_PT_UUID         0x2A52  // Record Access Control Point
+#define RSC_MEAS_UUID               0x2A53  // RSC Measurement
+#define RSC_FEATURE_UUID            0x2A54  // RSC Feature
+#define SC_CTRL_PT_UUID             0x2A55  // SC Control Point
+#define CSC_MEAS_UUID               0x2A5B  // CSC Measurement
+#define CSC_FEATURE_UUID            0x2A5C  // CSC Feature
+#define SENSOR_LOC_UUID             0x2A5D  // Sensor Location
+#define CYCPWR_MEAS_UUID            0x2A63  // Cycling Power Measurement
+#define CYCPWR_VECTOR_UUID          0x2A64  // Cycling Power Vector
+#define CYCPWR_FEATURE_UUID         0x2A65  // Cycling Power Feature
+#define CYCPWR_CTRL_PT_UUID         0x2A66  // Cycling Power Control Point
+#define LOC_SPEED_UUID              0x2A67  // Location and Speed
+#define NAV_UUID                    0x2A68  // Navigation
+#define POS_QUALITY_UUID            0x2A69  // Position Quality
+#define LN_FEATURE_UUID             0x2A6A  // LN Feature
+#define LN_CTRL_PT_UUID             0x2A6B  // LN Control Point
+#define ELE_UUID                    0x2A6C  // Elevation
+#define PRESSURE_UUID               0x2A6D  // Pressure
+#define TEMP_UUID                   0x2A6E  // Temperature
+#define HUMI_UUID                   0x2A6F  // Humidity
+#define TRUE_WIND_SPEED_UUID        0x2A70  // True Wind Speed
+#define TRUE_WIND_DIRECTION_UUID    0x2A71  // True Wind Direction
+#define URI_UUID                    0x2AB6  // URI
+#define MEDIA_STATE_UUID            0x2BA3  // Media State
+#define MEDIA_CTRL_PT_UUID          0x2BA4  // Media Control Point
+#define MEDIA_CTRL_PT_OS_UUID 0x2BA5  // Media Control Point Opcodes Supported
+#define CALL_STATE_UUID       0x2BBD  // Call State
+#define CALL_CTRL_PT_UUID     0x2BBE  // Call Control Point
+#define CALL_CTRL_PT_OO_UUID  0x2BBF  // Call Control Point Optional Opcodes
+#define TERM_REASON_UUID      0x2BC0  // Termination Reason
+#define INCOMING_CALL_UUID    0x2BC1  // Incoming Call
+#define MUTE_UUID             0x2BC3  // Mute
+#define ESL_ADDR_UUID         0x2BF6  // ESL Address
+#define AP_SYNC_KEY_MATERIAL_UUID           0x2BF7  // AP Sync Key Material
+#define ESL_RSP_KEY_MATERIAL_UUID           0x2BF8  // ESL Response Key Material
+#define ESL_CURR_ABS_TIME_UUID              0x2BF9  // ESL Current Absolute Time
+#define ESL_DISPLAY_INFO_UUID               0x2BFA  // ESL Display Information
+#define ESL_IMAGE_INFO_UUID                 0x2BFB  // ESL Image Information
+#define ESL_SENSOR_INFO_UUID                0x2BFC  // ESL Sensor Information
+#define ESL_LED_INFO_UUID                   0x2BFD  // ESL LED Information
+#define ESL_CTL_POINT_UUID                  0x2BFE  // ESL Control Point
 
 /**
  * GATT Unit UUIDs
  */
-#define GATT_UNITLESS_UUID                   0x2700  // unitless
-#define GATT_UNIT_LENGTH_METER_UUID          0x2701  // m, m
-#define GATT_UNIT_MASS_KGRAM_UUID            0x2702  // kg, kg
-#define GATT_UNIT_TIME_SECOND_UUID           0x2703  // s, s
-#define GATT_UNIT_ELECTRIC_CURRENT_A_UUID    0x2704  // A, A
-#define GATT_UNIT_THERMODYN_TEMP_K_UUID      0x2705  // K, K
-#define GATT_UNIT_AMOUNT_SUBSTANCE_M_UUID    0x2706  // mol, mol
-#define GATT_UNIT_LUMINOUS_INTENSITY_C_UUID  0x2707  // cd, cd
+#define GATT_UNITLESS_UUID                  0x2700  // unitless
+#define GATT_UNIT_LENGTH_METER_UUID         0x2701  // m, m
+#define GATT_UNIT_MASS_KGRAM_UUID           0x2702  // kg, kg
+#define GATT_UNIT_TIME_SECOND_UUID          0x2703  // s, s
+#define GATT_UNIT_ELECTRIC_CURRENT_A_UUID   0x2704  // A, A
+#define GATT_UNIT_THERMODYN_TEMP_K_UUID     0x2705  // K, K
+#define GATT_UNIT_AMOUNT_SUBSTANCE_M_UUID   0x2706  // mol, mol
+#define GATT_UNIT_LUMINOUS_INTENSITY_C_UUID 0x2707  // cd, cd
 
-#define GATT_UNIT_AREA_SQ_MTR_UUID           0x2710  // m^2, m^2
-#define GATT_UNIT_VOLUME_CUBIC_MTR_UUID      0x2711  // m^3, m^3
-#define GATT_UNIT_VELOCITY_MPS_UUID          0x2712  // m/s, m s^-1
-#define GATT_UNIT_ACCELERATION_MPS_SQ_UUID   0x2713  // m/s^2, m s^-2
-#define GATT_UNIT_WAVENUMBER_RM_UUID         0x2714  // ? m^-1
-#define GATT_UNIT_DENSITY_KGPCM_UUID         0x2715  // p, kg m^-3
+#define GATT_UNIT_AREA_SQ_MTR_UUID          0x2710  // m^2, m^2
+#define GATT_UNIT_VOLUME_CUBIC_MTR_UUID     0x2711  // m^3, m^3
+#define GATT_UNIT_VELOCITY_MPS_UUID         0x2712  // m/s, m s^-1
+#define GATT_UNIT_ACCELERATION_MPS_SQ_UUID  0x2713  // m/s^2, m s^-2
+#define GATT_UNIT_WAVENUMBER_RM_UUID        0x2714  // ? m^-1
+#define GATT_UNIT_DENSITY_KGPCM_UUID        0x2715  // p, kg m^-3
 #define GATT_UNIT_SURFACE_DENSITY_KGPSM_UUID 0x2716  // pA, kg m^-2
 #define GATT_UNIT_SPECIFIC_VOLUME_CMPKG_UUID 0x2717  // v, m^3 kg^-1
 #define GATT_UNIT_CURRENT_DENSITY_APSM_UUID  0x2718  // j, A m^-2
@@ -522,11 +522,11 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GATT_UNIT_ENERGY_GCAL_UUID           0x27A9  // energy (gram calorie)
 #define GATT_UNIT_ENERGY_KCAL_UUID           0x27AA  // kcal, 4190.02 J
 #define GATT_UNIT_ENERGY_KWH_UUID            0x27AB  // kWh, 3600000 J
-#define GATT_UNIT_THERMODYN_TEMP_DF_UUID     0x27AC  // oF, t/oF = T/K ?1.8 - 459.67
-#define GATT_UNIT_PERCENTAGE_UUID            0x27AD  // percentage,%
-#define GATT_UNIT_PER_MILE_UUID              0x27AE  // per mille
-#define GATT_UNIT_PERIOD_BPM_UUID            0x27AF  // period (beats per minute),BPM
-#define GATT_UNIT_E_CHARGE_AH_UUID           0x27B0  // electric charge (ampere hours)
+#define GATT_UNIT_THERMODYN_TEMP_DF_UUID 0x27AC  // oF, t/oF = T/K ?1.8 - 459.67
+#define GATT_UNIT_PERCENTAGE_UUID        0x27AD  // percentage,%
+#define GATT_UNIT_PER_MILE_UUID          0x27AE  // per mille
+#define GATT_UNIT_PERIOD_BPM_UUID  0x27AF  // period (beats per minute),BPM
+#define GATT_UNIT_E_CHARGE_AH_UUID 0x27B0  // electric charge (ampere hours)
 #define GATT_UNIT_MASS_DENSITY_MGPD_UUID \
     0x27B1  // mass density (milligram per decilitre)
 #define GATT_UNIT_MASS_DENSITY_MMPL_UUID \
@@ -737,10 +737,10 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GATT_SERVICE_HANDLE(attrs)     ((attrs)[0].handle)
 
 // The handle of the first included service (i = 1) is the value of the second attribute
-#define GATT_INCLUDED_HANDLE(attrs, i) (*((uint16_t *)((attrs)[(i)].pValue)))
+#define GATT_INCLUDED_HANDLE(attrs, i) (*((uint16_t*)((attrs)[(i)].pValue)))
 
 // Client Characteristic Configuration table (from CCC attribute value pointer)
-#define GATT_CCC_TBL(pValue)           ((gattCharCfg_t *)(*((PTR_TYPE)(&pValue))))
+#define GATT_CCC_TBL(pValue) ((gattCharCfg_t*)(*((PTR_TYPE)(&pValue))))
 
 /************************************ GAP *************************************/
 #define GAP_MSG_EVENT_DEFINES  //!< GAP type of command
@@ -936,7 +936,7 @@ extern const uint8_t VER_LIB[];  // LIB version
     28  //!< Maximum advertising events the Controller can skip before sending the AUX_ADV_IND packets on the secondary advertising channel. Default 0.
 #define TGAP_ADV_ADVERTISING_SID \
     29  //!< Value of the Advertising SID subfield in the ADI field of the PDU Range:0-15. Default 0.
-#define TGAP_ADV_SCAN_REQ_NOTIFY                                         \
+#define TGAP_ADV_SCAN_REQ_NOTIFY \
     30  //!< bit0:Scan request notifications enabled.Default 0-disabled. \
         //!< bit1:After the SCAN_RSP PDU is sent the advertiser move to the next used primary advertising channel index.Default 0-close the advertising event.
 #define TGAP_ADV_ADVERTISING_DURATION \
@@ -1049,15 +1049,15 @@ extern const uint8_t VER_LIB[];  // LIB version
 
 // GAP_ADVERTISEMENT_TYPE_DEFINES GAP Scan PHY VAL TYPE(GAP_PHY_BIT_TYPE)
 #define GAP_PHY_BIT_TYPE
-#define GAP_PHY_BIT_LE_1M                   (1 << 0)
-#define GAP_PHY_BIT_LE_2M                   (1 << 1)
-#define GAP_PHY_BIT_ALL                     (GAP_PHY_BIT_LE_1M | GAP_PHY_BIT_LE_2M)
+#define GAP_PHY_BIT_LE_1M (1 << 0)
+#define GAP_PHY_BIT_LE_2M (1 << 1)
+#define GAP_PHY_BIT_ALL   (GAP_PHY_BIT_LE_1M | GAP_PHY_BIT_LE_2M)
 
 // GAP_ADVERTISEMENT_TYPE_DEFINES GAP Periodic Advertising Properties
 #define GAP_PERI_PROPERTIES_INCLUDE_TXPOWER (1 << 6)
 
 // GAP_ADVERTISEMENT_TYPE_DEFINES GAP Connectionless CTE Transmit CTE type
-#define GAP_CTE_TYPE_AOA                    0x00  //!< AoA Constant Tone Extension
+#define GAP_CTE_TYPE_AOA 0x00  //!< AoA Constant Tone Extension
 #define GAP_CTE_TYPE_AOD_1US \
     0x01  //!< AoD Constant Tone Extension with 1us slots
 #define GAP_CTE_TYPE_AOD_2US \
@@ -1084,10 +1084,10 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x09  //!< extend Scannable directed report type
 #define GAP_ADRPT_EXT_NONCONN_NONSCAN_DIRECT \
     0x0A  //!< extend Non-Connectable and Non-Scannable directed report type
-#define GAP_ADRPT_EXT_SCAN_RESPONSE   0x0B  //!< extend Scan Response report type
+#define GAP_ADRPT_EXT_SCAN_RESPONSE 0x0B  //!< extend Scan Response report type
 // bit5 to 6 Data status:defined for gapExtAdvDeviceInfoEvent_t Advertisement data type
-#define GAP_ADRPT_EXT_DATA_MASK       (3 << 5)
-#define GAP_ADRPT_EXT_DATA_COMPLETE   (0 << 5)  //!< Complete
+#define GAP_ADRPT_EXT_DATA_MASK     (3 << 5)
+#define GAP_ADRPT_EXT_DATA_COMPLETE (0 << 5)  //!< Complete
 #define GAP_ADRPT_EXT_DATA_INCOMPLETE (1 << 5)  //!< more data to come
 #define GAP_ADRPT_EXT_DATA_LAST \
     (2 << 5)  //!< Incomplete, data truncated, no more to come
@@ -1125,7 +1125,7 @@ extern const uint8_t VER_LIB[];  // LIB version
      GAP_ADVCHAN_39)  //!< All Advertisement Channels Enabled
 
 // GAP_ADTYPE_DEFINES GAP Advertisement Data Types
-#define GAP_ADTYPE_FLAGS      0x01  //!< Discovery Mode: @ref GAP_ADTYPE_FLAGS_MODES
+#define GAP_ADTYPE_FLAGS 0x01  //!< Discovery Mode: @ref GAP_ADTYPE_FLAGS_MODES
 #define GAP_ADTYPE_16BIT_MORE 0x02  //!< Service: More 16-bit UUIDs available
 #define GAP_ADTYPE_16BIT_COMPLETE \
     0x03  //!< Service: Complete list of 16-bit UUIDs
@@ -1137,7 +1137,7 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x07  //!< Service: Complete list of 128-bit UUIDs
 #define GAP_ADTYPE_LOCAL_NAME_SHORT    0x08  //!< Shortened local name
 #define GAP_ADTYPE_LOCAL_NAME_COMPLETE 0x09  //!< Complete local name
-#define GAP_ADTYPE_POWER_LEVEL         0x0A  //!< TX Power Level: -127 to +127 dBm
+#define GAP_ADTYPE_POWER_LEVEL 0x0A  //!< TX Power Level: -127 to +127 dBm
 #define GAP_ADTYPE_OOB_CLASS_OF_DEVICE \
     0x0D  //!< Simple Pairing OOB Tag: Class of device (3 octets)
 #define GAP_ADTYPE_OOB_SIMPLE_PAIRING_HASHC \
@@ -1153,13 +1153,13 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x14  //!< Service Solicitation: list of 16-bit Service UUIDs
 #define GAP_ADTYPE_SERVICES_LIST_128BIT \
     0x15  //!< Service Solicitation: list of 128-bit Service UUIDs
-#define GAP_ADTYPE_SERVICE_DATA             0x16  //!< Service Data - 16-bit UUID
-#define GAP_ADTYPE_PUBLIC_TARGET_ADDR       0x17  //!< Public Target Address
-#define GAP_ADTYPE_RANDOM_TARGET_ADDR       0x18  //!< Random Target Address
-#define GAP_ADTYPE_APPEARANCE               0x19  //!< Appearance
-#define GAP_ADTYPE_ADV_INTERVAL             0x1A  //!< Advertising Interval
-#define GAP_ADTYPE_LE_BD_ADDR               0x1B  //!< LE Bluetooth Device Address
-#define GAP_ADTYPE_LE_ROLE                  0x1C  //!< LE Role
+#define GAP_ADTYPE_SERVICE_DATA       0x16  //!< Service Data - 16-bit UUID
+#define GAP_ADTYPE_PUBLIC_TARGET_ADDR 0x17  //!< Public Target Address
+#define GAP_ADTYPE_RANDOM_TARGET_ADDR 0x18  //!< Random Target Address
+#define GAP_ADTYPE_APPEARANCE         0x19  //!< Appearance
+#define GAP_ADTYPE_ADV_INTERVAL       0x1A  //!< Advertising Interval
+#define GAP_ADTYPE_LE_BD_ADDR         0x1B  //!< LE Bluetooth Device Address
+#define GAP_ADTYPE_LE_ROLE            0x1C  //!< LE Role
 #define GAP_ADTYPE_SIMPLE_PAIRING_HASHC_256 0x1D  //!< Simple Pairing Hash C-256
 #define GAP_ADTYPE_SIMPLE_PAIRING_RANDR_256 \
     0x1E  //!< Simple Pairing Randomizer R-256
@@ -1222,7 +1222,7 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAP_APPEARE_GENERIC_BARCODE_SCANNER 0x02C0  //!< Generic Barcode Scanner
 #define GAP_APPEARE_GENERIC_THERMOMETER     0x0300  //!< Generic Thermometer
 #define GAP_APPEARE_GENERIC_THERMO_EAR      0x0301  //!< Thermometer: Ear
-#define GAP_APPEARE_GENERIC_HR_SENSOR       0x0340  //!< Generic Heart rate Sensor
+#define GAP_APPEARE_GENERIC_HR_SENSOR 0x0340  //!< Generic Heart rate Sensor
 #define GAP_APPEARE_GENERIC_HRS_BELT \
     0x0341  //!< Heart Rate Sensor: Heart Rate Belt
 #define GAP_APPEARE_GENERIC_BLOOD_PRESSURE 0x0380  //!< Generic Blood Pressure
@@ -1282,7 +1282,7 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x314  //!< The receiver PHYs that the Host prefers the Controller to use.Default is GAP_PHY_BIT_ALL
 #define GAPROLE_PERIODIC_ADVERT_DATA \
     0x315  //!< Periodic advertisement Data. Read/Write. Max size is B_MAX_ADV_PERIODIC_LEN. Default to all 0.
-#define GAPROLE_PERIODIC_ADVERT_ENABLED                                                                          \
+#define GAPROLE_PERIODIC_ADVERT_ENABLED \
     0x316  //!< bit0:Enable/Disable Periodic Advertising. Read/Write. Size is uint8_t. Default is FALSE=Disable. \
         //!< bit1:Include the ADI field in AUX_SYNC_IND PDUs
 #define GAPROLE_CTE_CONNECTIONLESS_ENABLED \
@@ -1369,27 +1369,27 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x02  //!< Don't wait, initiate a pairing request or slave security request
 
 // GAPBOND_IO_CAP_DEFINES GAP Bond Manager I/O Capabilities
-#define GAPBOND_IO_CAP_DISPLAY_ONLY       0x00  //!< Display Only Device
-#define GAPBOND_IO_CAP_DISPLAY_YES_NO     0x01  //!< Display and Yes and No Capable
-#define GAPBOND_IO_CAP_KEYBOARD_ONLY      0x02  //!< Keyboard Only
+#define GAPBOND_IO_CAP_DISPLAY_ONLY   0x00  //!< Display Only Device
+#define GAPBOND_IO_CAP_DISPLAY_YES_NO 0x01  //!< Display and Yes and No Capable
+#define GAPBOND_IO_CAP_KEYBOARD_ONLY  0x02  //!< Keyboard Only
 #define GAPBOND_IO_CAP_NO_INPUT_NO_OUTPUT 0x03  //!< No Display or Input Device
 #define GAPBOND_IO_CAP_KEYBOARD_DISPLAY \
     0x04  //!< Both Keyboard and Display Capable
 
 // GAPBOND_KEY_DIST_DEFINES GAP Bond Manager Key Distribution
-#define GAPBOND_KEYDIST_SENCKEY          0x01  //!< Slave Encryption Key
-#define GAPBOND_KEYDIST_SIDKEY           0x02  //!< Slave IRK and ID information
-#define GAPBOND_KEYDIST_SSIGN            0x04  //!< Slave CSRK
-#define GAPBOND_KEYDIST_SLINK            0x08  //!< Slave Link Key
-#define GAPBOND_KEYDIST_MENCKEY          0x10  //!< Master Encrypton Key
-#define GAPBOND_KEYDIST_MIDKEY           0x20  //!< Master IRK and ID information
-#define GAPBOND_KEYDIST_MSIGN            0x40  //!< Master CSRK
-#define GAPBOND_KEYDIST_MLINK            0x80  //!< Master Link Key
+#define GAPBOND_KEYDIST_SENCKEY        0x01  //!< Slave Encryption Key
+#define GAPBOND_KEYDIST_SIDKEY         0x02  //!< Slave IRK and ID information
+#define GAPBOND_KEYDIST_SSIGN          0x04  //!< Slave CSRK
+#define GAPBOND_KEYDIST_SLINK          0x08  //!< Slave Link Key
+#define GAPBOND_KEYDIST_MENCKEY        0x10  //!< Master Encrypton Key
+#define GAPBOND_KEYDIST_MIDKEY         0x20  //!< Master IRK and ID information
+#define GAPBOND_KEYDIST_MSIGN          0x40  //!< Master CSRK
+#define GAPBOND_KEYDIST_MLINK          0x80  //!< Master Link Key
 
 // GAPBOND_PAIRING_STATE_DEFINES GAP Bond Manager Pairing States
-#define GAPBOND_PAIRING_STATE_STARTED    0x00  //!< Pairing started
-#define GAPBOND_PAIRING_STATE_COMPLETE   0x01  //!< Pairing complete
-#define GAPBOND_PAIRING_STATE_BONDED     0x02  //!< Devices bonded
+#define GAPBOND_PAIRING_STATE_STARTED  0x00  //!< Pairing started
+#define GAPBOND_PAIRING_STATE_COMPLETE 0x01  //!< Pairing complete
+#define GAPBOND_PAIRING_STATE_BONDED   0x02  //!< Devices bonded
 #define GAPBOND_PAIRING_STATE_BOND_SAVED 0x03  //!< Bonding record saved in NV
 
 // SMP_PAIRING_FAILED_DEFINES Pairing failure status values
@@ -1535,16 +1535,16 @@ typedef struct {
     uint16_t     connTimeout;
     uint16_t     MTU;  //!< The connection's MTU size
     linkSec_t    sec;  //!< Connection Security related items
-    encParams_t *pEncParams;  //!< pointer to LTK, ediv, rand. if needed.
+    encParams_t* pEncParams;  //!< pointer to LTK, ediv, rand. if needed.
     uint16_t     smEvtID;
-    void        *pPairingParams;
-    void        *pAuthLink;
+    void*        pPairingParams;
+    void*        pAuthLink;
 } linkDBItem_t;
 
 // function pointer used to register for a status callback
 typedef void (*pfnLinkDBCB_t)(uint16_t connectionHandle, uint8_t changeType);
 // function pointer used to perform specialized link database searches
-typedef void (*pfnPerformFuncCB_t)(linkDBItem_t *pLinkItem);
+typedef void (*pfnPerformFuncCB_t)(linkDBItem_t* pLinkItem);
 
 /**
  * Attribute Type format (2 or 16 octet UUID).
@@ -1600,7 +1600,7 @@ typedef struct {
 typedef struct {
     uint16_t numInfo;  //!< Number of attribute handle-UUID pairs found
     uint8_t  format;  //!< Format of information data
-    uint8_t *
+    uint8_t*
         pInfo;  //!< Information data whose format is determined by format field (4 to ATT_MTU_SIZE-2)
 } attFindInfoRsp_t;
 
@@ -1613,7 +1613,7 @@ typedef struct {
     uint16_t        endHandle;  //!< Last requested handle number
     attAttrBtType_t type;  //!< 2-octet UUID to find
     uint16_t        len;  //!< Length of value
-    uint8_t        *pValue;  //!< Attribute value to find (0 to ATT_MTU_SIZE-7)
+    uint8_t*        pValue;  //!< Attribute value to find (0 to ATT_MTU_SIZE-7)
 } attFindByTypeValueReq_t;
 
 /**
@@ -1621,7 +1621,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t numInfo;  //!< Number of handles information found
-    uint8_t *
+    uint8_t*
         pHandlesInfo;  //!< List of 1 or more handles information (4 to ATT_MTU_SIZE-1)
 } attFindByTypeValueRsp_t;
 
@@ -1641,7 +1641,7 @@ typedef struct {
 typedef struct {
     uint16_t numPairs;  //!< Number of attribute handle-UUID pairs found
     uint16_t len;  //!< Size of each attribute handle-value pair
-    uint8_t *
+    uint8_t*
         pDataList;  //!< List of 1 or more attribute handle-value pairs (2 to ATT_MTU_SIZE-2)
 } attReadByTypeRsp_t;
 
@@ -1658,7 +1658,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Value of the attribute with the handle given (0 to ATT_MTU_SIZE-1)
 } attReadRsp_t;
 
@@ -1676,7 +1676,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Part of the value of the attribute with the handle given (0 to ATT_MTU_SIZE-1)
 } attReadBlobRsp_t;
 
@@ -1684,7 +1684,7 @@ typedef struct {
  * Read Multiple Request format.
  */
 typedef struct {
-    uint8_t *
+    uint8_t*
         pHandles;  //!< Set of two or more attribute handles (4 to ATT_MTU_SIZE-1) - must be first field
     uint16_t numHandles;  //!< Number of attribute handles
 } attReadMultiReq_t;
@@ -1694,7 +1694,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t len;  //!< Length of values
-    uint8_t *pValues;  //!< Set of two or more values (0 to ATT_MTU_SIZE-1)
+    uint8_t* pValues;  //!< Set of two or more values (0 to ATT_MTU_SIZE-1)
 } attReadMultiRsp_t;
 
 /**
@@ -1715,7 +1715,7 @@ typedef struct {
         numGrps;  //!< Number of attribute handle, end group handle and value sets found
     uint16_t
         len;  //!< Length of each attribute handle, end group handle and value set
-    uint8_t *
+    uint8_t*
         pDataList;  //!< List of 1 or more attribute handle, end group handle and value (4 to ATT_MTU_SIZE-2)
 } attReadByGrpTypeRsp_t;
 
@@ -1726,7 +1726,7 @@ typedef struct {
     uint16_t
         handle;  //!< Handle of the attribute to be written (must be first field)
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Value of the attribute to be written (0 to ATT_MTU_SIZE-3)
     uint8_t
         sig;  //!< Authentication Signature status (not included (0), valid (1), invalid (2))
@@ -1741,7 +1741,7 @@ typedef struct {
         handle;  //!< Handle of the attribute to be written (must be first field)
     uint16_t offset;  //!< Offset of the first octet to be written
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Part of the value of the attribute to be written (0 to ATT_MTU_SIZE-5) - must be allocated
 } attPrepareWriteReq_t;
 
@@ -1752,7 +1752,7 @@ typedef struct {
     uint16_t handle;  //!< Handle of the attribute that has been read
     uint16_t offset;  //!< Offset of the first octet to be written
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Part of the value of the attribute to be written (0 to ATT_MTU_SIZE-5)
 } attPrepareWriteRsp_t;
 
@@ -1761,7 +1761,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t flags;  //!< 0x00 - cancel all prepared writes.
-        //!< 0x01 - immediately write all pending prepared values.
+    //!< 0x01 - immediately write all pending prepared values.
 } attExecuteWriteReq_t;
 
 /**
@@ -1771,7 +1771,7 @@ typedef struct {
     uint16_t
         handle;  //!< Handle of the attribute that has been changed (must be first field)
     uint16_t len;  //!< Length of value
-    uint8_t *pValue;  //!< Current value of the attribute (0 to ATT_MTU_SIZE-3)
+    uint8_t* pValue;  //!< Current value of the attribute (0 to ATT_MTU_SIZE-3)
 } attHandleValueNoti_t;
 
 /**
@@ -1781,7 +1781,7 @@ typedef struct {
     uint16_t
         handle;  //!< Handle of the attribute that has been changed (must be first field)
     uint16_t len;  //!< Length of value
-    uint8_t *pValue;  //!< Current value of the attribute (0 to ATT_MTU_SIZE-3)
+    uint8_t* pValue;  //!< Current value of the attribute (0 to ATT_MTU_SIZE-3)
 } attHandleValueInd_t;
 
 /**
@@ -1889,12 +1889,12 @@ typedef struct {
 typedef struct {
     uint8_t
         reliable;  //!< Whether reliable writes requested (always TRUE for Reliable Writes)
-    attPrepareWriteReq_t
-           *pReqs;  //!< Array of Prepare Write Requests (must be allocated)
+    attPrepareWriteReq_t*
+            pReqs;  //!< Array of Prepare Write Requests (must be allocated)
     uint8_t numReqs;  //!< Number of Prepare Write Requests
     uint8_t index;  //!< Index of last Prepare Write Request sent
     uint8_t flags;  //!< 0x00 - cancel all prepared writes.
-        //!< 0x01 - immediately write all pending prepared values.
+    //!< 0x01 - immediately write all pending prepared values.
 } gattReliableWritesReq_t;
 
 /**
@@ -1962,7 +1962,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t        len;  //!< Length of UUID (2 or 16)
-    const uint8_t *uuid;  //!< Pointer to UUID
+    const uint8_t* uuid;  //!< Pointer to UUID
 } gattAttrType_t;
 
 /**
@@ -1973,10 +1973,10 @@ typedef struct attAttribute_t {
     uint8_t        permissions;  //!< Attribute permissions
     uint16_t
         handle;  //!< Attribute handle - assigned internally by attribute server
-    uint8_t *
+    uint8_t*
         pValue;  //!< Attribute value - encoding of the octet array is defined in
-        //!< the applicable profile. The maximum length of an attribute
-        //!< value shall be 512 octets.
+    //!< the applicable profile. The maximum length of an attribute
+    //!< value shall be 512 octets.
 } gattAttribute_t;
 
 /**
@@ -1991,7 +1991,7 @@ typedef struct {
      *  note: The list must start with a Service attribute followed by
      *        all attributes associated with this Service attribute.
      */
-    gattAttribute_t *attrs;
+    gattAttribute_t* attrs;
 } gattService_t;
 
 /**
@@ -2021,8 +2021,8 @@ typedef struct {
  *          Error, otherwise: ref ATT_ERR_CODE_DEFINES.<BR>
  */
 typedef uint8_t (*pfnGATTReadAttrCB_t)(uint16_t         connHandle,
-                                       gattAttribute_t *pAttr, uint8_t *pValue,
-                                       uint16_t *pLen, uint16_t offset,
+                                       gattAttribute_t* pAttr, uint8_t* pValue,
+                                       uint16_t* pLen, uint16_t offset,
                                        uint16_t maxLen, uint8_t method);
 
 /**
@@ -2053,7 +2053,7 @@ typedef uint8_t (*pfnGATTReadAttrCB_t)(uint16_t         connHandle,
  *          Error, otherwise: ref ATT_ERR_CODE_DEFINES.<BR>
  */
 typedef uint8_t (*pfnGATTWriteAttrCB_t)(uint16_t         connHandle,
-                                        gattAttribute_t *pAttr, uint8_t *pValue,
+                                        gattAttribute_t* pAttr, uint8_t* pValue,
                                         uint16_t len, uint16_t offset,
                                         uint8_t method);
 
@@ -2069,7 +2069,7 @@ typedef uint8_t (*pfnGATTWriteAttrCB_t)(uint16_t         connHandle,
  *          ATT_ERR_INSUFFICIENT_AUTHOR: Authorization required.<BR>
  */
 typedef bStatus_t (*pfnGATTAuthorizeAttrCB_t)(uint16_t         connHandle,
-                                              gattAttribute_t *pAttr,
+                                              gattAttribute_t* pAttr,
                                               uint8_t          opcode);
 
 /**
@@ -2163,7 +2163,7 @@ typedef struct {
     uint8_t  addr[B_ADDR_LEN];  //!< Address of the advertisement or SCAN_RSP
     int8_t   rssi;  //!< Advertisement or SCAN_RSP RSSI
     uint8_t  dataLen;  //!< Length (in bytes) of the data field (evtData)
-    uint8_t *pEvtData;  //!< Data field of advertisement or SCAN_RSP
+    uint8_t* pEvtData;  //!< Data field of advertisement or SCAN_RSP
 } gapDeviceInfoEvent_t;
 
 /**
@@ -2206,7 +2206,7 @@ typedef struct {
     uint8_t  directAddressType;  //!< public or random address type
     uint8_t  directAddress[B_ADDR_LEN];  //!< device address
     uint8_t  dataLen;  //!< Length (in bytes) of the data field (evtData)
-    uint8_t *pEvtData;  //!< Data field of advertisement or SCAN_RSP
+    uint8_t* pEvtData;  //!< Data field of advertisement or SCAN_RSP
 } gapExtAdvDeviceInfoEvent_t;
 
 /**
@@ -2238,7 +2238,7 @@ typedef struct {
     tmos_event_hdr_t hdr;  //!< GAP_MSG_EVENT and status
     uint8_t          opcode;  //!< GAP_DEVICE_DISCOVERY_EVENT
     uint8_t          numDevs;  //!< Number of devices found during scan
-    gapDevRec_t     *pDevList;  //!< array of device records
+    gapDevRec_t*     pDevList;  //!< array of device records
 } gapDevDiscEvent_t;
 
 /**
@@ -2315,7 +2315,7 @@ typedef struct {
     uint8_t  subevent;  //!< The subevent number. 0xFF: No subevents
     uint8_t  dataStatus;  //!< Data complete
     uint8_t  dataLength;  //!< Length (in bytes) of the data field (evtData)
-    uint8_t *pEvtData;  //!< Data field of periodic advertising data
+    uint8_t* pEvtData;  //!< Data field of periodic advertising data
 } gapPeriodicAdvDeviceInfoEvent_t;
 
 /**
@@ -2334,7 +2334,7 @@ typedef struct {
 typedef struct {
     uint8_t taskID;  //!< set periodic advertising task ID
     uint8_t enable;  //!< bit0 Enable periodic advertising
-        //!< bit1 Include the ADI field in AUX_SYNC_IND PDUs
+    //!< bit1 Include the ADI field in AUX_SYNC_IND PDUs
     uint8_t advHandle;  //!< Used to identify a periodic advertising train
     uint16_t
         advIntervalMin;  //!< Minimum advertising interval for periodic advertising.Time = N × 1.25ms.Time Range: 7.5ms to 81.91875s
@@ -2361,7 +2361,7 @@ typedef struct {
     uint8_t
         dataLength;  //!< The number of octets in the Subevent_Data parameter.
     uint16_t rspMaxLength;  //!<
-    uint8_t *pData;  //!< Advertising data
+    uint8_t* pData;  //!< Advertising data
 } gapPawrSetData_t;
 
 typedef struct {
@@ -2374,7 +2374,7 @@ typedef struct {
     uint8_t rspSlot;  //!< Used to identify the response slot of the PAwR train.
     uint8_t
         rspDataLength;  //!< The number of octets in the Response_Data parameter.
-    uint8_t *pRspData;  //!< Response data
+    uint8_t* pRspData;  //!< Response data
 } gapPawrSetResponseData_t;
 
 typedef struct {
@@ -2392,7 +2392,7 @@ typedef struct {
     uint8_t  rspSlot;
     uint8_t  dataStatus;
     uint8_t  dataLength;
-    uint8_t *pData;
+    uint8_t* pData;
 } pawrResponseInfo_t;
 
 typedef struct {
@@ -2403,7 +2403,7 @@ typedef struct {
     uint8_t
         txStatus;  //!< 0x00 packet was transmitted. 0x01 packet was not transmitted.
     uint8_t             numResponses;
-    pawrResponseInfo_t *pList;
+    pawrResponseInfo_t* pList;
 } gapPawrResponseEvent_t;
 
 typedef struct {
@@ -2563,7 +2563,7 @@ typedef struct {
  * Passcode Callback Function
  */
 typedef void (*pfnPasscodeCB_t)(
-    uint8_t *
+    uint8_t*
         deviceAddr,  //!< address of device to pair with, and could be either public or random.
     uint16_t connectionHandle,  //!< Connection handle
     uint8_t
@@ -2594,11 +2594,11 @@ typedef struct {
  * OOB Callback Function
  */
 typedef void (*pfnOobCB_t)(
-    uint8_t *
+    uint8_t*
         deviceAddr,  //!< address of device to pair with, and could be either public or random.
     uint16_t connectionHandle,  //!< Connection handle
-    uint8_t *r_local,  //!< local rand
-    uint8_t *c_local  //!< local confirm
+    uint8_t* r_local,  //!< local rand
+    uint8_t* c_local  //!< local confirm
 );
 
 /**
@@ -2610,26 +2610,26 @@ typedef struct {
     pfnOobCB_t       oobCB;  //!< oob callback
 } gapBondCBs_t;
 
-typedef int (*pfnEcc_key_t)(uint8_t *pub, uint8_t *priv);
+typedef int (*pfnEcc_key_t)(uint8_t* pub, uint8_t* priv);
 
-typedef int (*pfnEcc_dhkey_t)(uint8_t *peer_pub_key_x, uint8_t *peer_pub_key_y,
-                              uint8_t *our_priv_key, uint8_t *out_dhkey);
+typedef int (*pfnEcc_dhkey_t)(uint8_t* peer_pub_key_x, uint8_t* peer_pub_key_y,
+                              uint8_t* our_priv_key, uint8_t* out_dhkey);
 
-typedef int (*pfnEcc_alg_f4_t)(uint8_t *u, uint8_t *v, uint8_t *x, uint8_t z,
-                               uint8_t *out_enc_data);
+typedef int (*pfnEcc_alg_f4_t)(uint8_t* u, uint8_t* v, uint8_t* x, uint8_t z,
+                               uint8_t* out_enc_data);
 
-typedef int (*pfnEcc_alg_g2_t)(uint8_t *u, uint8_t *v, uint8_t *x, uint8_t *y,
-                               uint32_t *passkey);
+typedef int (*pfnEcc_alg_g2_t)(uint8_t* u, uint8_t* v, uint8_t* x, uint8_t* y,
+                               uint32_t* passkey);
 
-typedef int (*pfnEcc_alg_f5_t)(uint8_t *w, uint8_t *n1, uint8_t *n2,
-                               uint8_t a1t, uint8_t *a1, uint8_t a2t,
-                               uint8_t *a2, uint8_t *mackey, uint8_t *ltk);
+typedef int (*pfnEcc_alg_f5_t)(uint8_t* w, uint8_t* n1, uint8_t* n2,
+                               uint8_t a1t, uint8_t* a1, uint8_t a2t,
+                               uint8_t* a2, uint8_t* mackey, uint8_t* ltk);
 
-typedef int (*pfnEcc_alg_f6_t)(uint8_t *w, uint8_t *n1, uint8_t *n2, uint8_t *r,
-                               uint8_t *iocap, uint8_t a1t, uint8_t *a1,
-                               uint8_t a2t, uint8_t *a2, uint8_t *check);
+typedef int (*pfnEcc_alg_f6_t)(uint8_t* w, uint8_t* n1, uint8_t* n2, uint8_t* r,
+                               uint8_t* iocap, uint8_t a1t, uint8_t* a1,
+                               uint8_t a2t, uint8_t* a2, uint8_t* check);
 
-typedef void (*pfnSm_randkey_t)(uint8_t *randkey, uint8_t keylen);
+typedef void (*pfnSm_randkey_t)(uint8_t* randkey, uint8_t keylen);
 
 /**
  * Callback Registration Structure
@@ -2777,13 +2777,13 @@ typedef struct {
     uint8_t addr[B_ADDR_LEN];  //!< Device's Address
     uint16_t
         skip;  //!< the maximum number of consecutive periodic advertising events that the receiver may skip after
-        //!< successfully receiving a periodic advertising packet.Range: 0x0000 to 0x01F3
+    //!< successfully receiving a periodic advertising packet.Range: 0x0000 to 0x01F3
     uint16_t
         syncTimeout;  //!< the maximum permitted time between successful receives. If this time is exceeded, synchronization is lost.
-        //!< Time = N*10 ms.Range: 0x000A to 0x4000
+    //!< Time = N*10 ms.Range: 0x000A to 0x4000
     uint8_t
         syncCTEType;  //!< specifies whether to only synchronize to periodic advertising with certain types of Constant Tone Extension
-        //!< (a value of 0 indicates that the presence or absence of a Constant Tone Extension is irrelevant).
+    //!< (a value of 0 indicates that the presence or absence of a Constant Tone Extension is irrelevant).
 } gapCreateSync_t;
 
 /**
@@ -2793,16 +2793,16 @@ typedef struct {
     uint16_t connHandle;  //!< Used to identify the Connection handle
     uint8_t
         mode;  //!< specifies the action to be taken when periodic advertising synchronization information is received
-#define MODE_0                                                                   \
+#define MODE_0 \
     0  //!< No attempt is made to synchronize to the periodic advertising and no \
         //!< gapPeriodicTranReceivec_t event is sent to the APP.
-#define MODE_1                                                     \
+#define MODE_1 \
     1  //!< An gapPeriodicTranReceivec_t event is sent to the APP. \
         //!< gapPeriodicAdvDeviceInfoEvent_t events will be disabled.
-#define MODE_2                                                     \
+#define MODE_2 \
     2  //!< An gapPeriodicTranReceivec_t event is sent to the APP. \
         //!< gapPeriodicAdvDeviceInfoEvent_t events will be enabled with duplicate filtering disabled.
-#define MODE_3                                                     \
+#define MODE_3 \
     3  //!< An gapPeriodicTranReceivec_t event is sent to the APP. \
         //!< gapPeriodicAdvDeviceInfoEvent_t events will be enabled with duplicate filtering enabled.
     uint16_t
@@ -2847,7 +2847,7 @@ typedef struct {
         lowHysteresis;  //!< Hysteresis value for the high threshold.Units: dB
     uint16_t
         minTimeSpent;  //!< Minimum time in number of connection events to be observed
-        //!< once the path crosses the threshold before an event is generated.
+    //!< once the path crosses the threshold before an event is generated.
     uint8_t enable;  //!< 0x00:Reporting disabled 0x01:Reporting enabled
 } gapRoleSetPathLossReporting_t;
 
@@ -2867,7 +2867,7 @@ typedef struct {
  */
 typedef void (*gapRolesBroadcasterStateNotify_t)(gapRole_States_t newState);
 
-typedef void (*gapRolesScanReqRecv_t)(gapScanRec_t *pEvent);
+typedef void (*gapRolesScanReqRecv_t)(gapScanRec_t* pEvent);
 
 typedef struct {
     gapRolesBroadcasterStateNotify_t
@@ -2879,7 +2879,7 @@ typedef struct {
  * Observer Event Callback Function
  */
 typedef void (*pfnGapObserverRoleEventCB_t)(
-    gapRoleEvent_t *pEvent  //!< Pointer to event structure.
+    gapRoleEvent_t* pEvent  //!< Pointer to event structure.
 );
 
 /**
@@ -2899,7 +2899,7 @@ typedef void (*gapRolesRssiRead_t)(uint16_t connHandle, int8_t newRSSI);
  * the Notify of a state change.
  */
 typedef void (*gapRolesStateNotify_t)(gapRole_States_t newState,
-                                      gapRoleEvent_t  *pEvent);
+                                      gapRoleEvent_t*  pEvent);
 
 /**
  * Callback when the connection parameteres are updated.
@@ -2925,7 +2925,7 @@ typedef struct {
  * Central Event Callback Function
  */
 typedef void (*pfnGapCentralRoleEventCB_t)(
-    gapRoleEvent_t *pEvent);  //!< Pointer to event structure.
+    gapRoleEvent_t* pEvent);  //!< Pointer to event structure.
 
 /**
  * HCI Data Length Change Event Callback Function
@@ -2962,7 +2962,7 @@ typedef struct {
  * RF_ROLE_STATUS_TYPE pfnRFStatusCB_t state defined
  */
 // TX_MODE call RF_Tx
-#define TX_MODE_TX_FINISH                                     \
+#define TX_MODE_TX_FINISH \
     0x01  //!< basic or auto tx mode sends data successfully  \
         //!< if it is in basic mode,it will enter idle state; \
         //!< if it is in auto mode,it will wait for receiving
@@ -2976,7 +2976,7 @@ typedef struct {
 #define TX_MODE_HOP_SHUT 0x22
 
 // RX_MODE call RF_Rx
-#define RX_MODE_RX_DATA                                                    \
+#define RX_MODE_RX_DATA \
     0x03  //!< basic or auto rx mode receive data                          \
         //!< if it is in basic mode,it will enter idle state;              \
         //!< if it is in auto mode,it will judge whether the type matches; \
@@ -3010,19 +3010,19 @@ typedef struct {
 /**
  * RFRole Event Callback Function
  */
-typedef void (*pfnRFStatusCB_t)(uint8_t sta, uint8_t rsr, uint8_t *rxBuf);
+typedef void (*pfnRFStatusCB_t)(uint8_t sta, uint8_t rsr, uint8_t* rxBuf);
 // sta - current status@ref RF_ROLE_STATUS_TYPE
 // rsr - receive status: bit0- crc check result,bit1- type matching result
 // rxBuf - receive data buffer
 
 typedef struct tag_rf_config {
     uint8_t         LLEMode;  //!< BIT0   0=basic, 1=auto def@LLE_MODE_TYPE
-        //!< BIT1   0=whitening on, 1=whitening off def@LLE_WHITENING_TYPE
-        //!< BIT4-5 00-1M  01-2M  10/11-resv def@LLE_PHY_TYPE
-        //!< BIT6   0=data channel(0-39)
-        //!<        1=rf frequency (2400000kHz-2483500kHz)
-        //!< BIT7   0=the first byte of the receive buffer is rssi
-        //!<        1=the first byte of the receive buffer is package type
+    //!< BIT1   0=whitening on, 1=whitening off def@LLE_WHITENING_TYPE
+    //!< BIT4-5 00-1M  01-2M  10/11-resv def@LLE_PHY_TYPE
+    //!< BIT6   0=data channel(0-39)
+    //!<        1=rf frequency (2400000kHz-2483500kHz)
+    //!< BIT7   0=the first byte of the receive buffer is rssi
+    //!<        1=the first byte of the receive buffer is package type
     uint8_t         Channel;  //!< rf channel(0-39)
     uint32_t        Frequency;  //!< rf frequency (2400000kHz-2483500kHz)
     uint32_t        accessAddress;  //!< access address,32bit PHY address
@@ -3030,7 +3030,7 @@ typedef struct tag_rf_config {
     pfnRFStatusCB_t rfStatusCB;  //!< status call back
     uint32_t
         ChannelMap;  //!< indicating  Used and Unused data channels.Every channel is represented with a
-        //!< bit positioned as per the data channel index,The LSB represents data channel index 0
+    //!< bit positioned as per the data channel index,The LSB represents data channel index 0
     uint8_t Resv;
     uint8_t
         HeartPeriod;  //!< The heart package interval shall be an integer multiple of 100ms
@@ -3088,13 +3088,13 @@ extern const uint8_t centAddrResUUID[];
  * PUBLIC FUNCTIONS
  */
 extern uint32_t tmos_rand(void);  // pseudo-random number
-extern BOOL     tmos_memcmp(const void *src1, const void *src2,
+extern BOOL     tmos_memcmp(const void* src1, const void* src2,
                             uint32_t len);  // TRUE - same, FALSE - different
-extern BOOL     tmos_isbufset(uint8_t *buf, uint8_t val,
-                              uint32_t len);  // TRUE if all "val",FALSE otherwise
-extern uint32_t tmos_strlen(char *pString);
-extern void     tmos_memset(void *pDst, uint8_t Value, uint32_t len);
-extern void     tmos_memcpy(void *dst, const void *src,
+extern BOOL tmos_isbufset(uint8_t* buf, uint8_t val,
+                          uint32_t len);  // TRUE if all "val",FALSE otherwise
+extern uint32_t tmos_strlen(char* pString);
+extern void     tmos_memset(void* pDst, uint8_t Value, uint32_t len);
+extern void     tmos_memcpy(void* dst, const void* src,
                             uint32_t len);  // Generic memory copy.
 
 /**
@@ -3173,7 +3173,7 @@ extern tmosTimer tmos_get_task_timer(tmosTaskID taskID, tmosEvents event);
  *
  * @return  SUCCESS, INVALID_TASK, INVALID_MSG_POINTER
  */
-extern bStatus_t tmos_msg_send(tmosTaskID taskID, uint8_t *msg_ptr);
+extern bStatus_t tmos_msg_send(tmosTaskID taskID, uint8_t* msg_ptr);
 
 /**
  * @brief   delete a msg
@@ -3182,7 +3182,7 @@ extern bStatus_t tmos_msg_send(tmosTaskID taskID, uint8_t *msg_ptr);
  *
  * @return  SUCCESS.
  */
-extern bStatus_t tmos_msg_deallocate(uint8_t *msg_ptr);
+extern bStatus_t tmos_msg_deallocate(uint8_t* msg_ptr);
 
 /**
  * @brief   receive a msg
@@ -3191,7 +3191,7 @@ extern bStatus_t tmos_msg_deallocate(uint8_t *msg_ptr);
  *
  * @return *uint8_t - message information or NULL if no message
  */
-extern uint8_t *tmos_msg_receive(tmosTaskID taskID);
+extern uint8_t* tmos_msg_receive(tmosTaskID taskID);
 
 /**
  * @brief   allocate buffer for msg when need to send msg
@@ -3200,7 +3200,7 @@ extern uint8_t *tmos_msg_receive(tmosTaskID taskID);
  *
  * @return  pointer to allocated buffer or NULL if allocation failed.
  */
-extern uint8_t *tmos_msg_allocate(uint16_t len);
+extern uint8_t* tmos_msg_allocate(uint16_t len);
 
 /**
  * @brief   read a data item to NV.
@@ -3211,7 +3211,7 @@ extern uint8_t *tmos_msg_allocate(uint16_t len);
  *
  * @return  SUCCESS if successful, NV_OPER_FAILED if failed.
  */
-extern bStatus_t tmos_snv_read(tmosSnvId_t id, tmosSnvLen_t len, void *pBuf);
+extern bStatus_t tmos_snv_read(tmosSnvId_t id, tmosSnvLen_t len, void* pBuf);
 
 /**
  * @brief   tmos system timer initialization
@@ -3222,7 +3222,7 @@ extern bStatus_t tmos_snv_read(tmosSnvId_t id, tmosSnvLen_t len, void *pBuf);
  *
  * @return  SUCCESS if successful, FAILURE if failed.
  */
-extern bStatus_t TMOS_TimerInit(bleClockConfig_t *pClockConfig);
+extern bStatus_t TMOS_TimerInit(bleClockConfig_t* pClockConfig);
 
 /**
  * @brief   interrupt handler.
@@ -3231,7 +3231,7 @@ extern bStatus_t TMOS_TimerInit(bleClockConfig_t *pClockConfig);
  *
  * @return  None
  */
-extern bStatus_t TMOS_TimerIRQHandler(uint32_t *time);
+extern bStatus_t TMOS_TimerIRQHandler(uint32_t* time);
 
 /**
  * @brief   Process system
@@ -3268,7 +3268,7 @@ extern tmosTaskID TMOS_ProcessEventRegister(pTaskEventHandlerFn eventCb);
  *
  * @return  Command Status.
  */
-extern bStatus_t LL_AddWhiteListDevice(uint8_t addrType, uint8_t *devAddr);
+extern bStatus_t LL_AddWhiteListDevice(uint8_t addrType, uint8_t* devAddr);
 
 /**
  * @brief   Remove a device address from white list
@@ -3278,7 +3278,7 @@ extern bStatus_t LL_AddWhiteListDevice(uint8_t addrType, uint8_t *devAddr);
  *
  * @return  Command Status.
  */
-extern bStatus_t LL_RemoveWhiteListDevice(uint8_t addrType, uint8_t *devAddr);
+extern bStatus_t LL_RemoveWhiteListDevice(uint8_t addrType, uint8_t* devAddr);
 
 /**
  * @brief   Clear white list
@@ -3298,8 +3298,8 @@ extern bStatus_t LL_ClearWhiteList(void);
  *
  * @return  Command Status.
  */
-extern bStatus_t LL_Encrypt(uint8_t *key, uint8_t *plaintextData,
-                            uint8_t *encryptData);
+extern bStatus_t LL_Encrypt(uint8_t* key, uint8_t* plaintextData,
+                            uint8_t* encryptData);
 
 /**
  * @brief   Decrypt data
@@ -3310,8 +3310,8 @@ extern bStatus_t LL_Encrypt(uint8_t *key, uint8_t *plaintextData,
  *
  * @return  Command Status.
  */
-extern bStatus_t LL_Decrypt(uint8_t *key, uint8_t *plaintextData,
-                            uint8_t *decryptData);
+extern bStatus_t LL_Decrypt(uint8_t* key, uint8_t* plaintextData,
+                            uint8_t* decryptData);
 
 /**
  * @brief   get number of unAck packet in current connect buffer
@@ -3377,7 +3377,7 @@ extern int16_t BLE_ReadCfo(void);
  *
  * @return  Command Status.
  */
-extern void BLE_PAControlInit(blePaControlConfig_t *paControl);
+extern void BLE_PAControlInit(blePaControlConfig_t* paControl);
 
 /**
  * @brief   ble register reset and rf calibration 
@@ -3395,7 +3395,7 @@ extern void BLE_RegInit(void);
  *
  * @return  0-success. error defined @ ERR_LIB_INIT
  */
-extern bStatus_t BLE_LibInit(bleConfig_t *pCfg);
+extern bStatus_t BLE_LibInit(bleConfig_t* pCfg);
 
 /**
  * @brief   interrupt handler.
@@ -3482,8 +3482,8 @@ extern bStatus_t ATT_HandleValueCfm(uint16_t connHandle);
 /*
  * Compare two UUIDs. The UUIDs are converted if necessary.
  */
-extern uint8_t ATT_CompareUUID(const uint8_t *pUUID1, uint16_t len1,
-                               const uint8_t *pUUID2, uint16_t len2);
+extern uint8_t ATT_CompareUUID(const uint8_t* pUUID1, uint16_t len1,
+                               const uint8_t* pUUID2, uint16_t len2);
 
 /**
  * @brief   Initialize the Generic Attribute Profile Client.
@@ -3511,7 +3511,7 @@ extern void GATT_RegisterForInd(uint8_t taskId);
  * 
  * @return  Pointer to attribute record. NULL, otherwise.
  */
-extern gattAttribute_t *GATT_FindHandle(uint16_t handle, uint16_t *pHandle);
+extern gattAttribute_t* GATT_FindHandle(uint16_t handle, uint16_t* pHandle);
 
 /**
  * @brief   This sub-procedure is used when a server is configured to 
@@ -3541,7 +3541,7 @@ extern gattAttribute_t *GATT_FindHandle(uint16_t handle, uint16_t *pHandle);
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-extern bStatus_t GATT_Indication(uint16_t connHandle, attHandleValueInd_t *pInd,
+extern bStatus_t GATT_Indication(uint16_t connHandle, attHandleValueInd_t* pInd,
                                  uint8_t authenticated, uint8_t taskId);
 /**
  * @brief   This sub-procedure is used when a server is configured to 
@@ -3567,7 +3567,7 @@ extern bStatus_t GATT_Indication(uint16_t connHandle, attHandleValueInd_t *pInd,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_Notification(uint16_t              connHandle,
-                                   attHandleValueNoti_t *pNoti,
+                                   attHandleValueNoti_t* pNoti,
                                    uint8_t               authenticated);
 
 /**
@@ -3601,7 +3601,7 @@ extern bStatus_t GATT_Notification(uint16_t              connHandle,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_ExchangeMTU(uint16_t             connHandle,
-                                  attExchangeMTUReq_t *pReq, uint8_t taskId);
+                                  attExchangeMTUReq_t* pReq, uint8_t taskId);
 
 /**
  * @brief   This sub-procedure is used by a client to discover all 
@@ -3671,7 +3671,7 @@ extern bStatus_t GATT_DiscAllPrimaryServices(uint16_t connHandle,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_DiscPrimaryServiceByUUID(uint16_t connHandle,
-                                               uint8_t *pUUID, uint8_t len,
+                                               uint8_t* pUUID, uint8_t len,
                                                uint8_t taskId);
 
 /**
@@ -3784,7 +3784,7 @@ extern bStatus_t GATT_DiscAllChars(uint16_t connHandle, uint16_t startHandle,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_DiscCharsByUUID(uint16_t            connHandle,
-                                      attReadByTypeReq_t *pReq, uint8_t taskId);
+                                      attReadByTypeReq_t* pReq, uint8_t taskId);
 
 /**
  * @brief   This sub-procedure is used by a client to find all the 
@@ -3859,7 +3859,7 @@ extern bStatus_t GATT_DiscAllCharDescs(uint16_t connHandle,
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-extern bStatus_t GATT_ReadCharValue(uint16_t connHandle, attReadReq_t *pReq,
+extern bStatus_t GATT_ReadCharValue(uint16_t connHandle, attReadReq_t* pReq,
                                     uint8_t taskId);
 
 /**
@@ -3896,7 +3896,7 @@ extern bStatus_t GATT_ReadCharValue(uint16_t connHandle, attReadReq_t *pReq,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_ReadUsingCharUUID(uint16_t            connHandle,
-                                        attReadByTypeReq_t *pReq,
+                                        attReadByTypeReq_t* pReq,
                                         uint8_t             taskId);
 
 /**
@@ -3929,7 +3929,7 @@ extern bStatus_t GATT_ReadUsingCharUUID(uint16_t            connHandle,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_ReadLongCharValue(uint16_t          connHandle,
-                                        attReadBlobReq_t *pReq, uint8_t taskId);
+                                        attReadBlobReq_t* pReq, uint8_t taskId);
 
 /**
  * @brief   This sub-procedure is used to read multiple Characteristic Values
@@ -3963,7 +3963,7 @@ extern bStatus_t GATT_ReadLongCharValue(uint16_t          connHandle,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_ReadMultiCharValues(uint16_t           connHandle,
-                                          attReadMultiReq_t *pReq,
+                                          attReadMultiReq_t* pReq,
                                           uint8_t            taskId);
 
 /**
@@ -3997,7 +3997,7 @@ extern bStatus_t GATT_ReadMultiCharValues(uint16_t           connHandle,
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-extern bStatus_t GATT_WriteNoRsp(uint16_t connHandle, attWriteReq_t *pReq);
+extern bStatus_t GATT_WriteNoRsp(uint16_t connHandle, attWriteReq_t* pReq);
 
 /**
  * @brief   This sub-procedure is used to write a Characteristic Value
@@ -4036,7 +4036,7 @@ extern bStatus_t GATT_WriteNoRsp(uint16_t connHandle, attWriteReq_t *pReq);
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_SignedWriteNoRsp(uint16_t       connHandle,
-                                       attWriteReq_t *pReq);
+                                       attWriteReq_t* pReq);
 
 /**
  * @brief   This sub-procedure is used to write a characteristic value
@@ -4072,7 +4072,7 @@ extern bStatus_t GATT_SignedWriteNoRsp(uint16_t       connHandle,
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-extern bStatus_t GATT_WriteCharValue(uint16_t connHandle, attWriteReq_t *pReq,
+extern bStatus_t GATT_WriteCharValue(uint16_t connHandle, attWriteReq_t* pReq,
                                      uint8_t taskId);
 
 /**
@@ -4110,7 +4110,7 @@ extern bStatus_t GATT_WriteCharValue(uint16_t connHandle, attWriteReq_t *pReq,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_WriteLongCharValue(uint16_t              connHandle,
-                                         attPrepareWriteReq_t *pReq,
+                                         attPrepareWriteReq_t* pReq,
                                          uint8_t               taskId);
 
 /**
@@ -4159,7 +4159,7 @@ extern bStatus_t GATT_WriteLongCharValue(uint16_t              connHandle,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_ReliableWrites(uint16_t              connHandle,
-                                     attPrepareWriteReq_t *pReqs,
+                                     attPrepareWriteReq_t* pReqs,
                                      uint8_t numReqs, uint8_t flags,
                                      uint8_t taskId);
 
@@ -4194,7 +4194,7 @@ extern bStatus_t GATT_ReliableWrites(uint16_t              connHandle,
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-extern bStatus_t GATT_ReadCharDesc(uint16_t connHandle, attReadReq_t *pReq,
+extern bStatus_t GATT_ReadCharDesc(uint16_t connHandle, attReadReq_t* pReq,
                                    uint8_t taskId);
 
 /**
@@ -4231,7 +4231,7 @@ extern bStatus_t GATT_ReadCharDesc(uint16_t connHandle, attReadReq_t *pReq,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_ReadLongCharDesc(uint16_t          connHandle,
-                                       attReadBlobReq_t *pReq, uint8_t taskId);
+                                       attReadBlobReq_t* pReq, uint8_t taskId);
 
 /**
  * @brief   This sub-procedure is used to write a characteristic
@@ -4264,7 +4264,7 @@ extern bStatus_t GATT_ReadLongCharDesc(uint16_t          connHandle,
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-extern bStatus_t GATT_WriteCharDesc(uint16_t connHandle, attWriteReq_t *pReq,
+extern bStatus_t GATT_WriteCharDesc(uint16_t connHandle, attWriteReq_t* pReq,
                                     uint8_t taskId);
 
 /**
@@ -4302,7 +4302,7 @@ extern bStatus_t GATT_WriteCharDesc(uint16_t connHandle, attWriteReq_t *pReq,
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 extern bStatus_t GATT_WriteLongCharDesc(uint16_t              connHandle,
-                                        attPrepareWriteReq_t *pReq,
+                                        attPrepareWriteReq_t* pReq,
                                         uint8_t               taskId);
 
 /**
@@ -4318,8 +4318,8 @@ extern bStatus_t GATT_WriteLongCharDesc(uint16_t              connHandle,
  *
  * @return  pointer to the heap allocation; NULL if error or failure.
  */
-extern void *GATT_bm_alloc(uint16_t connHandle, uint8_t opcode, uint16_t size,
-                           uint16_t *pSizeAlloc, uint8_t flag);
+extern void* GATT_bm_alloc(uint16_t connHandle, uint8_t opcode, uint16_t size,
+                           uint16_t* pSizeAlloc, uint8_t flag);
 
 /**
  * @brief   GATT implementation of the de-allocator functionality.
@@ -4329,7 +4329,7 @@ extern void *GATT_bm_alloc(uint16_t connHandle, uint8_t opcode, uint16_t size,
  *
  * @return  none
  */
-extern void GATT_bm_free(gattMsg_t *pMsg, uint8_t opcode);
+extern void GATT_bm_free(gattMsg_t* pMsg, uint8_t opcode);
 
 /**
  * @brief   Register a service's attribute list and callback functions with
@@ -4346,10 +4346,10 @@ extern void GATT_bm_free(gattMsg_t *pMsg, uint8_t opcode);
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleInvalidRange: Encryption key size's out of range.<BR>
  */
-extern bStatus_t GATTServApp_RegisterService(gattAttribute_t  *pAttrs,
+extern bStatus_t GATTServApp_RegisterService(gattAttribute_t*  pAttrs,
                                              uint16_t          numAttrs,
                                              uint8_t           encKeySize,
-                                             gattServiceCBs_t *pServiceCBs);
+                                             gattServiceCBs_t* pServiceCBs);
 
 /**
  * @brief   Add function for the GATT Service.
@@ -4378,7 +4378,7 @@ extern bStatus_t GATTServApp_AddService(uint32_t services);
  *          FAILURE: Service not found.<BR>
  */
 extern bStatus_t GATTServApp_DeregisterService(uint16_t          handle,
-                                               gattAttribute_t **p2pAttrs);
+                                               gattAttribute_t** p2pAttrs);
 
 /**
  * @brief   Initialize the client characteristic configuration table.
@@ -4393,7 +4393,7 @@ extern bStatus_t GATTServApp_DeregisterService(uint16_t          handle,
  * @return  none
  */
 extern void GATTServApp_InitCharCfg(uint16_t       connHandle,
-                                    gattCharCfg_t *charCfgTbl);
+                                    gattCharCfg_t* charCfgTbl);
 
 /**
  * @brief   Send out a Service Changed Indication.
@@ -4424,7 +4424,7 @@ extern bStatus_t GATTServApp_SendServiceChangedInd(uint16_t connHandle,
  * @return  attribute value
  */
 extern uint16_t GATTServApp_ReadCharCfg(uint16_t       connHandle,
-                                        gattCharCfg_t *charCfgTbl);
+                                        gattCharCfg_t* charCfgTbl);
 
 /**
  * @brief   Write the client characteristic configuration for a given client.
@@ -4440,7 +4440,7 @@ extern uint16_t GATTServApp_ReadCharCfg(uint16_t       connHandle,
  * @return  Success or Failure
  */
 extern uint8_t GATTServApp_WriteCharCfg(uint16_t       connHandle,
-                                        gattCharCfg_t *charCfgTbl,
+                                        gattCharCfg_t* charCfgTbl,
                                         uint16_t       value);
 
 /**
@@ -4457,8 +4457,8 @@ extern uint8_t GATTServApp_WriteCharCfg(uint16_t       connHandle,
  * @return  Success or Failure
  */
 extern bStatus_t GATTServApp_ProcessCCCWriteReq(uint16_t         connHandle,
-                                                gattAttribute_t *pAttr,
-                                                uint8_t *pValue, uint16_t len,
+                                                gattAttribute_t* pAttr,
+                                                uint8_t* pValue, uint16_t len,
                                                 uint16_t offset,
                                                 uint16_t validCfg);
 
@@ -4474,7 +4474,7 @@ extern bStatus_t GATTServApp_ProcessCCCWriteReq(uint16_t         connHandle,
  *
  * @return  bStatus_t
  */
-extern bStatus_t GGS_SetParameter(uint8_t param, uint8_t len, void *value);
+extern bStatus_t GGS_SetParameter(uint8_t param, uint8_t len, void* value);
 
 /**
  * @brief   Get a GAP GATT Server parameter.
@@ -4487,7 +4487,7 @@ extern bStatus_t GGS_SetParameter(uint8_t param, uint8_t len, void *value);
  *
  * @return  bStatus_t
  */
-extern bStatus_t GGS_GetParameter(uint8_t param, void *value);
+extern bStatus_t GGS_GetParameter(uint8_t param, void* value);
 
 /**
  * @brief   Add function for the GAP GATT Service.
@@ -4539,7 +4539,7 @@ extern uint16_t GAP_GetParamValue(uint16_t paramID);
  *          bleIncorrectMode: can't change with an active connection,or INVALIDPARAMETER
  *          If return value isn't SUCCESS, the address type remains the same as before this call.
  */
-extern bStatus_t GAP_ConfigDeviceAddr(uint8_t addrType, uint8_t *pStaticAddr);
+extern bStatus_t GAP_ConfigDeviceAddr(uint8_t addrType, uint8_t* pStaticAddr);
 
 /**
  * @brief   Resolves a private address against an IRK.
@@ -4554,7 +4554,7 @@ extern bStatus_t GAP_ConfigDeviceAddr(uint8_t addrType, uint8_t *pStaticAddr);
  *          FAILURE: don't match,<BR>
  *          INVALIDPARAMETER: parameters invalid<BR>
  */
-extern bStatus_t GAP_ResolvePrivateAddr(uint8_t *pIRK, uint8_t *pAddr);
+extern bStatus_t GAP_ResolvePrivateAddr(uint8_t* pIRK, uint8_t* pAddr);
 
 /**
  * @brief   Setup or change advertising and scan response data.
@@ -4572,7 +4572,7 @@ extern bStatus_t GAP_ResolvePrivateAddr(uint8_t *pIRK, uint8_t *pAddr);
  */
 extern bStatus_t GAP_UpdateAdvertisingData(uint8_t taskID, uint8_t adType,
                                            uint16_t dataLen,
-                                           uint8_t *pAdvertData);
+                                           uint8_t* pAdvertData);
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - GAP Bond API
@@ -4592,7 +4592,7 @@ extern bStatus_t GAP_UpdateAdvertisingData(uint8_t taskID, uint8_t adType,
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
 extern bStatus_t GAPBondMgr_SetParameter(uint16_t param, uint8_t len,
-                                         void *pValue);
+                                         void* pValue);
 
 /**
  * @brief   Get a GAP Bond Manager parameter.
@@ -4606,7 +4606,7 @@ extern bStatus_t GAPBondMgr_SetParameter(uint16_t param, uint8_t len,
  *
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
-extern bStatus_t GAPBondMgr_GetParameter(uint16_t param, void *pValue);
+extern bStatus_t GAPBondMgr_GetParameter(uint16_t param, void* pValue);
 
 /**
  * @brief   Respond to a passcode request.
@@ -4633,7 +4633,7 @@ extern bStatus_t GAPBondMgr_PasscodeRsp(uint16_t connectionHandle,
  *          bleIncorrectMode - Link not found.
  */
 extern bStatus_t GAPBondMgr_OobRsp(uint16_t connHandle, uint8_t status,
-                                   uint8_t *oob, uint8_t *c_peer);
+                                   uint8_t* oob, uint8_t* c_peer);
 
 /**
  * @brief   Initialization function for the ecc-function callback.
@@ -4642,7 +4642,7 @@ extern bStatus_t GAPBondMgr_OobRsp(uint16_t connHandle, uint8_t status,
  *
  * @return  null.
  */
-extern void GAPBondMgr_EccInit(gapEccCBs_t *pEcc);
+extern void GAPBondMgr_EccInit(gapEccCBs_t* pEcc);
 
 /**
  * @brief   Send a security request
@@ -4672,7 +4672,7 @@ extern bStatus_t GAPBondMgr_PeriSecurityReq(uint16_t connHandle);
  * @return  SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
 extern bStatus_t GAPRole_SetParameter(uint16_t param, uint16_t len,
-                                      void *pValue);
+                                      void* pValue);
 
 /**
  * @brief   Get a GAP Role parameter.
@@ -4687,7 +4687,7 @@ extern bStatus_t GAPRole_SetParameter(uint16_t param, uint16_t len,
  *
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
-extern bStatus_t GAPRole_GetParameter(uint16_t param, void *pValue);
+extern bStatus_t GAPRole_GetParameter(uint16_t param, void* pValue);
 
 /**
  * @brief       Terminates the existing connection.
@@ -4715,7 +4715,7 @@ extern bStatus_t GAPRole_ReadRssiCmd(uint16_t connHandle);
  * @return  bStatus_t: HCI Error Code.<BR>
  *
  */
-extern bStatus_t GAPRole_CreateSync(gapCreateSync_t *pSync);
+extern bStatus_t GAPRole_CreateSync(gapCreateSync_t* pSync);
 
 /**
  * @brief   used to cancel the HCI_LE_Periodic_Advertising_Create_Sync command while
@@ -4748,7 +4748,7 @@ extern bStatus_t GAPRole_TerminateSync(uint16_t syncHandle);
  * @return  bStatus_t: HCI Error Code.<BR>
  *
  */
-extern bStatus_t GAPRole_SyncTransferParameters(gapSyncTransferParam_t *pSync);
+extern bStatus_t GAPRole_SyncTransferParameters(gapSyncTransferParam_t* pSync);
 
 /**
  * @brief   used to instruct the Controller to send synchronization information about the periodic
@@ -4759,7 +4759,7 @@ extern bStatus_t GAPRole_SyncTransferParameters(gapSyncTransferParam_t *pSync);
  * @return  bStatus_t: HCI Error Code.<BR>
  *
  */
-extern bStatus_t GAPRole_SyncTransferSync(gapSyncTransferSync_t *pSync);
+extern bStatus_t GAPRole_SyncTransferSync(gapSyncTransferSync_t* pSync);
 
 /**
  * @brief   used to instruct the Controller to send synchronization information about the periodic
@@ -4771,7 +4771,7 @@ extern bStatus_t GAPRole_SyncTransferSync(gapSyncTransferSync_t *pSync);
  *
  */
 extern bStatus_t GAPRole_SyncTransferAdvertising(
-    gapSyncTransferAdvertising_t *pSync);
+    gapSyncTransferAdvertising_t* pSync);
 
 /**
  * @brief   Update the link connection parameters.
@@ -4824,7 +4824,7 @@ extern bStatus_t GAPRole_UpdatePHY(uint16_t connHandle, uint8_t all_phys,
  * @return  Command Status.
  *
  */
-extern bStatus_t GAPRole_SetPrivacyMode(uint8_t addrTypePeer, uint8_t *peerAddr,
+extern bStatus_t GAPRole_SetPrivacyMode(uint8_t addrTypePeer, uint8_t* peerAddr,
                                         uint8_t privacyMode);
 
 /**
@@ -4836,7 +4836,7 @@ extern bStatus_t GAPRole_SetPrivacyMode(uint8_t addrTypePeer, uint8_t *peerAddr,
  *
  */
 extern bStatus_t GAPRole_SetPathLossReporting(
-    gapRoleSetPathLossReporting_t *pParm);
+    gapRoleSetPathLossReporting_t* pParm);
 
 /**
  * @brief   used to set power level management.
@@ -4846,7 +4846,7 @@ extern bStatus_t GAPRole_SetPathLossReporting(
  * @return  Command Status.
  *
  */
-extern bStatus_t GAPRole_SetPowerlevel(gapRolePowerlevelManagement_t *pParm);
+extern bStatus_t GAPRole_SetPowerlevel(gapRolePowerlevelManagement_t* pParm);
 
 /**
  * @brief   used to set the parameters for pawr advertising..
@@ -4856,7 +4856,7 @@ extern bStatus_t GAPRole_SetPowerlevel(gapRolePowerlevelManagement_t *pParm);
  * @return  Command Status.
  *
  */
-extern bStatus_t GAPPawr_SetParameters(gapPawrSetParam_t *pParm);
+extern bStatus_t GAPPawr_SetParameters(gapPawrSetParam_t* pParm);
 
 /**
  * @brief   used to set the data for one or more subevents of PAwR in reply to an
@@ -4871,7 +4871,7 @@ extern bStatus_t GAPPawr_SetParameters(gapPawrSetParam_t *pParm);
  */
 extern bStatus_t GAPPawr_SetSubeventData(uint8_t           advHandle,
                                          uint8_t           numSubevents,
-                                         gapPawrSetData_t *pParm);
+                                         gapPawrSetData_t* pParm);
 
 /**
  * @brief   used by the Host to set the data for a response slot in a specific subevent
@@ -4882,7 +4882,7 @@ extern bStatus_t GAPPawr_SetSubeventData(uint8_t           advHandle,
  * @return  Command Status.
  *
  */
-extern bStatus_t GAPPawr_SetResponseData(gapPawrSetResponseData_t *pParm);
+extern bStatus_t GAPPawr_SetResponseData(gapPawrSetResponseData_t* pParm);
 
 /**
  * @brief   used to create an ACL connection between a periodic advertiser and a synchronized device.
@@ -4892,7 +4892,7 @@ extern bStatus_t GAPPawr_SetResponseData(gapPawrSetResponseData_t *pParm);
  * @return  Command Status.
  *
  */
-extern bStatus_t GAPPawr_CreatConnection(gapPawrCreateConnection_t *pParm);
+extern bStatus_t GAPPawr_CreatConnection(gapPawrCreateConnection_t* pParm);
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - BROADCASTER_PROFILE_API Broadcaster Profile API
@@ -4915,7 +4915,7 @@ extern bStatus_t GAPRole_BroadcasterInit(void);
  * @return  SUCCESS or bleAlreadyInRequestedMode
  */
 extern bStatus_t GAPRole_BroadcasterStartDevice(
-    gapRolesBroadcasterCBs_t *pAppCallbacks);
+    gapRolesBroadcasterCBs_t* pAppCallbacks);
 
 /**
  * @brief   Does the Broadcaster receive scan request call initialization.
@@ -4924,7 +4924,7 @@ extern bStatus_t GAPRole_BroadcasterStartDevice(
  *
  * @return  None
  */
-extern void GAPRole_BroadcasterSetCB(gapRolesBroadcasterCBs_t *pAppCallbacks);
+extern void GAPRole_BroadcasterSetCB(gapRolesBroadcasterCBs_t* pAppCallbacks);
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - OBSERVER_PROFILE_API Observer Profile API
@@ -4950,7 +4950,7 @@ extern bStatus_t GAPRole_ObserverInit(void);
  *          bleAlreadyInRequestedMode: Device already started.<BR>
  */
 extern bStatus_t GAPRole_ObserverStartDevice(
-    gapRoleObserverCB_t *pAppCallbacks);
+    gapRoleObserverCB_t* pAppCallbacks);
 
 /**
  * @brief   Start a device discovery scan.
@@ -5002,8 +5002,8 @@ extern bStatus_t GAPRole_PeripheralInit(void);
  * @return  SUCCESS or bleAlreadyInRequestedMode
  */
 extern bStatus_t GAPRole_PeripheralStartDevice(uint8_t        taskid,
-                                               gapBondCBs_t  *pCB,
-                                               gapRolesCBs_t *pAppCallbacks);
+                                               gapBondCBs_t*  pCB,
+                                               gapRolesCBs_t* pAppCallbacks);
 
 /**
  * @brief   Update the parameters of an existing connection
@@ -5044,8 +5044,8 @@ extern bStatus_t GAPRole_CentralInit(void);
  * @return  SUCCESS: Operation successful.<BR>
  *          bleAlreadyInRequestedMode: Device already started.<BR>
  */
-extern bStatus_t GAPRole_CentralStartDevice(uint8_t taskid, gapBondCBs_t *pCB,
-                                            gapCentralRoleCB_t *pAppCallbacks);
+extern bStatus_t GAPRole_CentralStartDevice(uint8_t taskid, gapBondCBs_t* pCB,
+                                            gapCentralRoleCB_t* pAppCallbacks);
 
 /**
  * @brief   Start a device discovery scan.
@@ -5084,7 +5084,7 @@ extern bStatus_t GAPRole_CentralCancelDiscovery(void);
  *
  * @return  SUCCESS
  */
-extern void GAPRole_SetHostChanClassification(uint8_t *chanMap);
+extern void GAPRole_SetHostChanClassification(uint8_t* chanMap);
 
 /**
  * @brief   Establish a link to a peer device.
@@ -5103,7 +5103,7 @@ extern void GAPRole_SetHostChanClassification(uint8_t *chanMap);
 extern bStatus_t GAPRole_CentralEstablishLink(uint8_t  highDutyCycle,
                                               uint8_t  whiteList,
                                               uint8_t  addrTypePeer,
-                                              uint8_t *peerAddr);
+                                              uint8_t* peerAddr);
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - RF_PHY Profile API
@@ -5125,7 +5125,7 @@ extern bStatus_t RF_RoleInit(void);
  *
  * @return  0 - success.
  */
-extern bStatus_t RF_Config(rfConfig_t *pConfig);
+extern bStatus_t RF_Config(rfConfig_t* pConfig);
 
 /**
  * @brief   rx mode.
@@ -5141,7 +5141,7 @@ extern bStatus_t RF_Config(rfConfig_t *pConfig);
  *
  * @return  0 - success. 1-access address error 2-busy
  */
-extern bStatus_t RF_Rx(uint8_t *txBuf, uint8_t txLen, uint8_t pktRxType,
+extern bStatus_t RF_Rx(uint8_t* txBuf, uint8_t txLen, uint8_t pktRxType,
                        uint8_t pktTxType);
 
 /**
@@ -5158,7 +5158,7 @@ extern bStatus_t RF_Rx(uint8_t *txBuf, uint8_t txLen, uint8_t pktRxType,
  *
  * @return  0 - success. 1-access address error 2-busy
  */
-extern bStatus_t RF_Tx(uint8_t *txBuf, uint8_t txLen, uint8_t pktTxType,
+extern bStatus_t RF_Tx(uint8_t* txBuf, uint8_t txLen, uint8_t pktTxType,
                        uint8_t pktRxType);
 
 /**
@@ -5244,7 +5244,7 @@ extern bStatus_t LL_SingleChannel(uint8_t ch);
  *
  * @return  0 - success.
  */
-extern bStatus_t LL_TestEnd(uint8_t *pPktNum);
+extern bStatus_t LL_TestEnd(uint8_t* pPktNum);
 
 /**
  * @brief   used to start a test where the DUT receives test reference packets at a fixed interval
@@ -5261,7 +5261,7 @@ extern bStatus_t LL_TestEnd(uint8_t *pPktNum);
  *
  * @return  0 - success.
  */
-extern bStatus_t API_LE_ReceiverTestCmd(uint8_t *pParm, uint16_t opcode);
+extern bStatus_t API_LE_ReceiverTestCmd(uint8_t* pParm, uint16_t opcode);
 
 /**
  * @brief   used to start a test where the DUT generates test reference packets at a fixed interval
@@ -5279,7 +5279,7 @@ extern bStatus_t API_LE_ReceiverTestCmd(uint8_t *pParm, uint16_t opcode);
  *
  * @return  0 - success.
  */
-extern bStatus_t API_LE_TransmitterTestCmd(uint8_t *pParm, uint16_t opcode);
+extern bStatus_t API_LE_TransmitterTestCmd(uint8_t* pParm, uint16_t opcode);
 
 /**
  * @brief   used to stop any test which is in progress
@@ -5306,7 +5306,7 @@ extern void RFEND_SetSensitivity(void);
  *
  * @return  Command Status.
  */
-extern bStatus_t RFEND_TXCtuneSet(uint8_t *pParm);
+extern bStatus_t RFEND_TXCtuneSet(uint8_t* pParm);
 
 /**
  * @brief   used to get rf TxCtune value
@@ -5315,7 +5315,7 @@ extern bStatus_t RFEND_TXCtuneSet(uint8_t *pParm);
  *
  * @return  Command Status.
  */
-extern bStatus_t RFEND_TXCtuneGet(uint8_t *pParm);
+extern bStatus_t RFEND_TXCtuneGet(uint8_t* pParm);
 
 /*
  * END @ Profile API

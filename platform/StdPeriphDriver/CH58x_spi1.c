@@ -121,7 +121,7 @@ uint8_t SPI1_MasterRecvByte(void) {
  *
  * @return  none
  */
-void SPI1_MasterTrans(uint8_t *pbuf, uint16_t len) {
+void SPI1_MasterTrans(uint8_t* pbuf, uint16_t len) {
     uint16_t sendlen;
 
     sendlen = len;
@@ -148,7 +148,7 @@ void SPI1_MasterTrans(uint8_t *pbuf, uint16_t len) {
  *
  * @return  none
  */
-void SPI1_MasterRecv(uint8_t *pbuf, uint16_t len) {
+void SPI1_MasterRecv(uint8_t* pbuf, uint16_t len) {
     uint16_t readlen;
 
     readlen = len;

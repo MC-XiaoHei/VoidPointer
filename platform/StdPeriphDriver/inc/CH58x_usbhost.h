@@ -87,8 +87,8 @@ extern _DevOnHubPort DevOnHubPort
 extern uint8_t UsbDevEndp0Size;  // USB设备的端点0的最大包尺寸 */
 extern uint8_t FoundNewDev;
 
-extern uint8_t *pHOST_RX_RAM_Addr;
-extern uint8_t *pHOST_TX_RAM_Addr;
+extern uint8_t* pHOST_RX_RAM_Addr;
+extern uint8_t* pHOST_TX_RAM_Addr;
 
 extern _RootHubDev   ThisUsb2Dev;
 extern _DevOnHubPort DevOnU2HubPort
@@ -96,8 +96,8 @@ extern _DevOnHubPort DevOnU2HubPort
 extern uint8_t Usb2DevEndp0Size;  // USB设备的端点0的最大包尺寸 */
 extern uint8_t FoundNewU2Dev;
 
-extern uint8_t *pU2HOST_RX_RAM_Addr;
-extern uint8_t *pU2HOST_TX_RAM_Addr;
+extern uint8_t* pU2HOST_RX_RAM_Addr;
+extern uint8_t* pU2HOST_TX_RAM_Addr;
 
 #define pSetupReq   ((PUSB_SETUP_REQ)pHOST_TX_RAM_Addr)
 #define pU2SetupReq ((PUSB_SETUP_REQ)pU2HOST_TX_RAM_Addr)
@@ -189,14 +189,14 @@ uint8_t USBHostTransact(uint8_t endp_pid, uint8_t tog, uint32_t timeout);
  * @return  ERR_USB_BUF_OVER    IN状态阶段出错
  *          ERR_SUCCESS         数据交换成功
  */
-uint8_t HostCtrlTransfer(uint8_t *DataBuf, uint8_t *RetLen);
+uint8_t HostCtrlTransfer(uint8_t* DataBuf, uint8_t* RetLen);
 
 /**
  * @brief   复制控制传输的请求包
  *
  * @param   pReqPkt     - 控制请求包地址
  */
-void CopySetupReqPkg(const uint8_t *pReqPkt);
+void CopySetupReqPkg(const uint8_t* pReqPkt);
 
 /**
  * @brief   获取设备描述符,返回在 pHOST_TX_RAM_Addr 中
@@ -256,12 +256,12 @@ uint8_t CtrlSetUsbIntercace(uint8_t cfg);
 void    USB_HostInit(void);
 uint8_t EnumAllHubPort(void);  // 枚举所有ROOT-HUB端口下外部HUB后的二级USB设备
 void    SelectHubPort(
-       uint8_t
-           HubPortIndex);  // HubPortIndex=0选择操作指定的ROOT-HUB端口,否则选择操作指定的ROOT-HUB端口的外部HUB的指定端口
+    uint8_t
+        HubPortIndex);  // HubPortIndex=0选择操作指定的ROOT-HUB端口,否则选择操作指定的ROOT-HUB端口的外部HUB的指定端口
 uint16_t SearchTypeDevice(
     uint8_t
         type);  // 在ROOT-HUB以及外部HUB各端口上搜索指定类型的设备所在的端口号,输出端口号为0xFFFF则未搜索到.
-uint8_t SETorOFFNumLock(uint8_t *buf);  // NumLock的点灯判断
+uint8_t SETorOFFNumLock(uint8_t* buf);  // NumLock的点灯判断
 
 /*************************************************************/
 

@@ -3,7 +3,8 @@
 #include "CH58x_common.h"  // IWYU pragma: keep
 
 vp_bool_t board_gpio_is_valid(const BoardGpio gpio) {
-    return (gpio.group == BOARD_GPIO_GROUP_A || gpio.group == BOARD_GPIO_GROUP_B) &&
+    return (gpio.group == BOARD_GPIO_GROUP_A ||
+            gpio.group == BOARD_GPIO_GROUP_B) &&
                    gpio.pin != 0u
                ? 1u
                : 0u;
@@ -84,7 +85,8 @@ void board_gpio_mode_cfg_mask(const BoardGpioGroup group, const uint32_t pins,
     }
 }
 
-void board_gpio_digital_cfg(const BoardGpio gpio, const FunctionalState enable) {
+void board_gpio_digital_cfg(const BoardGpio       gpio,
+                            const FunctionalState enable) {
     switch (gpio.group) {
         case BOARD_GPIO_GROUP_A:
             GPIOADigitalCfg(enable, gpio.pin);
@@ -97,9 +99,9 @@ void board_gpio_digital_cfg(const BoardGpio gpio, const FunctionalState enable) 
     }
 }
 
-void board_gpio_digital_cfg_mask(const BoardGpioGroup group,
+void board_gpio_digital_cfg_mask(const BoardGpioGroup  group,
                                  const FunctionalState enable,
-                                 const uint32_t       pins) {
+                                 const uint32_t        pins) {
     switch (group) {
         case BOARD_GPIO_GROUP_A:
             GPIOADigitalCfg(enable, pins);
@@ -126,8 +128,9 @@ void board_gpio_it_mode_cfg(const BoardGpio gpio, const GPIOITModeTpDef mode) {
 }
 
 void board_gpio_config_next_edge(const BoardGpio gpio) {
-    board_gpio_it_mode_cfg(gpio, board_gpio_read_level(gpio) ? GPIO_ITMode_FallEdge
-                                                             : GPIO_ITMode_RiseEdge);
+    board_gpio_it_mode_cfg(gpio, board_gpio_read_level(gpio)
+                                     ? GPIO_ITMode_FallEdge
+                                     : GPIO_ITMode_RiseEdge);
 }
 
 void board_gpio_clear_it_flag(const BoardGpio gpio) {
@@ -185,15 +188,15 @@ void board_gpio_prepare_level_rearm(const BoardGpio gpio) {
             R16_PA_INT_EN &= (uint16_t)(~gpio.pin);
             R16_PA_INT_MODE &= (uint16_t)(~gpio.pin);
             R32_PA_CLR |= gpio.pin;
-            board_gpio_clear_it_flag_port(BOARD_GPIO_GROUP_A,
-                                          board_gpio_read_it_flag_port(
-                                              BOARD_GPIO_GROUP_A));
+            board_gpio_clear_it_flag_port(
+                BOARD_GPIO_GROUP_A,
+                board_gpio_read_it_flag_port(BOARD_GPIO_GROUP_A));
             board_gpio_clear_it_flag(gpio);
             break;
         case BOARD_GPIO_GROUP_B:
-            board_gpio_clear_it_flag_port(BOARD_GPIO_GROUP_B,
-                                          board_gpio_read_it_flag_port(
-                                              BOARD_GPIO_GROUP_B));
+            board_gpio_clear_it_flag_port(
+                BOARD_GPIO_GROUP_B,
+                board_gpio_read_it_flag_port(BOARD_GPIO_GROUP_B));
             board_gpio_clear_it_flag(gpio);
             break;
         default:

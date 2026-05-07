@@ -34,8 +34,8 @@ extern "C" {
 bool LSM6DSV_Init(void);
 bool LSM6DSV_ReadWhoAmI(uint8_t* out_id);
 bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
-                                           uint16_t                 max_samples,
-                                           uint16_t*                out_dropped_count);
+                                           uint16_t  max_samples,
+                                           uint16_t* out_dropped_count);
 bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw);
 
 void        LSM6DSV_AsyncInit(void);

@@ -9,18 +9,20 @@
 extern "C" {
 #endif
 
-vp_bool_t   board_gpio_is_valid(BoardGpio gpio);
-vp_bool_t   board_gpio_read_level(BoardGpio gpio);
-uint32_t    board_gpio_read_port(BoardGpioGroup group);
-void        board_gpio_set(BoardGpio gpio);
-void        board_gpio_reset(BoardGpio gpio);
-void        board_gpio_mode_cfg(BoardGpio gpio, GPIOModeTypeDef mode);
-void        board_gpio_mode_cfg_mask(BoardGpioGroup group, uint32_t pins, GPIOModeTypeDef mode);
-void        board_gpio_digital_cfg(BoardGpio gpio, FunctionalState enable);
-void        board_gpio_digital_cfg_mask(BoardGpioGroup group, FunctionalState enable, uint32_t pins);
-void        board_gpio_it_mode_cfg(BoardGpio gpio, GPIOITModeTpDef mode);
-void        board_gpio_config_next_edge(BoardGpio gpio);
-void        board_gpio_clear_it_flag(BoardGpio gpio);
+vp_bool_t board_gpio_is_valid(BoardGpio gpio);
+vp_bool_t board_gpio_read_level(BoardGpio gpio);
+uint32_t  board_gpio_read_port(BoardGpioGroup group);
+void      board_gpio_set(BoardGpio gpio);
+void      board_gpio_reset(BoardGpio gpio);
+void      board_gpio_mode_cfg(BoardGpio gpio, GPIOModeTypeDef mode);
+void      board_gpio_mode_cfg_mask(BoardGpioGroup group, uint32_t pins,
+                                   GPIOModeTypeDef mode);
+void      board_gpio_digital_cfg(BoardGpio gpio, FunctionalState enable);
+void board_gpio_digital_cfg_mask(BoardGpioGroup group, FunctionalState enable,
+                                 uint32_t pins);
+void board_gpio_it_mode_cfg(BoardGpio gpio, GPIOITModeTpDef mode);
+void board_gpio_config_next_edge(BoardGpio gpio);
+void board_gpio_clear_it_flag(BoardGpio gpio);
 uint16_t    board_gpio_read_it_flag_port(BoardGpioGroup group);
 void        board_gpio_clear_it_flag_port(BoardGpioGroup group, uint16_t flags);
 uint16_t    board_gpio_read_int_enable_port(BoardGpioGroup group);

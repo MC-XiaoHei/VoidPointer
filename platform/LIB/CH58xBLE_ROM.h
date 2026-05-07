@@ -71,10 +71,10 @@ typedef void (*pfnLibStatusErrorCB)(uint8_t code, uint32_t status);
 // Define function type that process event
 typedef tmosEvents (*pTaskEventHandlerFn)(tmosTaskID taskID, tmosEvents event);
 // Define function type that read flash
-typedef uint32_t (*pfnFlashReadCB)(uint32_t addr, uint32_t num, uint32_t *pBuf);
+typedef uint32_t (*pfnFlashReadCB)(uint32_t addr, uint32_t num, uint32_t* pBuf);
 // Define function type that write flash
 typedef uint32_t (*pfnFlashWriteCB)(uint32_t addr, uint32_t num,
-                                    uint32_t *pBuf);
+                                    uint32_t* pBuf);
 // Define function type that get system clock count
 typedef uint32_t (*pfnGetSysClock)(void);
 // Define function type that enable/disable system clock interrupt
@@ -92,11 +92,11 @@ typedef struct tag_ble_config {
     uint8_t  SNVNum;  // SNV flash block number ( default 1 )
     uint8_t
         BufNumber;  // Maximum number of sent and received packages cached by the controller( default 5 )
-        // Must be greater than the number of connections.
+    // Must be greater than the number of connections.
     uint16_t
         BufMaxLen;  // Maximum length (in octets) of the data portion of each HCI data packet( default 27 )
-        // SC enable,must be greater than 69
-        // ATT_MTU = BufMaxLen-4,Range[23,ATT_MAX_MTU_SIZE]
+    // SC enable,must be greater than 69
+    // ATT_MTU = BufMaxLen-4,Range[23,ATT_MAX_MTU_SIZE]
     uint8_t
         TxNumEvent;  // Maximum number of TX data in a connection event ( default 1 )
     uint8_t
@@ -239,8 +239,8 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define PUBLIC_KEY_LEN            64
 
 //! Maximum Advertising Packet Length
-#define B_MAX_ADV_LEN             31  // maximum legacy advertising packet length
-#define B_MAX_ADV_EXT_LEN         460  // maximum extended advertising packet length
+#define B_MAX_ADV_LEN     31  // maximum legacy advertising packet length
+#define B_MAX_ADV_EXT_LEN 460  // maximum extended advertising packet length
 #define B_MAX_ADV_PERIODIC_LEN \
     460  // maximum periodic advertising packet length
 
@@ -259,12 +259,12 @@ extern const uint8_t VER_LIB[];  // LIB version
 /** BLE_STATUS_VALUES BLE Default BLE Status Values
  * returned as bStatus_t
  */
-#define bleInvalidTaskID          INVALID_TASK  //!< Task ID isn't setup properly
-#define bleEecKeyRequestRejected  0x06  //!< key missing
-#define bleNotReady               0x10  //!< Not ready to perform task
+#define bleInvalidTaskID         INVALID_TASK  //!< Task ID isn't setup properly
+#define bleEecKeyRequestRejected 0x06  //!< key missing
+#define bleNotReady              0x10  //!< Not ready to perform task
 #define bleAlreadyInRequestedMode 0x11  //!< Already performing that task
-#define bleIncorrectMode          0x12  //!< Not setup properly to perform that task
-#define bleMemAllocError          0x13  //!< Memory allocation error occurred
+#define bleIncorrectMode 0x12  //!< Not setup properly to perform that task
+#define bleMemAllocError 0x13  //!< Memory allocation error occurred
 #define bleNotConnected \
     0x14  //!< Can't perform function when not in a connection
 #define bleNoResources       0x15  //!< There are no resource available
@@ -309,180 +309,180 @@ extern const uint8_t VER_LIB[];  // LIB version
 /**
  * GATT Descriptors
  */
-#define GATT_CHAR_EXT_PROPS_UUID        0x2900  // Characteristic Extended Properties
-#define GATT_CHAR_USER_DESC_UUID        0x2901  // Characteristic User Description
-#define GATT_CLIENT_CHAR_CFG_UUID       0x2902  // Client Characteristic Configuration
-#define GATT_SERV_CHAR_CFG_UUID         0x2903  // Server Characteristic Configuration
-#define GATT_CHAR_FORMAT_UUID           0x2904  // Characteristic Presentation Format
-#define GATT_CHAR_AGG_FORMAT_UUID       0x2905  // Characteristic Aggregate Format
-#define GATT_VALID_RANGE_UUID           0x2906  // Valid Range
-#define GATT_EXT_REPORT_REF_UUID        0x2907  // External Report Reference Descriptor
-#define GATT_REPORT_REF_UUID            0x2908  // Report Reference Descriptor
+#define GATT_CHAR_EXT_PROPS_UUID  0x2900  // Characteristic Extended Properties
+#define GATT_CHAR_USER_DESC_UUID  0x2901  // Characteristic User Description
+#define GATT_CLIENT_CHAR_CFG_UUID 0x2902  // Client Characteristic Configuration
+#define GATT_SERV_CHAR_CFG_UUID   0x2903  // Server Characteristic Configuration
+#define GATT_CHAR_FORMAT_UUID     0x2904  // Characteristic Presentation Format
+#define GATT_CHAR_AGG_FORMAT_UUID 0x2905  // Characteristic Aggregate Format
+#define GATT_VALID_RANGE_UUID     0x2906  // Valid Range
+#define GATT_EXT_REPORT_REF_UUID 0x2907  // External Report Reference Descriptor
+#define GATT_REPORT_REF_UUID     0x2908  // Report Reference Descriptor
 
 /**
  * GATT Characteristics
  */
-#define DEVICE_NAME_UUID                0x2A00  // Device Name
-#define APPEARANCE_UUID                 0x2A01  // Appearance
-#define PERI_PRIVACY_FLAG_UUID          0x2A02  // Peripheral Privacy Flag
-#define RECONNECT_ADDR_UUID             0x2A03  // Reconnection Address
+#define DEVICE_NAME_UUID         0x2A00  // Device Name
+#define APPEARANCE_UUID          0x2A01  // Appearance
+#define PERI_PRIVACY_FLAG_UUID   0x2A02  // Peripheral Privacy Flag
+#define RECONNECT_ADDR_UUID      0x2A03  // Reconnection Address
 #define PERI_CONN_PARAM_UUID \
     0x2A04  // Peripheral Preferred Connection Parameters
 #define SERVICE_CHANGED_UUID            0x2A05  // Service Changed
 #define CENTRAL_ADDRESS_RESOLUTION_UUID 0x2AA6  // Central Address Resolution
-#define RL_PRIVATE_ADDR_ONLY_UUID       0x2AC9  // Resolvable Private Address Only
-#define ENC_DATA_KEY_MATERIAL_UUID      0x2B88  // Encrypted Data Key Material
-#define LE_GATT_SEC_LEVELS_UUID         0x2BF5  // LE GATT Security Levels
+#define RL_PRIVATE_ADDR_ONLY_UUID  0x2AC9  // Resolvable Private Address Only
+#define ENC_DATA_KEY_MATERIAL_UUID 0x2B88  // Encrypted Data Key Material
+#define LE_GATT_SEC_LEVELS_UUID    0x2BF5  // LE GATT Security Levels
 
 /**
  * GATT Service UUIDs
  */
-#define IMMEDIATE_ALERT_SERV_UUID       0x1802  // Immediate Alert
-#define LINK_LOSS_SERV_UUID             0x1803  // Link Loss
-#define TX_PWR_LEVEL_SERV_UUID          0x1804  // Tx Power
-#define CURRENT_TIME_SERV_UUID          0x1805  // Current Time Service
-#define REF_TIME_UPDATE_SERV_UUID       0x1806  // Reference Time Update Service
-#define NEXT_DST_CHANGE_SERV_UUID       0x1807  // Next DST Change Service
-#define GLUCOSE_SERV_UUID               0x1808  // Glucose
-#define THERMOMETER_SERV_UUID           0x1809  // Health Thermometer
-#define DEVINFO_SERV_UUID               0x180A  // Device Information
-#define NWA_SERV_UUID                   0x180B  // Network Availability
-#define HEARTRATE_SERV_UUID             0x180D  // Heart Rate
-#define PHONE_ALERT_STS_SERV_UUID       0x180E  // Phone Alert Status Service
-#define BATT_SERV_UUID                  0x180F  // Battery Service
-#define BLOODPRESSURE_SERV_UUID         0x1810  // Blood Pressure
-#define ALERT_NOTIF_SERV_UUID           0x1811  // Alert Notification Service
-#define HID_SERV_UUID                   0x1812  // Human Interface Device
-#define SCAN_PARAM_SERV_UUID            0x1813  // Scan Parameters
-#define RSC_SERV_UUID                   0x1814  // Running Speed and Cadence
-#define CSC_SERV_UUID                   0x1816  // Cycling Speed and Cadence
-#define CYCPWR_SERV_UUID                0x1818  // Cycling Power
-#define LOC_NAV_SERV_UUID               0x1819  // Location and Navigation
+#define IMMEDIATE_ALERT_SERV_UUID  0x1802  // Immediate Alert
+#define LINK_LOSS_SERV_UUID        0x1803  // Link Loss
+#define TX_PWR_LEVEL_SERV_UUID     0x1804  // Tx Power
+#define CURRENT_TIME_SERV_UUID     0x1805  // Current Time Service
+#define REF_TIME_UPDATE_SERV_UUID  0x1806  // Reference Time Update Service
+#define NEXT_DST_CHANGE_SERV_UUID  0x1807  // Next DST Change Service
+#define GLUCOSE_SERV_UUID          0x1808  // Glucose
+#define THERMOMETER_SERV_UUID      0x1809  // Health Thermometer
+#define DEVINFO_SERV_UUID          0x180A  // Device Information
+#define NWA_SERV_UUID              0x180B  // Network Availability
+#define HEARTRATE_SERV_UUID        0x180D  // Heart Rate
+#define PHONE_ALERT_STS_SERV_UUID  0x180E  // Phone Alert Status Service
+#define BATT_SERV_UUID             0x180F  // Battery Service
+#define BLOODPRESSURE_SERV_UUID    0x1810  // Blood Pressure
+#define ALERT_NOTIF_SERV_UUID      0x1811  // Alert Notification Service
+#define HID_SERV_UUID              0x1812  // Human Interface Device
+#define SCAN_PARAM_SERV_UUID       0x1813  // Scan Parameters
+#define RSC_SERV_UUID              0x1814  // Running Speed and Cadence
+#define CSC_SERV_UUID              0x1816  // Cycling Speed and Cadence
+#define CYCPWR_SERV_UUID           0x1818  // Cycling Power
+#define LOC_NAV_SERV_UUID          0x1819  // Location and Navigation
 
 /**
  * GATT Characteristic UUIDs
  */
-#define ALERT_LEVEL_UUID                0x2A06  // Alert Level
-#define TX_PWR_LEVEL_UUID               0x2A07  // Tx Power Level
-#define DATE_TIME_UUID                  0x2A08  // Date Time
-#define DAY_OF_WEEK_UUID                0x2A09  // Day of Week
-#define DAY_DATE_TIME_UUID              0x2A0A  // Day Date Time
-#define EXACT_TIME_256_UUID             0x2A0C  // Exact Time 256
-#define DST_OFFSET_UUID                 0x2A0D  // DST Offset
-#define TIME_ZONE_UUID                  0x2A0E  // Time Zone
-#define LOCAL_TIME_INFO_UUID            0x2A0F  // Local Time Information
-#define TIME_WITH_DST_UUID              0x2A11  // Time with DST
-#define TIME_ACCURACY_UUID              0x2A12  // Time Accuracy
-#define TIME_SOURCE_UUID                0x2A13  // Time Source
-#define REF_TIME_INFO_UUID              0x2A14  // Reference Time Information
-#define TIME_UPDATE_CTRL_PT_UUID        0x2A16  // Time Update Control Point
-#define TIME_UPDATE_STATE_UUID          0x2A17  // Time Update State
-#define GLUCOSE_MEAS_UUID               0x2A18  // Glucose Measurement
-#define BATT_LEVEL_UUID                 0x2A19  // Battery Level
-#define TEMP_MEAS_UUID                  0x2A1C  // Temperature Measurement
-#define TEMP_TYPE_UUID                  0x2A1D  // Temperature Type
-#define IMEDIATE_TEMP_UUID              0x2A1E  // Intermediate Temperature
-#define MEAS_INTERVAL_UUID              0x2A21  // Measurement Interval
-#define BOOT_KEY_INPUT_UUID             0x2A22  // Boot Keyboard Input Report
-#define SYSTEM_ID_UUID                  0x2A23  // System ID
-#define MODEL_NUMBER_UUID               0x2A24  // Model Number String
-#define SERIAL_NUMBER_UUID              0x2A25  // Serial Number String
-#define FIRMWARE_REV_UUID               0x2A26  // Firmware Revision String
-#define HARDWARE_REV_UUID               0x2A27  // Hardware Revision String
-#define SOFTWARE_REV_UUID               0x2A28  // Software Revision String
-#define MANUFACTURER_NAME_UUID          0x2A29  // Manufacturer Name String
+#define ALERT_LEVEL_UUID           0x2A06  // Alert Level
+#define TX_PWR_LEVEL_UUID          0x2A07  // Tx Power Level
+#define DATE_TIME_UUID             0x2A08  // Date Time
+#define DAY_OF_WEEK_UUID           0x2A09  // Day of Week
+#define DAY_DATE_TIME_UUID         0x2A0A  // Day Date Time
+#define EXACT_TIME_256_UUID        0x2A0C  // Exact Time 256
+#define DST_OFFSET_UUID            0x2A0D  // DST Offset
+#define TIME_ZONE_UUID             0x2A0E  // Time Zone
+#define LOCAL_TIME_INFO_UUID       0x2A0F  // Local Time Information
+#define TIME_WITH_DST_UUID         0x2A11  // Time with DST
+#define TIME_ACCURACY_UUID         0x2A12  // Time Accuracy
+#define TIME_SOURCE_UUID           0x2A13  // Time Source
+#define REF_TIME_INFO_UUID         0x2A14  // Reference Time Information
+#define TIME_UPDATE_CTRL_PT_UUID   0x2A16  // Time Update Control Point
+#define TIME_UPDATE_STATE_UUID     0x2A17  // Time Update State
+#define GLUCOSE_MEAS_UUID          0x2A18  // Glucose Measurement
+#define BATT_LEVEL_UUID            0x2A19  // Battery Level
+#define TEMP_MEAS_UUID             0x2A1C  // Temperature Measurement
+#define TEMP_TYPE_UUID             0x2A1D  // Temperature Type
+#define IMEDIATE_TEMP_UUID         0x2A1E  // Intermediate Temperature
+#define MEAS_INTERVAL_UUID         0x2A21  // Measurement Interval
+#define BOOT_KEY_INPUT_UUID        0x2A22  // Boot Keyboard Input Report
+#define SYSTEM_ID_UUID             0x2A23  // System ID
+#define MODEL_NUMBER_UUID          0x2A24  // Model Number String
+#define SERIAL_NUMBER_UUID         0x2A25  // Serial Number String
+#define FIRMWARE_REV_UUID          0x2A26  // Firmware Revision String
+#define HARDWARE_REV_UUID          0x2A27  // Hardware Revision String
+#define SOFTWARE_REV_UUID          0x2A28  // Software Revision String
+#define MANUFACTURER_NAME_UUID     0x2A29  // Manufacturer Name String
 #define IEEE_11073_CERT_DATA_UUID \
     0x2A2A  // IEEE 11073-20601 Regulatory Certification Data List
-#define CURRENT_TIME_UUID                    0x2A2B  // Current Time
-#define SCAN_REFRESH_UUID                    0x2A31  // Scan Refresh
-#define BOOT_KEY_OUTPUT_UUID                 0x2A32  // Boot Keyboard Output Report
-#define BOOT_MOUSE_INPUT_UUID                0x2A33  // Boot Mouse Input Report
-#define GLUCOSE_CONTEXT_UUID                 0x2A34  // Glucose Measurement Context
-#define BLOODPRESSURE_MEAS_UUID              0x2A35  // Blood Pressure Measurement
-#define IMEDIATE_CUFF_PRESSURE_UUID          0x2A36  // Intermediate Cuff Pressure
-#define HEARTRATE_MEAS_UUID                  0x2A37  // Heart Rate Measurement
-#define BODY_SENSOR_LOC_UUID                 0x2A38  // Body Sensor Location
-#define HEARTRATE_CTRL_PT_UUID               0x2A39  // Heart Rate Control Point
-#define NETWORK_AVAIL_UUID                   0x2A3E  // Network Availability
-#define ALERT_STATUS_UUID                    0x2A3F  // Alert Status
-#define RINGER_CTRL_PT_UUID                  0x2A40  // Ringer Control Point
-#define RINGER_SETTING_UUID                  0x2A41  // Ringer Setting
-#define ALERT_CAT_ID_BMASK_UUID              0x2A42  // Alert Category ID Bit Mask
-#define ALERT_CAT_ID_UUID                    0x2A43  // Alert Category ID
-#define ALERT_NOTIF_CTRL_PT_UUID             0x2A44  // Alert Notification Control Point
-#define UNREAD_ALERT_STATUS_UUID             0x2A45  // Unread Alert Status
-#define NEW_ALERT_UUID                       0x2A46  // New Alert
-#define SUP_NEW_ALERT_CAT_UUID               0x2A47  // Supported New Alert Category
-#define SUP_UNREAD_ALERT_CAT_UUID            0x2A48  // Supported Unread Alert Category
-#define BLOODPRESSURE_FEATURE_UUID           0x2A49  // Blood Pressure Feature
-#define HID_INFORMATION_UUID                 0x2A4A  // HID Information
-#define REPORT_MAP_UUID                      0x2A4B  // Report Map
-#define HID_CTRL_PT_UUID                     0x2A4C  // HID Control Point
-#define REPORT_UUID                          0x2A4D  // Report
-#define PROTOCOL_MODE_UUID                   0x2A4E  // Protocol Mode
-#define SCAN_INTERVAL_WINDOW_UUID            0x2A4F  // Scan Interval Window
-#define PNP_ID_UUID                          0x2A50  // PnP ID
-#define GLUCOSE_FEATURE_UUID                 0x2A51  // Glucose Feature
-#define RECORD_CTRL_PT_UUID                  0x2A52  // Record Access Control Point
-#define RSC_MEAS_UUID                        0x2A53  // RSC Measurement
-#define RSC_FEATURE_UUID                     0x2A54  // RSC Feature
-#define SC_CTRL_PT_UUID                      0x2A55  // SC Control Point
-#define CSC_MEAS_UUID                        0x2A5B  // CSC Measurement
-#define CSC_FEATURE_UUID                     0x2A5C  // CSC Feature
-#define SENSOR_LOC_UUID                      0x2A5D  // Sensor Location
-#define CYCPWR_MEAS_UUID                     0x2A63  // Cycling Power Measurement
-#define CYCPWR_VECTOR_UUID                   0x2A64  // Cycling Power Vector
-#define CYCPWR_FEATURE_UUID                  0x2A65  // Cycling Power Feature
-#define CYCPWR_CTRL_PT_UUID                  0x2A66  // Cycling Power Control Point
-#define LOC_SPEED_UUID                       0x2A67  // Location and Speed
-#define NAV_UUID                             0x2A68  // Navigation
-#define POS_QUALITY_UUID                     0x2A69  // Position Quality
-#define LN_FEATURE_UUID                      0x2A6A  // LN Feature
-#define LN_CTRL_PT_UUID                      0x2A6B  // LN Control Point
-#define ELE_UUID                             0x2A6C  // Elevation
-#define PRESSURE_UUID                        0x2A6D  // Pressure
-#define TEMP_UUID                            0x2A6E  // Temperature
-#define HUMI_UUID                            0x2A6F  // Humidity
-#define TRUE_WIND_SPEED_UUID                 0x2A70  // True Wind Speed
-#define TRUE_WIND_DIRECTION_UUID             0x2A71  // True Wind Direction
-#define URI_UUID                             0x2AB6  // URI
-#define MEDIA_STATE_UUID                     0x2BA3  // Media State
-#define MEDIA_CTRL_PT_UUID                   0x2BA4  // Media Control Point
-#define MEDIA_CTRL_PT_OS_UUID                0x2BA5  // Media Control Point Opcodes Supported
-#define CALL_STATE_UUID                      0x2BBD  // Call State
-#define CALL_CTRL_PT_UUID                    0x2BBE  // Call Control Point
-#define CALL_CTRL_PT_OO_UUID                 0x2BBF  // Call Control Point Optional Opcodes
-#define TERM_REASON_UUID                     0x2BC0  // Termination Reason
-#define INCOMING_CALL_UUID                   0x2BC1  // Incoming Call
-#define MUTE_UUID                            0x2BC3  // Mute
-#define ESL_ADDR_UUID                        0x2BF6  // ESL Address
-#define AP_SYNC_KEY_MATERIAL_UUID            0x2BF7  // AP Sync Key Material
-#define ESL_RSP_KEY_MATERIAL_UUID            0x2BF8  // ESL Response Key Material
-#define ESL_CURR_ABS_TIME_UUID               0x2BF9  // ESL Current Absolute Time
-#define ESL_DISPLAY_INFO_UUID                0x2BFA  // ESL Display Information
-#define ESL_IMAGE_INFO_UUID                  0x2BFB  // ESL Image Information
-#define ESL_SENSOR_INFO_UUID                 0x2BFC  // ESL Sensor Information
-#define ESL_LED_INFO_UUID                    0x2BFD  // ESL LED Information
-#define ESL_CTL_POINT_UUID                   0x2BFE  // ESL Control Point
+#define CURRENT_TIME_UUID           0x2A2B  // Current Time
+#define SCAN_REFRESH_UUID           0x2A31  // Scan Refresh
+#define BOOT_KEY_OUTPUT_UUID        0x2A32  // Boot Keyboard Output Report
+#define BOOT_MOUSE_INPUT_UUID       0x2A33  // Boot Mouse Input Report
+#define GLUCOSE_CONTEXT_UUID        0x2A34  // Glucose Measurement Context
+#define BLOODPRESSURE_MEAS_UUID     0x2A35  // Blood Pressure Measurement
+#define IMEDIATE_CUFF_PRESSURE_UUID 0x2A36  // Intermediate Cuff Pressure
+#define HEARTRATE_MEAS_UUID         0x2A37  // Heart Rate Measurement
+#define BODY_SENSOR_LOC_UUID        0x2A38  // Body Sensor Location
+#define HEARTRATE_CTRL_PT_UUID      0x2A39  // Heart Rate Control Point
+#define NETWORK_AVAIL_UUID          0x2A3E  // Network Availability
+#define ALERT_STATUS_UUID           0x2A3F  // Alert Status
+#define RINGER_CTRL_PT_UUID         0x2A40  // Ringer Control Point
+#define RINGER_SETTING_UUID         0x2A41  // Ringer Setting
+#define ALERT_CAT_ID_BMASK_UUID     0x2A42  // Alert Category ID Bit Mask
+#define ALERT_CAT_ID_UUID           0x2A43  // Alert Category ID
+#define ALERT_NOTIF_CTRL_PT_UUID    0x2A44  // Alert Notification Control Point
+#define UNREAD_ALERT_STATUS_UUID    0x2A45  // Unread Alert Status
+#define NEW_ALERT_UUID              0x2A46  // New Alert
+#define SUP_NEW_ALERT_CAT_UUID      0x2A47  // Supported New Alert Category
+#define SUP_UNREAD_ALERT_CAT_UUID   0x2A48  // Supported Unread Alert Category
+#define BLOODPRESSURE_FEATURE_UUID  0x2A49  // Blood Pressure Feature
+#define HID_INFORMATION_UUID        0x2A4A  // HID Information
+#define REPORT_MAP_UUID             0x2A4B  // Report Map
+#define HID_CTRL_PT_UUID            0x2A4C  // HID Control Point
+#define REPORT_UUID                 0x2A4D  // Report
+#define PROTOCOL_MODE_UUID          0x2A4E  // Protocol Mode
+#define SCAN_INTERVAL_WINDOW_UUID   0x2A4F  // Scan Interval Window
+#define PNP_ID_UUID                 0x2A50  // PnP ID
+#define GLUCOSE_FEATURE_UUID        0x2A51  // Glucose Feature
+#define RECORD_CTRL_PT_UUID         0x2A52  // Record Access Control Point
+#define RSC_MEAS_UUID               0x2A53  // RSC Measurement
+#define RSC_FEATURE_UUID            0x2A54  // RSC Feature
+#define SC_CTRL_PT_UUID             0x2A55  // SC Control Point
+#define CSC_MEAS_UUID               0x2A5B  // CSC Measurement
+#define CSC_FEATURE_UUID            0x2A5C  // CSC Feature
+#define SENSOR_LOC_UUID             0x2A5D  // Sensor Location
+#define CYCPWR_MEAS_UUID            0x2A63  // Cycling Power Measurement
+#define CYCPWR_VECTOR_UUID          0x2A64  // Cycling Power Vector
+#define CYCPWR_FEATURE_UUID         0x2A65  // Cycling Power Feature
+#define CYCPWR_CTRL_PT_UUID         0x2A66  // Cycling Power Control Point
+#define LOC_SPEED_UUID              0x2A67  // Location and Speed
+#define NAV_UUID                    0x2A68  // Navigation
+#define POS_QUALITY_UUID            0x2A69  // Position Quality
+#define LN_FEATURE_UUID             0x2A6A  // LN Feature
+#define LN_CTRL_PT_UUID             0x2A6B  // LN Control Point
+#define ELE_UUID                    0x2A6C  // Elevation
+#define PRESSURE_UUID               0x2A6D  // Pressure
+#define TEMP_UUID                   0x2A6E  // Temperature
+#define HUMI_UUID                   0x2A6F  // Humidity
+#define TRUE_WIND_SPEED_UUID        0x2A70  // True Wind Speed
+#define TRUE_WIND_DIRECTION_UUID    0x2A71  // True Wind Direction
+#define URI_UUID                    0x2AB6  // URI
+#define MEDIA_STATE_UUID            0x2BA3  // Media State
+#define MEDIA_CTRL_PT_UUID          0x2BA4  // Media Control Point
+#define MEDIA_CTRL_PT_OS_UUID 0x2BA5  // Media Control Point Opcodes Supported
+#define CALL_STATE_UUID       0x2BBD  // Call State
+#define CALL_CTRL_PT_UUID     0x2BBE  // Call Control Point
+#define CALL_CTRL_PT_OO_UUID  0x2BBF  // Call Control Point Optional Opcodes
+#define TERM_REASON_UUID      0x2BC0  // Termination Reason
+#define INCOMING_CALL_UUID    0x2BC1  // Incoming Call
+#define MUTE_UUID             0x2BC3  // Mute
+#define ESL_ADDR_UUID         0x2BF6  // ESL Address
+#define AP_SYNC_KEY_MATERIAL_UUID           0x2BF7  // AP Sync Key Material
+#define ESL_RSP_KEY_MATERIAL_UUID           0x2BF8  // ESL Response Key Material
+#define ESL_CURR_ABS_TIME_UUID              0x2BF9  // ESL Current Absolute Time
+#define ESL_DISPLAY_INFO_UUID               0x2BFA  // ESL Display Information
+#define ESL_IMAGE_INFO_UUID                 0x2BFB  // ESL Image Information
+#define ESL_SENSOR_INFO_UUID                0x2BFC  // ESL Sensor Information
+#define ESL_LED_INFO_UUID                   0x2BFD  // ESL LED Information
+#define ESL_CTL_POINT_UUID                  0x2BFE  // ESL Control Point
 
 /**
  * GATT Unit UUIDs
  */
-#define GATT_UNITLESS_UUID                   0x2700  // unitless
-#define GATT_UNIT_LENGTH_METER_UUID          0x2701  // m, m
-#define GATT_UNIT_MASS_KGRAM_UUID            0x2702  // kg, kg
-#define GATT_UNIT_TIME_SECOND_UUID           0x2703  // s, s
-#define GATT_UNIT_ELECTRIC_CURRENT_A_UUID    0x2704  // A, A
-#define GATT_UNIT_THERMODYN_TEMP_K_UUID      0x2705  // K, K
-#define GATT_UNIT_AMOUNT_SUBSTANCE_M_UUID    0x2706  // mol, mol
-#define GATT_UNIT_LUMINOUS_INTENSITY_C_UUID  0x2707  // cd, cd
+#define GATT_UNITLESS_UUID                  0x2700  // unitless
+#define GATT_UNIT_LENGTH_METER_UUID         0x2701  // m, m
+#define GATT_UNIT_MASS_KGRAM_UUID           0x2702  // kg, kg
+#define GATT_UNIT_TIME_SECOND_UUID          0x2703  // s, s
+#define GATT_UNIT_ELECTRIC_CURRENT_A_UUID   0x2704  // A, A
+#define GATT_UNIT_THERMODYN_TEMP_K_UUID     0x2705  // K, K
+#define GATT_UNIT_AMOUNT_SUBSTANCE_M_UUID   0x2706  // mol, mol
+#define GATT_UNIT_LUMINOUS_INTENSITY_C_UUID 0x2707  // cd, cd
 
-#define GATT_UNIT_AREA_SQ_MTR_UUID           0x2710  // m^2, m^2
-#define GATT_UNIT_VOLUME_CUBIC_MTR_UUID      0x2711  // m^3, m^3
-#define GATT_UNIT_VELOCITY_MPS_UUID          0x2712  // m/s, m s^-1
-#define GATT_UNIT_ACCELERATION_MPS_SQ_UUID   0x2713  // m/s^2, m s^-2
-#define GATT_UNIT_WAVENUMBER_RM_UUID         0x2714  // ? m^-1
-#define GATT_UNIT_DENSITY_KGPCM_UUID         0x2715  // p, kg m^-3
+#define GATT_UNIT_AREA_SQ_MTR_UUID          0x2710  // m^2, m^2
+#define GATT_UNIT_VOLUME_CUBIC_MTR_UUID     0x2711  // m^3, m^3
+#define GATT_UNIT_VELOCITY_MPS_UUID         0x2712  // m/s, m s^-1
+#define GATT_UNIT_ACCELERATION_MPS_SQ_UUID  0x2713  // m/s^2, m s^-2
+#define GATT_UNIT_WAVENUMBER_RM_UUID        0x2714  // ? m^-1
+#define GATT_UNIT_DENSITY_KGPCM_UUID        0x2715  // p, kg m^-3
 #define GATT_UNIT_SURFACE_DENSITY_KGPSM_UUID 0x2716  // pA, kg m^-2
 #define GATT_UNIT_SPECIFIC_VOLUME_CMPKG_UUID 0x2717  // v, m^3 kg^-1
 #define GATT_UNIT_CURRENT_DENSITY_APSM_UUID  0x2718  // j, A m^-2
@@ -526,11 +526,11 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GATT_UNIT_ENERGY_GCAL_UUID           0x27A9  // energy (gram calorie)
 #define GATT_UNIT_ENERGY_KCAL_UUID           0x27AA  // kcal, 4190.02 J
 #define GATT_UNIT_ENERGY_KWH_UUID            0x27AB  // kWh, 3600000 J
-#define GATT_UNIT_THERMODYN_TEMP_DF_UUID     0x27AC  // oF, t/oF = T/K ?1.8 - 459.67
-#define GATT_UNIT_PERCENTAGE_UUID            0x27AD  // percentage,%
-#define GATT_UNIT_PER_MILE_UUID              0x27AE  // per mille
-#define GATT_UNIT_PERIOD_BPM_UUID            0x27AF  // period (beats per minute),BPM
-#define GATT_UNIT_E_CHARGE_AH_UUID           0x27B0  // electric charge (ampere hours)
+#define GATT_UNIT_THERMODYN_TEMP_DF_UUID 0x27AC  // oF, t/oF = T/K ?1.8 - 459.67
+#define GATT_UNIT_PERCENTAGE_UUID        0x27AD  // percentage,%
+#define GATT_UNIT_PER_MILE_UUID          0x27AE  // per mille
+#define GATT_UNIT_PERIOD_BPM_UUID  0x27AF  // period (beats per minute),BPM
+#define GATT_UNIT_E_CHARGE_AH_UUID 0x27B0  // electric charge (ampere hours)
 #define GATT_UNIT_MASS_DENSITY_MGPD_UUID \
     0x27B1  // mass density (milligram per decilitre)
 #define GATT_UNIT_MASS_DENSITY_MMPL_UUID \
@@ -741,10 +741,10 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GATT_SERVICE_HANDLE(attrs)     ((attrs)[0].handle)
 
 // The handle of the first included service (i = 1) is the value of the second attribute
-#define GATT_INCLUDED_HANDLE(attrs, i) (*((uint16_t *)((attrs)[(i)].pValue)))
+#define GATT_INCLUDED_HANDLE(attrs, i) (*((uint16_t*)((attrs)[(i)].pValue)))
 
 // Client Characteristic Configuration table (from CCC attribute value pointer)
-#define GATT_CCC_TBL(pValue)           ((gattCharCfg_t *)(*((PTR_TYPE)(&pValue))))
+#define GATT_CCC_TBL(pValue) ((gattCharCfg_t*)(*((PTR_TYPE)(&pValue))))
 
 /************************************ GAP *************************************/
 #define GAP_MSG_EVENT_DEFINES  //!< GAP type of command
@@ -940,7 +940,7 @@ extern const uint8_t VER_LIB[];  // LIB version
     28  //!< Maximum advertising events the Controller can skip before sending the AUX_ADV_IND packets on the secondary advertising channel. Default 0.
 #define TGAP_ADV_ADVERTISING_SID \
     29  //!< Value of the Advertising SID subfield in the ADI field of the PDU Range:0-15. Default 0.
-#define TGAP_ADV_SCAN_REQ_NOTIFY                                         \
+#define TGAP_ADV_SCAN_REQ_NOTIFY \
     30  //!< bit0:Scan request notifications enabled.Default 0-disabled. \
         //!< bit1:After the SCAN_RSP PDU is sent the advertiser move to the next used primary advertising channel index.Default 0-close the advertising event.
 #define TGAP_ADV_ADVERTISING_DURATION \
@@ -1053,15 +1053,15 @@ extern const uint8_t VER_LIB[];  // LIB version
 
 // GAP_ADVERTISEMENT_TYPE_DEFINES GAP Scan PHY VAL TYPE(GAP_PHY_BIT_TYPE)
 #define GAP_PHY_BIT_TYPE
-#define GAP_PHY_BIT_LE_1M                   (1 << 0)
-#define GAP_PHY_BIT_LE_2M                   (1 << 1)
-#define GAP_PHY_BIT_ALL                     (GAP_PHY_BIT_LE_1M | GAP_PHY_BIT_LE_2M)
+#define GAP_PHY_BIT_LE_1M (1 << 0)
+#define GAP_PHY_BIT_LE_2M (1 << 1)
+#define GAP_PHY_BIT_ALL   (GAP_PHY_BIT_LE_1M | GAP_PHY_BIT_LE_2M)
 
 // GAP_ADVERTISEMENT_TYPE_DEFINES GAP Periodic Advertising Properties
 #define GAP_PERI_PROPERTIES_INCLUDE_TXPOWER (1 << 6)
 
 // GAP_ADVERTISEMENT_TYPE_DEFINES GAP Connectionless CTE Transmit CTE type
-#define GAP_CTE_TYPE_AOA                    0x00  //!< AoA Constant Tone Extension
+#define GAP_CTE_TYPE_AOA 0x00  //!< AoA Constant Tone Extension
 #define GAP_CTE_TYPE_AOD_1US \
     0x01  //!< AoD Constant Tone Extension with 1us slots
 #define GAP_CTE_TYPE_AOD_2US \
@@ -1088,10 +1088,10 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x09  //!< extend Scannable directed report type
 #define GAP_ADRPT_EXT_NONCONN_NONSCAN_DIRECT \
     0x0A  //!< extend Non-Connectable and Non-Scannable directed report type
-#define GAP_ADRPT_EXT_SCAN_RESPONSE   0x0B  //!< extend Scan Response report type
+#define GAP_ADRPT_EXT_SCAN_RESPONSE 0x0B  //!< extend Scan Response report type
 // bit5 to 6 Data status:defined for gapExtAdvDeviceInfoEvent_t Advertisement data type
-#define GAP_ADRPT_EXT_DATA_MASK       (3 << 5)
-#define GAP_ADRPT_EXT_DATA_COMPLETE   (0 << 5)  //!< Complete
+#define GAP_ADRPT_EXT_DATA_MASK     (3 << 5)
+#define GAP_ADRPT_EXT_DATA_COMPLETE (0 << 5)  //!< Complete
 #define GAP_ADRPT_EXT_DATA_INCOMPLETE (1 << 5)  //!< more data to come
 #define GAP_ADRPT_EXT_DATA_LAST \
     (2 << 5)  //!< Incomplete, data truncated, no more to come
@@ -1129,7 +1129,7 @@ extern const uint8_t VER_LIB[];  // LIB version
      GAP_ADVCHAN_39)  //!< All Advertisement Channels Enabled
 
 // GAP_ADTYPE_DEFINES GAP Advertisement Data Types
-#define GAP_ADTYPE_FLAGS      0x01  //!< Discovery Mode: @ref GAP_ADTYPE_FLAGS_MODES
+#define GAP_ADTYPE_FLAGS 0x01  //!< Discovery Mode: @ref GAP_ADTYPE_FLAGS_MODES
 #define GAP_ADTYPE_16BIT_MORE 0x02  //!< Service: More 16-bit UUIDs available
 #define GAP_ADTYPE_16BIT_COMPLETE \
     0x03  //!< Service: Complete list of 16-bit UUIDs
@@ -1141,7 +1141,7 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x07  //!< Service: Complete list of 128-bit UUIDs
 #define GAP_ADTYPE_LOCAL_NAME_SHORT    0x08  //!< Shortened local name
 #define GAP_ADTYPE_LOCAL_NAME_COMPLETE 0x09  //!< Complete local name
-#define GAP_ADTYPE_POWER_LEVEL         0x0A  //!< TX Power Level: -127 to +127 dBm
+#define GAP_ADTYPE_POWER_LEVEL 0x0A  //!< TX Power Level: -127 to +127 dBm
 #define GAP_ADTYPE_OOB_CLASS_OF_DEVICE \
     0x0D  //!< Simple Pairing OOB Tag: Class of device (3 octets)
 #define GAP_ADTYPE_OOB_SIMPLE_PAIRING_HASHC \
@@ -1157,13 +1157,13 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x14  //!< Service Solicitation: list of 16-bit Service UUIDs
 #define GAP_ADTYPE_SERVICES_LIST_128BIT \
     0x15  //!< Service Solicitation: list of 128-bit Service UUIDs
-#define GAP_ADTYPE_SERVICE_DATA             0x16  //!< Service Data - 16-bit UUID
-#define GAP_ADTYPE_PUBLIC_TARGET_ADDR       0x17  //!< Public Target Address
-#define GAP_ADTYPE_RANDOM_TARGET_ADDR       0x18  //!< Random Target Address
-#define GAP_ADTYPE_APPEARANCE               0x19  //!< Appearance
-#define GAP_ADTYPE_ADV_INTERVAL             0x1A  //!< Advertising Interval
-#define GAP_ADTYPE_LE_BD_ADDR               0x1B  //!< LE Bluetooth Device Address
-#define GAP_ADTYPE_LE_ROLE                  0x1C  //!< LE Role
+#define GAP_ADTYPE_SERVICE_DATA       0x16  //!< Service Data - 16-bit UUID
+#define GAP_ADTYPE_PUBLIC_TARGET_ADDR 0x17  //!< Public Target Address
+#define GAP_ADTYPE_RANDOM_TARGET_ADDR 0x18  //!< Random Target Address
+#define GAP_ADTYPE_APPEARANCE         0x19  //!< Appearance
+#define GAP_ADTYPE_ADV_INTERVAL       0x1A  //!< Advertising Interval
+#define GAP_ADTYPE_LE_BD_ADDR         0x1B  //!< LE Bluetooth Device Address
+#define GAP_ADTYPE_LE_ROLE            0x1C  //!< LE Role
 #define GAP_ADTYPE_SIMPLE_PAIRING_HASHC_256 0x1D  //!< Simple Pairing Hash C-256
 #define GAP_ADTYPE_SIMPLE_PAIRING_RANDR_256 \
     0x1E  //!< Simple Pairing Randomizer R-256
@@ -1226,7 +1226,7 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAP_APPEARE_GENERIC_BARCODE_SCANNER 0x02C0  //!< Generic Barcode Scanner
 #define GAP_APPEARE_GENERIC_THERMOMETER     0x0300  //!< Generic Thermometer
 #define GAP_APPEARE_GENERIC_THERMO_EAR      0x0301  //!< Thermometer: Ear
-#define GAP_APPEARE_GENERIC_HR_SENSOR       0x0340  //!< Generic Heart rate Sensor
+#define GAP_APPEARE_GENERIC_HR_SENSOR 0x0340  //!< Generic Heart rate Sensor
 #define GAP_APPEARE_GENERIC_HRS_BELT \
     0x0341  //!< Heart Rate Sensor: Heart Rate Belt
 #define GAP_APPEARE_GENERIC_BLOOD_PRESSURE 0x0380  //!< Generic Blood Pressure
@@ -1286,7 +1286,7 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x314  //!< The receiver PHYs that the Host prefers the Controller to use.Default is GAP_PHY_BIT_ALL
 #define GAPROLE_PERIODIC_ADVERT_DATA \
     0x315  //!< Periodic advertisement Data. Read/Write. Max size is B_MAX_ADV_PERIODIC_LEN. Default to all 0.
-#define GAPROLE_PERIODIC_ADVERT_ENABLED                                                                          \
+#define GAPROLE_PERIODIC_ADVERT_ENABLED \
     0x316  //!< bit0:Enable/Disable Periodic Advertising. Read/Write. Size is uint8_t. Default is FALSE=Disable. \
         //!< bit1:Include the ADI field in AUX_SYNC_IND PDUs
 #define GAPROLE_CTE_CONNECTIONLESS_ENABLED \
@@ -1373,27 +1373,27 @@ extern const uint8_t VER_LIB[];  // LIB version
     0x02  //!< Don't wait, initiate a pairing request or slave security request
 
 // GAPBOND_IO_CAP_DEFINES GAP Bond Manager I/O Capabilities
-#define GAPBOND_IO_CAP_DISPLAY_ONLY       0x00  //!< Display Only Device
-#define GAPBOND_IO_CAP_DISPLAY_YES_NO     0x01  //!< Display and Yes and No Capable
-#define GAPBOND_IO_CAP_KEYBOARD_ONLY      0x02  //!< Keyboard Only
+#define GAPBOND_IO_CAP_DISPLAY_ONLY   0x00  //!< Display Only Device
+#define GAPBOND_IO_CAP_DISPLAY_YES_NO 0x01  //!< Display and Yes and No Capable
+#define GAPBOND_IO_CAP_KEYBOARD_ONLY  0x02  //!< Keyboard Only
 #define GAPBOND_IO_CAP_NO_INPUT_NO_OUTPUT 0x03  //!< No Display or Input Device
 #define GAPBOND_IO_CAP_KEYBOARD_DISPLAY \
     0x04  //!< Both Keyboard and Display Capable
 
 // GAPBOND_KEY_DIST_DEFINES GAP Bond Manager Key Distribution
-#define GAPBOND_KEYDIST_SENCKEY          0x01  //!< Slave Encryption Key
-#define GAPBOND_KEYDIST_SIDKEY           0x02  //!< Slave IRK and ID information
-#define GAPBOND_KEYDIST_SSIGN            0x04  //!< Slave CSRK
-#define GAPBOND_KEYDIST_SLINK            0x08  //!< Slave Link Key
-#define GAPBOND_KEYDIST_MENCKEY          0x10  //!< Master Encrypton Key
-#define GAPBOND_KEYDIST_MIDKEY           0x20  //!< Master IRK and ID information
-#define GAPBOND_KEYDIST_MSIGN            0x40  //!< Master CSRK
-#define GAPBOND_KEYDIST_MLINK            0x80  //!< Master Link Key
+#define GAPBOND_KEYDIST_SENCKEY        0x01  //!< Slave Encryption Key
+#define GAPBOND_KEYDIST_SIDKEY         0x02  //!< Slave IRK and ID information
+#define GAPBOND_KEYDIST_SSIGN          0x04  //!< Slave CSRK
+#define GAPBOND_KEYDIST_SLINK          0x08  //!< Slave Link Key
+#define GAPBOND_KEYDIST_MENCKEY        0x10  //!< Master Encrypton Key
+#define GAPBOND_KEYDIST_MIDKEY         0x20  //!< Master IRK and ID information
+#define GAPBOND_KEYDIST_MSIGN          0x40  //!< Master CSRK
+#define GAPBOND_KEYDIST_MLINK          0x80  //!< Master Link Key
 
 // GAPBOND_PAIRING_STATE_DEFINES GAP Bond Manager Pairing States
-#define GAPBOND_PAIRING_STATE_STARTED    0x00  //!< Pairing started
-#define GAPBOND_PAIRING_STATE_COMPLETE   0x01  //!< Pairing complete
-#define GAPBOND_PAIRING_STATE_BONDED     0x02  //!< Devices bonded
+#define GAPBOND_PAIRING_STATE_STARTED  0x00  //!< Pairing started
+#define GAPBOND_PAIRING_STATE_COMPLETE 0x01  //!< Pairing complete
+#define GAPBOND_PAIRING_STATE_BONDED   0x02  //!< Devices bonded
 #define GAPBOND_PAIRING_STATE_BOND_SAVED 0x03  //!< Bonding record saved in NV
 
 // SMP_PAIRING_FAILED_DEFINES Pairing failure status values
@@ -1539,16 +1539,16 @@ typedef struct {
     uint16_t     connTimeout;
     uint16_t     MTU;  //!< The connection's MTU size
     linkSec_t    sec;  //!< Connection Security related items
-    encParams_t *pEncParams;  //!< pointer to LTK, ediv, rand. if needed.
+    encParams_t* pEncParams;  //!< pointer to LTK, ediv, rand. if needed.
     uint16_t     smEvtID;
-    void        *pPairingParams;
-    void        *pAuthLink;
+    void*        pPairingParams;
+    void*        pAuthLink;
 } linkDBItem_t;
 
 // function pointer used to register for a status callback
 typedef void (*pfnLinkDBCB_t)(uint16_t connectionHandle, uint8_t changeType);
 // function pointer used to perform specialized link database searches
-typedef void (*pfnPerformFuncCB_t)(linkDBItem_t *pLinkItem);
+typedef void (*pfnPerformFuncCB_t)(linkDBItem_t* pLinkItem);
 
 /**
  * Attribute Type format (2 or 16 octet UUID).
@@ -1604,7 +1604,7 @@ typedef struct {
 typedef struct {
     uint16_t numInfo;  //!< Number of attribute handle-UUID pairs found
     uint8_t  format;  //!< Format of information data
-    uint8_t *
+    uint8_t*
         pInfo;  //!< Information data whose format is determined by format field (4 to ATT_MTU_SIZE-2)
 } attFindInfoRsp_t;
 
@@ -1617,7 +1617,7 @@ typedef struct {
     uint16_t        endHandle;  //!< Last requested handle number
     attAttrBtType_t type;  //!< 2-octet UUID to find
     uint16_t        len;  //!< Length of value
-    uint8_t        *pValue;  //!< Attribute value to find (0 to ATT_MTU_SIZE-7)
+    uint8_t*        pValue;  //!< Attribute value to find (0 to ATT_MTU_SIZE-7)
 } attFindByTypeValueReq_t;
 
 /**
@@ -1625,7 +1625,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t numInfo;  //!< Number of handles information found
-    uint8_t *
+    uint8_t*
         pHandlesInfo;  //!< List of 1 or more handles information (4 to ATT_MTU_SIZE-1)
 } attFindByTypeValueRsp_t;
 
@@ -1645,7 +1645,7 @@ typedef struct {
 typedef struct {
     uint16_t numPairs;  //!< Number of attribute handle-UUID pairs found
     uint16_t len;  //!< Size of each attribute handle-value pair
-    uint8_t *
+    uint8_t*
         pDataList;  //!< List of 1 or more attribute handle-value pairs (2 to ATT_MTU_SIZE-2)
 } attReadByTypeRsp_t;
 
@@ -1662,7 +1662,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Value of the attribute with the handle given (0 to ATT_MTU_SIZE-1)
 } attReadRsp_t;
 
@@ -1680,7 +1680,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Part of the value of the attribute with the handle given (0 to ATT_MTU_SIZE-1)
 } attReadBlobRsp_t;
 
@@ -1688,7 +1688,7 @@ typedef struct {
  * Read Multiple Request format.
  */
 typedef struct {
-    uint8_t *
+    uint8_t*
         pHandles;  //!< Set of two or more attribute handles (4 to ATT_MTU_SIZE-1) - must be first field
     uint16_t numHandles;  //!< Number of attribute handles
 } attReadMultiReq_t;
@@ -1698,7 +1698,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t len;  //!< Length of values
-    uint8_t *pValues;  //!< Set of two or more values (0 to ATT_MTU_SIZE-1)
+    uint8_t* pValues;  //!< Set of two or more values (0 to ATT_MTU_SIZE-1)
 } attReadMultiRsp_t;
 
 /**
@@ -1719,7 +1719,7 @@ typedef struct {
         numGrps;  //!< Number of attribute handle, end group handle and value sets found
     uint16_t
         len;  //!< Length of each attribute handle, end group handle and value set
-    uint8_t *
+    uint8_t*
         pDataList;  //!< List of 1 or more attribute handle, end group handle and value (4 to ATT_MTU_SIZE-2)
 } attReadByGrpTypeRsp_t;
 
@@ -1730,7 +1730,7 @@ typedef struct {
     uint16_t
         handle;  //!< Handle of the attribute to be written (must be first field)
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Value of the attribute to be written (0 to ATT_MTU_SIZE-3)
     uint8_t
         sig;  //!< Authentication Signature status (not included (0), valid (1), invalid (2))
@@ -1745,7 +1745,7 @@ typedef struct {
         handle;  //!< Handle of the attribute to be written (must be first field)
     uint16_t offset;  //!< Offset of the first octet to be written
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Part of the value of the attribute to be written (0 to ATT_MTU_SIZE-5) - must be allocated
 } attPrepareWriteReq_t;
 
@@ -1756,7 +1756,7 @@ typedef struct {
     uint16_t handle;  //!< Handle of the attribute that has been read
     uint16_t offset;  //!< Offset of the first octet to be written
     uint16_t len;  //!< Length of value
-    uint8_t *
+    uint8_t*
         pValue;  //!< Part of the value of the attribute to be written (0 to ATT_MTU_SIZE-5)
 } attPrepareWriteRsp_t;
 
@@ -1765,7 +1765,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t flags;  //!< 0x00 - cancel all prepared writes.
-        //!< 0x01 - immediately write all pending prepared values.
+    //!< 0x01 - immediately write all pending prepared values.
 } attExecuteWriteReq_t;
 
 /**
@@ -1775,7 +1775,7 @@ typedef struct {
     uint16_t
         handle;  //!< Handle of the attribute that has been changed (must be first field)
     uint16_t len;  //!< Length of value
-    uint8_t *pValue;  //!< Current value of the attribute (0 to ATT_MTU_SIZE-3)
+    uint8_t* pValue;  //!< Current value of the attribute (0 to ATT_MTU_SIZE-3)
 } attHandleValueNoti_t;
 
 /**
@@ -1785,7 +1785,7 @@ typedef struct {
     uint16_t
         handle;  //!< Handle of the attribute that has been changed (must be first field)
     uint16_t len;  //!< Length of value
-    uint8_t *pValue;  //!< Current value of the attribute (0 to ATT_MTU_SIZE-3)
+    uint8_t* pValue;  //!< Current value of the attribute (0 to ATT_MTU_SIZE-3)
 } attHandleValueInd_t;
 
 /**
@@ -1893,12 +1893,12 @@ typedef struct {
 typedef struct {
     uint8_t
         reliable;  //!< Whether reliable writes requested (always TRUE for Reliable Writes)
-    attPrepareWriteReq_t
-           *pReqs;  //!< Array of Prepare Write Requests (must be allocated)
+    attPrepareWriteReq_t*
+            pReqs;  //!< Array of Prepare Write Requests (must be allocated)
     uint8_t numReqs;  //!< Number of Prepare Write Requests
     uint8_t index;  //!< Index of last Prepare Write Request sent
     uint8_t flags;  //!< 0x00 - cancel all prepared writes.
-        //!< 0x01 - immediately write all pending prepared values.
+    //!< 0x01 - immediately write all pending prepared values.
 } gattReliableWritesReq_t;
 
 /**
@@ -1966,7 +1966,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t        len;  //!< Length of UUID (2 or 16)
-    const uint8_t *uuid;  //!< Pointer to UUID
+    const uint8_t* uuid;  //!< Pointer to UUID
 } gattAttrType_t;
 
 /**
@@ -1977,10 +1977,10 @@ typedef struct attAttribute_t {
     uint8_t        permissions;  //!< Attribute permissions
     uint16_t
         handle;  //!< Attribute handle - assigned internally by attribute server
-    uint8_t *
+    uint8_t*
         pValue;  //!< Attribute value - encoding of the octet array is defined in
-        //!< the applicable profile. The maximum length of an attribute
-        //!< value shall be 512 octets.
+    //!< the applicable profile. The maximum length of an attribute
+    //!< value shall be 512 octets.
 } gattAttribute_t;
 
 /**
@@ -1995,7 +1995,7 @@ typedef struct {
      *  note: The list must start with a Service attribute followed by
      *        all attributes associated with this Service attribute.
      */
-    gattAttribute_t *attrs;
+    gattAttribute_t* attrs;
 } gattService_t;
 
 /**
@@ -2025,8 +2025,8 @@ typedef struct {
  *          Error, otherwise: ref ATT_ERR_CODE_DEFINES.<BR>
  */
 typedef uint8_t (*pfnGATTReadAttrCB_t)(uint16_t         connHandle,
-                                       gattAttribute_t *pAttr, uint8_t *pValue,
-                                       uint16_t *pLen, uint16_t offset,
+                                       gattAttribute_t* pAttr, uint8_t* pValue,
+                                       uint16_t* pLen, uint16_t offset,
                                        uint16_t maxLen, uint8_t method);
 
 /**
@@ -2057,7 +2057,7 @@ typedef uint8_t (*pfnGATTReadAttrCB_t)(uint16_t         connHandle,
  *          Error, otherwise: ref ATT_ERR_CODE_DEFINES.<BR>
  */
 typedef uint8_t (*pfnGATTWriteAttrCB_t)(uint16_t         connHandle,
-                                        gattAttribute_t *pAttr, uint8_t *pValue,
+                                        gattAttribute_t* pAttr, uint8_t* pValue,
                                         uint16_t len, uint16_t offset,
                                         uint8_t method);
 
@@ -2073,7 +2073,7 @@ typedef uint8_t (*pfnGATTWriteAttrCB_t)(uint16_t         connHandle,
  *          ATT_ERR_INSUFFICIENT_AUTHOR: Authorization required.<BR>
  */
 typedef bStatus_t (*pfnGATTAuthorizeAttrCB_t)(uint16_t         connHandle,
-                                              gattAttribute_t *pAttr,
+                                              gattAttribute_t* pAttr,
                                               uint8_t          opcode);
 
 /**
@@ -2167,7 +2167,7 @@ typedef struct {
     uint8_t  addr[B_ADDR_LEN];  //!< Address of the advertisement or SCAN_RSP
     int8_t   rssi;  //!< Advertisement or SCAN_RSP RSSI
     uint8_t  dataLen;  //!< Length (in bytes) of the data field (evtData)
-    uint8_t *pEvtData;  //!< Data field of advertisement or SCAN_RSP
+    uint8_t* pEvtData;  //!< Data field of advertisement or SCAN_RSP
 } gapDeviceInfoEvent_t;
 
 /**
@@ -2210,7 +2210,7 @@ typedef struct {
     uint8_t  directAddressType;  //!< public or random address type
     uint8_t  directAddress[B_ADDR_LEN];  //!< device address
     uint8_t  dataLen;  //!< Length (in bytes) of the data field (evtData)
-    uint8_t *pEvtData;  //!< Data field of advertisement or SCAN_RSP
+    uint8_t* pEvtData;  //!< Data field of advertisement or SCAN_RSP
 } gapExtAdvDeviceInfoEvent_t;
 
 /**
@@ -2242,7 +2242,7 @@ typedef struct {
     tmos_event_hdr_t hdr;  //!< GAP_MSG_EVENT and status
     uint8_t          opcode;  //!< GAP_DEVICE_DISCOVERY_EVENT
     uint8_t          numDevs;  //!< Number of devices found during scan
-    gapDevRec_t     *pDevList;  //!< array of device records
+    gapDevRec_t*     pDevList;  //!< array of device records
 } gapDevDiscEvent_t;
 
 /**
@@ -2319,7 +2319,7 @@ typedef struct {
     uint8_t  subevent;  //!< The subevent number. 0xFF: No subevents
     uint8_t  dataStatus;  //!< Data complete
     uint8_t  dataLength;  //!< Length (in bytes) of the data field (evtData)
-    uint8_t *pEvtData;  //!< Data field of periodic advertising data
+    uint8_t* pEvtData;  //!< Data field of periodic advertising data
 } gapPeriodicAdvDeviceInfoEvent_t;
 
 /**
@@ -2338,7 +2338,7 @@ typedef struct {
 typedef struct {
     uint8_t taskID;  //!< set periodic advertising task ID
     uint8_t enable;  //!< bit0 Enable periodic advertising
-        //!< bit1 Include the ADI field in AUX_SYNC_IND PDUs
+    //!< bit1 Include the ADI field in AUX_SYNC_IND PDUs
     uint8_t advHandle;  //!< Used to identify a periodic advertising train
     uint16_t
         advIntervalMin;  //!< Minimum advertising interval for periodic advertising.Time = N × 1.25ms.Time Range: 7.5ms to 81.91875s
@@ -2365,7 +2365,7 @@ typedef struct {
     uint8_t
         dataLength;  //!< The number of octets in the Subevent_Data parameter.
     uint16_t rspMaxLength;  //!<
-    uint8_t *pData;  //!< Advertising data
+    uint8_t* pData;  //!< Advertising data
 } gapPawrSetData_t;
 
 typedef struct {
@@ -2378,7 +2378,7 @@ typedef struct {
     uint8_t rspSlot;  //!< Used to identify the response slot of the PAwR train.
     uint8_t
         rspDataLength;  //!< The number of octets in the Response_Data parameter.
-    uint8_t *pRspData;  //!< Response data
+    uint8_t* pRspData;  //!< Response data
 } gapPawrSetResponseData_t;
 
 typedef struct {
@@ -2396,7 +2396,7 @@ typedef struct {
     uint8_t  rspSlot;
     uint8_t  dataStatus;
     uint8_t  dataLength;
-    uint8_t *pData;
+    uint8_t* pData;
 } pawrResponseInfo_t;
 
 typedef struct {
@@ -2407,7 +2407,7 @@ typedef struct {
     uint8_t
         txStatus;  //!< 0x00 packet was transmitted. 0x01 packet was not transmitted.
     uint8_t             numResponses;
-    pawrResponseInfo_t *pList;
+    pawrResponseInfo_t* pList;
 } gapPawrResponseEvent_t;
 
 typedef struct {
@@ -2567,7 +2567,7 @@ typedef struct {
  * Passcode Callback Function
  */
 typedef void (*pfnPasscodeCB_t)(
-    uint8_t *
+    uint8_t*
         deviceAddr,  //!< address of device to pair with, and could be either public or random.
     uint16_t connectionHandle,  //!< Connection handle
     uint8_t
@@ -2598,11 +2598,11 @@ typedef struct {
  * OOB Callback Function
  */
 typedef void (*pfnOobCB_t)(
-    uint8_t *
+    uint8_t*
         deviceAddr,  //!< address of device to pair with, and could be either public or random.
     uint16_t connectionHandle,  //!< Connection handle
-    uint8_t *r_local,  //!< local rand
-    uint8_t *c_local  //!< local confirm
+    uint8_t* r_local,  //!< local rand
+    uint8_t* c_local  //!< local confirm
 );
 
 /**
@@ -2614,26 +2614,26 @@ typedef struct {
     pfnOobCB_t       oobCB;  //!< oob callback
 } gapBondCBs_t;
 
-typedef int (*pfnEcc_key_t)(uint8_t *pub, uint8_t *priv);
+typedef int (*pfnEcc_key_t)(uint8_t* pub, uint8_t* priv);
 
-typedef int (*pfnEcc_dhkey_t)(uint8_t *peer_pub_key_x, uint8_t *peer_pub_key_y,
-                              uint8_t *our_priv_key, uint8_t *out_dhkey);
+typedef int (*pfnEcc_dhkey_t)(uint8_t* peer_pub_key_x, uint8_t* peer_pub_key_y,
+                              uint8_t* our_priv_key, uint8_t* out_dhkey);
 
-typedef int (*pfnEcc_alg_f4_t)(uint8_t *u, uint8_t *v, uint8_t *x, uint8_t z,
-                               uint8_t *out_enc_data);
+typedef int (*pfnEcc_alg_f4_t)(uint8_t* u, uint8_t* v, uint8_t* x, uint8_t z,
+                               uint8_t* out_enc_data);
 
-typedef int (*pfnEcc_alg_g2_t)(uint8_t *u, uint8_t *v, uint8_t *x, uint8_t *y,
-                               uint32_t *passkey);
+typedef int (*pfnEcc_alg_g2_t)(uint8_t* u, uint8_t* v, uint8_t* x, uint8_t* y,
+                               uint32_t* passkey);
 
-typedef int (*pfnEcc_alg_f5_t)(uint8_t *w, uint8_t *n1, uint8_t *n2,
-                               uint8_t a1t, uint8_t *a1, uint8_t a2t,
-                               uint8_t *a2, uint8_t *mackey, uint8_t *ltk);
+typedef int (*pfnEcc_alg_f5_t)(uint8_t* w, uint8_t* n1, uint8_t* n2,
+                               uint8_t a1t, uint8_t* a1, uint8_t a2t,
+                               uint8_t* a2, uint8_t* mackey, uint8_t* ltk);
 
-typedef int (*pfnEcc_alg_f6_t)(uint8_t *w, uint8_t *n1, uint8_t *n2, uint8_t *r,
-                               uint8_t *iocap, uint8_t a1t, uint8_t *a1,
-                               uint8_t a2t, uint8_t *a2, uint8_t *check);
+typedef int (*pfnEcc_alg_f6_t)(uint8_t* w, uint8_t* n1, uint8_t* n2, uint8_t* r,
+                               uint8_t* iocap, uint8_t a1t, uint8_t* a1,
+                               uint8_t a2t, uint8_t* a2, uint8_t* check);
 
-typedef void (*pfnSm_randkey_t)(uint8_t *randkey, uint8_t keylen);
+typedef void (*pfnSm_randkey_t)(uint8_t* randkey, uint8_t keylen);
 
 /**
  * Callback Registration Structure
@@ -2781,13 +2781,13 @@ typedef struct {
     uint8_t addr[B_ADDR_LEN];  //!< Device's Address
     uint16_t
         skip;  //!< the maximum number of consecutive periodic advertising events that the receiver may skip after
-        //!< successfully receiving a periodic advertising packet.Range: 0x0000 to 0x01F3
+    //!< successfully receiving a periodic advertising packet.Range: 0x0000 to 0x01F3
     uint16_t
         syncTimeout;  //!< the maximum permitted time between successful receives. If this time is exceeded, synchronization is lost.
-        //!< Time = N*10 ms.Range: 0x000A to 0x4000
+    //!< Time = N*10 ms.Range: 0x000A to 0x4000
     uint8_t
         syncCTEType;  //!< specifies whether to only synchronize to periodic advertising with certain types of Constant Tone Extension
-        //!< (a value of 0 indicates that the presence or absence of a Constant Tone Extension is irrelevant).
+    //!< (a value of 0 indicates that the presence or absence of a Constant Tone Extension is irrelevant).
 } gapCreateSync_t;
 
 /**
@@ -2797,16 +2797,16 @@ typedef struct {
     uint16_t connHandle;  //!< Used to identify the Connection handle
     uint8_t
         mode;  //!< specifies the action to be taken when periodic advertising synchronization information is received
-#define MODE_0                                                                   \
+#define MODE_0 \
     0  //!< No attempt is made to synchronize to the periodic advertising and no \
         //!< gapPeriodicTranReceivec_t event is sent to the APP.
-#define MODE_1                                                     \
+#define MODE_1 \
     1  //!< An gapPeriodicTranReceivec_t event is sent to the APP. \
         //!< gapPeriodicAdvDeviceInfoEvent_t events will be disabled.
-#define MODE_2                                                     \
+#define MODE_2 \
     2  //!< An gapPeriodicTranReceivec_t event is sent to the APP. \
         //!< gapPeriodicAdvDeviceInfoEvent_t events will be enabled with duplicate filtering disabled.
-#define MODE_3                                                     \
+#define MODE_3 \
     3  //!< An gapPeriodicTranReceivec_t event is sent to the APP. \
         //!< gapPeriodicAdvDeviceInfoEvent_t events will be enabled with duplicate filtering enabled.
     uint16_t
@@ -2851,7 +2851,7 @@ typedef struct {
         lowHysteresis;  //!< Hysteresis value for the high threshold.Units: dB
     uint16_t
         minTimeSpent;  //!< Minimum time in number of connection events to be observed
-        //!< once the path crosses the threshold before an event is generated.
+    //!< once the path crosses the threshold before an event is generated.
     uint8_t enable;  //!< 0x00:Reporting disabled 0x01:Reporting enabled
 } gapRoleSetPathLossReporting_t;
 
@@ -2871,7 +2871,7 @@ typedef struct {
  */
 typedef void (*gapRolesBroadcasterStateNotify_t)(gapRole_States_t newState);
 
-typedef void (*gapRolesScanReqRecv_t)(gapScanRec_t *pEvent);
+typedef void (*gapRolesScanReqRecv_t)(gapScanRec_t* pEvent);
 
 typedef struct {
     gapRolesBroadcasterStateNotify_t
@@ -2883,7 +2883,7 @@ typedef struct {
  * Observer Event Callback Function
  */
 typedef void (*pfnGapObserverRoleEventCB_t)(
-    gapRoleEvent_t *pEvent  //!< Pointer to event structure.
+    gapRoleEvent_t* pEvent  //!< Pointer to event structure.
 );
 
 /**
@@ -2903,7 +2903,7 @@ typedef void (*gapRolesRssiRead_t)(uint16_t connHandle, int8_t newRSSI);
  * the Notify of a state change.
  */
 typedef void (*gapRolesStateNotify_t)(gapRole_States_t newState,
-                                      gapRoleEvent_t  *pEvent);
+                                      gapRoleEvent_t*  pEvent);
 
 /**
  * Callback when the connection parameteres are updated.
@@ -2929,7 +2929,7 @@ typedef struct {
  * Central Event Callback Function
  */
 typedef void (*pfnGapCentralRoleEventCB_t)(
-    gapRoleEvent_t *pEvent);  //!< Pointer to event structure.
+    gapRoleEvent_t* pEvent);  //!< Pointer to event structure.
 
 /**
  * HCI Data Length Change Event Callback Function
@@ -2966,7 +2966,7 @@ typedef struct {
  * RF_ROLE_STATUS_TYPE pfnRFStatusCB_t state defined
  */
 // TX_MODE call RF_Tx
-#define TX_MODE_TX_FINISH                                     \
+#define TX_MODE_TX_FINISH \
     0x01  //!< basic or auto tx mode sends data successfully  \
         //!< if it is in basic mode,it will enter idle state; \
         //!< if it is in auto mode,it will wait for receiving
@@ -2980,7 +2980,7 @@ typedef struct {
 #define TX_MODE_HOP_SHUT 0x22
 
 // RX_MODE call RF_Rx
-#define RX_MODE_RX_DATA                                                    \
+#define RX_MODE_RX_DATA \
     0x03  //!< basic or auto rx mode receive data                          \
         //!< if it is in basic mode,it will enter idle state;              \
         //!< if it is in auto mode,it will judge whether the type matches; \
@@ -3014,19 +3014,19 @@ typedef struct {
 /**
  * RFRole Event Callback Function
  */
-typedef void (*pfnRFStatusCB_t)(uint8_t sta, uint8_t rsr, uint8_t *rxBuf);
+typedef void (*pfnRFStatusCB_t)(uint8_t sta, uint8_t rsr, uint8_t* rxBuf);
 // sta - current status@ref RF_ROLE_STATUS_TYPE
 // rsr - receive status: bit0- crc check result,bit1- type matching result
 // rxBuf - receive data buffer
 
 typedef struct tag_rf_config {
     uint8_t         LLEMode;  //!< BIT0   0=basic, 1=auto def@LLE_MODE_TYPE
-        //!< BIT1   0=whitening on, 1=whitening off def@LLE_WHITENING_TYPE
-        //!< BIT4-5 00-1M  01-2M  10/11-resv def@LLE_PHY_TYPE
-        //!< BIT6   0=data channel(0-39)
-        //!<        1=rf frequency (2400000kHz-2483500kHz)
-        //!< BIT7   0=the first byte of the receive buffer is rssi
-        //!<        1=the first byte of the receive buffer is package type
+    //!< BIT1   0=whitening on, 1=whitening off def@LLE_WHITENING_TYPE
+    //!< BIT4-5 00-1M  01-2M  10/11-resv def@LLE_PHY_TYPE
+    //!< BIT6   0=data channel(0-39)
+    //!<        1=rf frequency (2400000kHz-2483500kHz)
+    //!< BIT7   0=the first byte of the receive buffer is rssi
+    //!<        1=the first byte of the receive buffer is package type
     uint8_t         Channel;  //!< rf channel(0-39)
     uint32_t        Frequency;  //!< rf frequency (2400000kHz-2483500kHz)
     uint32_t        accessAddress;  //!< access address,32bit PHY address
@@ -3034,7 +3034,7 @@ typedef struct tag_rf_config {
     pfnRFStatusCB_t rfStatusCB;  //!< status call back
     uint32_t
         ChannelMap;  //!< indicating  Used and Unused data channels.Every channel is represented with a
-        //!< bit positioned as per the data channel index,The LSB represents data channel index 0
+    //!< bit positioned as per the data channel index,The LSB represents data channel index 0
     uint8_t Resv;
     uint8_t
         HeartPeriod;  //!< The heart package interval shall be an integer multiple of 100ms
@@ -3059,9 +3059,9 @@ typedef struct tag_rf_config {
 #define FUNCITON_BASE_ADDRESSS (LIB_FLASH_BASE_ADDRESSS + 0x34)
 
 #define BLE_LIB_UUID(n)        (UUID_BASE_ADDRESSS + n * 2)
-#define BLE_LIB_RAM_JT(n)      (*(uint32_t *)(RAM_BASE_ADDRESSS + n * 4))
-#define BLE_LIB_JT(n)          (*(uint32_t *)(FUNCITON_BASE_ADDRESSS + n * 4))
-#define VER_LIB                ((const uint8_t *)BLE_LIB_JT(0))
+#define BLE_LIB_RAM_JT(n)      (*(uint32_t*)(RAM_BASE_ADDRESSS + n * 4))
+#define BLE_LIB_JT(n)          (*(uint32_t*)(FUNCITON_BASE_ADDRESSS + n * 4))
+#define VER_LIB                ((const uint8_t*)BLE_LIB_JT(0))
 
 /*******************************************************************************
  * UUID defined
@@ -3069,56 +3069,56 @@ typedef struct tag_rf_config {
 /**
  * GATT Services
  */
-#define gapServiceUUID         ((const uint8_t *)BLE_LIB_UUID(0))
-#define gattServiceUUID        ((const uint8_t *)BLE_LIB_UUID(1))
+#define gapServiceUUID         ((const uint8_t*)BLE_LIB_UUID(0))
+#define gattServiceUUID        ((const uint8_t*)BLE_LIB_UUID(1))
 
 /**
  * GATT Attribute Types
  */
-#define primaryServiceUUID     ((const uint8_t *)BLE_LIB_UUID(2))
-#define secondaryServiceUUID   ((const uint8_t *)BLE_LIB_UUID(3))
-#define includeUUID            ((const uint8_t *)BLE_LIB_UUID(4))
-#define characterUUID          ((const uint8_t *)BLE_LIB_UUID(5))
+#define primaryServiceUUID     ((const uint8_t*)BLE_LIB_UUID(2))
+#define secondaryServiceUUID   ((const uint8_t*)BLE_LIB_UUID(3))
+#define includeUUID            ((const uint8_t*)BLE_LIB_UUID(4))
+#define characterUUID          ((const uint8_t*)BLE_LIB_UUID(5))
 
 /**
  * GATT Characteristic Descriptors
  */
-#define charExtPropsUUID       ((const uint8_t *)BLE_LIB_UUID(6))
-#define charUserDescUUID       ((const uint8_t *)BLE_LIB_UUID(7))
-#define clientCharCfgUUID      ((const uint8_t *)BLE_LIB_UUID(8))
-#define servCharCfgUUID        ((const uint8_t *)BLE_LIB_UUID(9))
-#define charFormatUUID         ((const uint8_t *)BLE_LIB_UUID(10))
-#define charAggFormatUUID      ((const uint8_t *)BLE_LIB_UUID(11))
-#define validRangeUUID         ((const uint8_t *)BLE_LIB_UUID(12))
-#define extReportRefUUID       ((const uint8_t *)BLE_LIB_UUID(13))
-#define reportRefUUID          ((const uint8_t *)BLE_LIB_UUID(14))
+#define charExtPropsUUID       ((const uint8_t*)BLE_LIB_UUID(6))
+#define charUserDescUUID       ((const uint8_t*)BLE_LIB_UUID(7))
+#define clientCharCfgUUID      ((const uint8_t*)BLE_LIB_UUID(8))
+#define servCharCfgUUID        ((const uint8_t*)BLE_LIB_UUID(9))
+#define charFormatUUID         ((const uint8_t*)BLE_LIB_UUID(10))
+#define charAggFormatUUID      ((const uint8_t*)BLE_LIB_UUID(11))
+#define validRangeUUID         ((const uint8_t*)BLE_LIB_UUID(12))
+#define extReportRefUUID       ((const uint8_t*)BLE_LIB_UUID(13))
+#define reportRefUUID          ((const uint8_t*)BLE_LIB_UUID(14))
 
 /**
  * GATT Characteristic Types
  */
-#define deviceNameUUID         ((const uint8_t *)BLE_LIB_UUID(15))
-#define appearanceUUID         ((const uint8_t *)BLE_LIB_UUID(16))
-#define periPrivacyFlagUUID    ((const uint8_t *)BLE_LIB_UUID(17))
-#define reconnectAddrUUID      ((const uint8_t *)BLE_LIB_UUID(18))
-#define periConnParamUUID      ((const uint8_t *)BLE_LIB_UUID(19))
-#define serviceChangedUUID     ((const uint8_t *)BLE_LIB_UUID(10))
-#define centAddrResUUID        ((const uint8_t *)BLE_LIB_UUID(21))
+#define deviceNameUUID         ((const uint8_t*)BLE_LIB_UUID(15))
+#define appearanceUUID         ((const uint8_t*)BLE_LIB_UUID(16))
+#define periPrivacyFlagUUID    ((const uint8_t*)BLE_LIB_UUID(17))
+#define reconnectAddrUUID      ((const uint8_t*)BLE_LIB_UUID(18))
+#define periConnParamUUID      ((const uint8_t*)BLE_LIB_UUID(19))
+#define serviceChangedUUID     ((const uint8_t*)BLE_LIB_UUID(10))
+#define centAddrResUUID        ((const uint8_t*)BLE_LIB_UUID(21))
 
 /*******************************************************************************
  * PUBLIC FUNCTIONS
  */
-#define tmos_rand              ((uint32_t (*)(void))BLE_LIB_JT(1))  // pseudo-random number
-#define tmos_memcmp                                                         \
-    ((BOOL(*)(const void *src1, const void *src2, uint32_t len))BLE_LIB_JT( \
+#define tmos_rand ((uint32_t (*)(void))BLE_LIB_JT(1))  // pseudo-random number
+#define tmos_memcmp                                                          \
+    ((BOOL (*)(const void* src1, const void* src2, uint32_t len))BLE_LIB_JT( \
         2))  // TRUE - same, FALSE - different
-#define tmos_isbufset                                              \
-    ((BOOL(*)(uint8_t *buf, uint8_t val, uint32_t len))BLE_LIB_JT( \
+#define tmos_isbufset                                               \
+    ((BOOL (*)(uint8_t* buf, uint8_t val, uint32_t len))BLE_LIB_JT( \
         3))  // TRUE if all "val",FALSE otherwise
-#define tmos_strlen ((uint32_t (*)(char *pString))BLE_LIB_JT(4))
+#define tmos_strlen ((uint32_t (*)(char* pString))BLE_LIB_JT(4))
 #define tmos_memset \
-    ((void (*)(void *pDst, uint8_t Value, uint32_t len))BLE_LIB_JT(5))
+    ((void (*)(void* pDst, uint8_t Value, uint32_t len))BLE_LIB_JT(5))
 #define tmos_memcpy \
-    ((void (*)(void *dst, const void *src, uint32_t len))BLE_LIB_JT(6))
+    ((void (*)(void* dst, const void* src, uint32_t len))BLE_LIB_JT(6))
 
 /**
  * @brief   start a event immediately
@@ -3129,7 +3129,7 @@ typedef struct tag_rf_config {
  * @return  0 - SUCCESS.
  */
 #define tmos_set_event \
-    ((bStatus_t(*)(tmosTaskID taskID, tmosEvents event))BLE_LIB_JT(7))
+    ((bStatus_t (*)(tmosTaskID taskID, tmosEvents event))BLE_LIB_JT(7))
 
 /**
  * @brief   clear a event already timeout, cannot be used in it own event function.
@@ -3140,7 +3140,7 @@ typedef struct tag_rf_config {
  * @return  0 - SUCCESS.
  */
 #define tmos_clear_event \
-    ((bStatus_t(*)(tmosTaskID taskID, tmosEvents event))BLE_LIB_JT(8))
+    ((bStatus_t (*)(tmosTaskID taskID, tmosEvents event))BLE_LIB_JT(8))
 
 /**
  * @brief   start a event after period of time
@@ -3151,9 +3151,9 @@ typedef struct tag_rf_config {
  *
  * @return  TRUE,FALSE.
  */
-#define tmos_start_task                                                        \
-    ((BOOL(*)(tmosTaskID taskID, tmosEvents event, tmosTimer time))BLE_LIB_JT( \
-        9))
+#define tmos_start_task                             \
+    ((BOOL (*)(tmosTaskID taskID, tmosEvents event, \
+               tmosTimer time))BLE_LIB_JT(9))
 
 /**
  * @brief   This function is called to start a timer to expire in n system clock time.
@@ -3166,9 +3166,9 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS, or NO_TIMER_AVAIL.
  */
-#define tmos_start_reload_task                          \
-    ((bStatus_t(*)(tmosTaskID taskID, tmosEvents event, \
-                   tmosTimer time))BLE_LIB_JT(126))
+#define tmos_start_reload_task                           \
+    ((bStatus_t (*)(tmosTaskID taskID, tmosEvents event, \
+                    tmosTimer time))BLE_LIB_JT(126))
 
 /**
  * @brief   stop a event
@@ -3181,7 +3181,7 @@ typedef struct tag_rf_config {
  * @return  SUCCESS.
  */
 #define tmos_stop_task \
-    ((bStatus_t(*)(tmosTaskID taskID, tmosEvents event))BLE_LIB_JT(10))
+    ((bStatus_t (*)(tmosTaskID taskID, tmosEvents event))BLE_LIB_JT(10))
 
 /**
  * @brief   get last period of time for this event
@@ -3192,7 +3192,7 @@ typedef struct tag_rf_config {
  * @return  the timer's tick count if found, zero otherwise.
  */
 #define tmos_get_task_timer \
-    ((tmosTimer(*)(tmosTaskID taskID, tmosEvents event))BLE_LIB_JT(11))
+    ((tmosTimer (*)(tmosTaskID taskID, tmosEvents event))BLE_LIB_JT(11))
 
 /**
  * @brief   send msg to a task,callback events&SYS_EVENT_MSG
@@ -3203,7 +3203,7 @@ typedef struct tag_rf_config {
  * @return  SUCCESS, INVALID_TASK, INVALID_MSG_POINTER
  */
 #define tmos_msg_send \
-    ((bStatus_t(*)(tmosTaskID taskID, uint8_t *msg_ptr))BLE_LIB_JT(12))
+    ((bStatus_t (*)(tmosTaskID taskID, uint8_t* msg_ptr))BLE_LIB_JT(12))
 
 /**
  * @brief   delete a msg
@@ -3212,7 +3212,7 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS.
  */
-#define tmos_msg_deallocate ((bStatus_t(*)(uint8_t *msg_ptr))BLE_LIB_JT(13))
+#define tmos_msg_deallocate ((bStatus_t (*)(uint8_t* msg_ptr))BLE_LIB_JT(13))
 
 /**
  * @brief   receive a msg
@@ -3221,7 +3221,7 @@ typedef struct tag_rf_config {
  *
  * @return *uint8_t - message information or NULL if no message
  */
-#define tmos_msg_receive    ((uint8_t *(*)(tmosTaskID taskID))BLE_LIB_JT(14))
+#define tmos_msg_receive    ((uint8_t* (*)(tmosTaskID taskID))BLE_LIB_JT(14))
 
 /**
  * @brief   allocate buffer for msg when need to send msg
@@ -3230,7 +3230,7 @@ typedef struct tag_rf_config {
  *
  * @return  pointer to allocated buffer or NULL if allocation failed.
  */
-#define tmos_msg_allocate   ((uint8_t *(*)(uint16_t len))BLE_LIB_JT(15))
+#define tmos_msg_allocate   ((uint8_t* (*)(uint16_t len))BLE_LIB_JT(15))
 
 /**
  * @brief   read a data item to NV.
@@ -3241,8 +3241,8 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS if successful, NV_OPER_FAILED if failed.
  */
-#define tmos_snv_read                                                        \
-    ((bStatus_t(*)(tmosSnvId_t id, tmosSnvLen_t len, void *pBuf))BLE_LIB_JT( \
+#define tmos_snv_read                                                         \
+    ((bStatus_t (*)(tmosSnvId_t id, tmosSnvLen_t len, void* pBuf))BLE_LIB_JT( \
         107))
 
 /**
@@ -3255,7 +3255,7 @@ typedef struct tag_rf_config {
  * @return  SUCCESS if successful, FAILURE if failed.
  */
 #define TMOS_TimerInit \
-    ((bStatus_t(*)(bleClockConfig_t * pClockConfig)) BLE_LIB_JT(16))
+    ((bStatus_t (*)(bleClockConfig_t * pClockConfig)) BLE_LIB_JT(16))
 
 /**
  * @brief   interrupt handler.
@@ -3264,7 +3264,7 @@ typedef struct tag_rf_config {
  *
  * @return  None
  */
-#define TMOS_TimerIRQHandler ((bStatus_t(*)(uint32_t *time))BLE_LIB_JT(120))
+#define TMOS_TimerIRQHandler ((bStatus_t (*)(uint32_t* time))BLE_LIB_JT(120))
 
 /**
  * @brief   Process system
@@ -3292,7 +3292,7 @@ typedef struct tag_rf_config {
  * @return  0xFF - error,others-task id
  */
 #define TMOS_ProcessEventRegister \
-    ((tmosTaskID(*)(pTaskEventHandlerFn eventCb))BLE_LIB_JT(19))
+    ((tmosTaskID (*)(pTaskEventHandlerFn eventCb))BLE_LIB_JT(19))
 
 /**
  * @brief   Add a device address into white list ( support SNVNum MAX )
@@ -3303,7 +3303,7 @@ typedef struct tag_rf_config {
  * @return  Command Status.
  */
 #define LL_AddWhiteListDevice \
-    ((bStatus_t(*)(uint8_t addrType, uint8_t *devAddr))BLE_LIB_JT(20))
+    ((bStatus_t (*)(uint8_t addrType, uint8_t* devAddr))BLE_LIB_JT(20))
 
 /**
  * @brief   Remove a device address from white list
@@ -3314,7 +3314,7 @@ typedef struct tag_rf_config {
  * @return  Command Status.
  */
 #define LL_RemoveWhiteListDevice \
-    ((bStatus_t(*)(uint8_t addrType, uint8_t *devAddr))BLE_LIB_JT(21))
+    ((bStatus_t (*)(uint8_t addrType, uint8_t* devAddr))BLE_LIB_JT(21))
 
 /**
  * @brief   Clear white list
@@ -3323,7 +3323,7 @@ typedef struct tag_rf_config {
  *
  * @return  Command Status.
  */
-#define LL_ClearWhiteList ((bStatus_t(*)(void))BLE_LIB_JT(22))
+#define LL_ClearWhiteList ((bStatus_t (*)(void))BLE_LIB_JT(22))
 
 /**
  * @brief   Encrypt data
@@ -3334,9 +3334,9 @@ typedef struct tag_rf_config {
  *
  * @return  Command Status.
  */
-#define LL_Encrypt                                       \
-    ((bStatus_t(*)(uint8_t *key, uint8_t *plaintextData, \
-                   uint8_t *encryptData))BLE_LIB_JT(23))
+#define LL_Encrypt                                        \
+    ((bStatus_t (*)(uint8_t* key, uint8_t* plaintextData, \
+                    uint8_t* encryptData))BLE_LIB_JT(23))
 
 /**
  * @brief   Decrypt data
@@ -3347,9 +3347,9 @@ typedef struct tag_rf_config {
  *
  * @return  Command Status.
  */
-#define LL_Decrypt                                       \
-    ((bStatus_t(*)(uint8_t *key, uint8_t *plaintextData, \
-                   uint8_t *decryptData))BLE_LIB_JT(24))
+#define LL_Decrypt                                        \
+    ((bStatus_t (*)(uint8_t* key, uint8_t* plaintextData, \
+                    uint8_t* decryptData))BLE_LIB_JT(24))
 
 /**
  * @brief   get number of unAck packet in current connect buffer
@@ -3389,7 +3389,7 @@ typedef struct tag_rf_config {
  *
  * @return  Command Status.
  */
-#define LL_SetTxPowerLevel ((bStatus_t(*)(uint8_t power))BLE_LIB_JT(27))
+#define LL_SetTxPowerLevel ((bStatus_t (*)(uint8_t power))BLE_LIB_JT(27))
 
 /**
  * @brief   read rssi
@@ -3428,7 +3428,7 @@ typedef struct tag_rf_config {
  *
  * @return  None
  */
-#define BLE_RegInit               ((void (*)(void))BLE_LIB_JT(110))
+#define BLE_RegInit       ((void (*)(void))BLE_LIB_JT(110))
 
 /**
  * @brief   Init BLE lib. RTC will be occupied at the same time.
@@ -3437,7 +3437,7 @@ typedef struct tag_rf_config {
  *
  * @return  0-success. error defined @ ERR_LIB_INIT
  */
-#define BLE_LibInit               ((bStatus_t(*)(bleConfig_t * pCfg)) BLE_LIB_JT(28))
+#define BLE_LibInit       ((bStatus_t (*)(bleConfig_t * pCfg)) BLE_LIB_JT(28))
 
 /**
  * @brief   interrupt handler.
@@ -3446,7 +3446,7 @@ typedef struct tag_rf_config {
  *
  * @return  None
  */
-#define BB_IRQLibHandler          ((void (*)(void))BLE_LIB_RAM_JT(1))
+#define BB_IRQLibHandler  ((void (*)(void))BLE_LIB_RAM_JT(1))
 
 /**
  * @brief   interrupt handler.
@@ -3455,7 +3455,7 @@ typedef struct tag_rf_config {
  *
  * @return  None
  */
-#define LLE_IRQLibHandler         ((void (*)(void))BLE_LIB_RAM_JT(2))
+#define LLE_IRQLibHandler ((void (*)(void))BLE_LIB_RAM_JT(2))
 
 /**
  * @brief   generate a valid access address
@@ -3477,7 +3477,7 @@ typedef struct tag_rf_config {
  * linkDB_Register - Register with this function to receive a callback when
  *              status changes on a connection.
  */
-#define linkDB_Register           ((uint8_t (*)(pfnLinkDBCB_t pFunc))BLE_LIB_JT(30))
+#define linkDB_Register ((uint8_t (*)(pfnLinkDBCB_t pFunc))BLE_LIB_JT(30))
 
 /*
  * linkDB_State - Check to see if a physical link is in a specific state.
@@ -3520,13 +3520,13 @@ typedef struct tag_rf_config {
  *          bleNotConnected: Connection is down.<BR>
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  */
-#define ATT_HandleValueCfm ((bStatus_t(*)(uint16_t connHandle))BLE_LIB_JT(34))
+#define ATT_HandleValueCfm ((bStatus_t (*)(uint16_t connHandle))BLE_LIB_JT(34))
 
 /*
  * Compare two UUIDs. The UUIDs are converted if necessary.
  */
 #define ATT_CompareUUID                                                        \
-    ((uint8_t (*)(const uint8_t *pUUID1, uint16_t len1, const uint8_t *pUUID2, \
+    ((uint8_t (*)(const uint8_t* pUUID1, uint16_t len1, const uint8_t* pUUID2, \
                   uint16_t len2))BLE_LIB_JT(35))
 
 /**
@@ -3535,7 +3535,7 @@ typedef struct tag_rf_config {
  * @return  SUCCESS: Client initialized successfully.<BR>
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  */
-#define GATT_InitClient     ((bStatus_t(*)(void))BLE_LIB_JT(36))
+#define GATT_InitClient     ((bStatus_t (*)(void))BLE_LIB_JT(36))
 
 /**
  * @brief   Register to receive incoming ATT Indications or Notifications
@@ -3556,7 +3556,7 @@ typedef struct tag_rf_config {
  * @return  Pointer to attribute record. NULL, otherwise.
  */
 #define GATT_FindHandle \
-    ((gattAttribute_t * (*)(uint16_t handle, uint16_t *pHandle)) BLE_LIB_JT(38))
+    ((gattAttribute_t * (*)(uint16_t handle, uint16_t* pHandle)) BLE_LIB_JT(38))
 
 /**
  * @brief   This sub-procedure is used when a server is configured to 
@@ -3586,9 +3586,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_Indication                                            \
-    ((bStatus_t(*)(uint16_t connHandle, attHandleValueInd_t *pInd, \
-                   uint8_t authenticated, uint8_t taskId))BLE_LIB_JT(39))
+#define GATT_Indication                                             \
+    ((bStatus_t (*)(uint16_t connHandle, attHandleValueInd_t* pInd, \
+                    uint8_t authenticated, uint8_t taskId))BLE_LIB_JT(39))
 /**
  * @brief   This sub-procedure is used when a server is configured to 
  *          notify a characteristic value to a client without expecting
@@ -3612,9 +3612,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_Notification                                            \
-    ((bStatus_t(*)(uint16_t connHandle, attHandleValueNoti_t *pNoti, \
-                   uint8_t authenticated))BLE_LIB_JT(40))
+#define GATT_Notification                                             \
+    ((bStatus_t (*)(uint16_t connHandle, attHandleValueNoti_t* pNoti, \
+                    uint8_t authenticated))BLE_LIB_JT(40))
 
 /**
  * @brief   This sub-procedure is used by the client to set the ATT_MTU
@@ -3646,9 +3646,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_ExchangeMTU                                           \
-    ((bStatus_t(*)(uint16_t connHandle, attExchangeMTUReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(41))
+#define GATT_ExchangeMTU                                            \
+    ((bStatus_t (*)(uint16_t connHandle, attExchangeMTUReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(41))
 
 /**
  * @brief   This sub-procedure is used by a client to discover all 
@@ -3680,7 +3680,7 @@ typedef struct tag_rf_config {
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 #define GATT_DiscAllPrimaryServices \
-    ((bStatus_t(*)(uint16_t connHandle, uint8_t taskId))BLE_LIB_JT(42))
+    ((bStatus_t (*)(uint16_t connHandle, uint8_t taskId))BLE_LIB_JT(42))
 
 /**
  * @brief   This sub-procedure is used by a client to discover a specific
@@ -3717,9 +3717,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_DiscPrimaryServiceByUUID                                \
-    ((bStatus_t(*)(uint16_t connHandle, uint8_t *pUUID, uint8_t len, \
-                   uint8_t taskId))BLE_LIB_JT(43))
+#define GATT_DiscPrimaryServiceByUUID                                 \
+    ((bStatus_t (*)(uint16_t connHandle, uint8_t* pUUID, uint8_t len, \
+                    uint8_t taskId))BLE_LIB_JT(43))
 
 /**
  * @brief   This sub-procedure is used by a client to find include
@@ -3755,9 +3755,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_FindIncludedServices                             \
-    ((bStatus_t(*)(uint16_t connHandle, uint16_t startHandle, \
-                   uint16_t endHandle, uint8_t taskId))BLE_LIB_JT(44))
+#define GATT_FindIncludedServices                              \
+    ((bStatus_t (*)(uint16_t connHandle, uint16_t startHandle, \
+                    uint16_t endHandle, uint8_t taskId))BLE_LIB_JT(44))
 
 /**
  * @brief   This sub-procedure is used by a client to find all the 
@@ -3793,9 +3793,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_DiscAllChars                                     \
-    ((bStatus_t(*)(uint16_t connHandle, uint16_t startHandle, \
-                   uint16_t endHandle, uint8_t taskId))BLE_LIB_JT(45))
+#define GATT_DiscAllChars                                      \
+    ((bStatus_t (*)(uint16_t connHandle, uint16_t startHandle, \
+                    uint16_t endHandle, uint8_t taskId))BLE_LIB_JT(45))
 
 /**
  * @brief   This sub-procedure is used by a client to discover service 
@@ -3831,9 +3831,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_DiscCharsByUUID                                      \
-    ((bStatus_t(*)(uint16_t connHandle, attReadByTypeReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(46))
+#define GATT_DiscCharsByUUID                                       \
+    ((bStatus_t (*)(uint16_t connHandle, attReadByTypeReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(46))
 
 /**
  * @brief   This sub-procedure is used by a client to find all the 
@@ -3869,9 +3869,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_DiscAllCharDescs                                 \
-    ((bStatus_t(*)(uint16_t connHandle, uint16_t startHandle, \
-                   uint16_t endHandle, uint8_t taskId))BLE_LIB_JT(47))
+#define GATT_DiscAllCharDescs                                  \
+    ((bStatus_t (*)(uint16_t connHandle, uint16_t startHandle, \
+                    uint16_t endHandle, uint8_t taskId))BLE_LIB_JT(47))
 
 /**
  * @brief   This sub-procedure is used to read a Characteristic Value
@@ -3908,9 +3908,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_ReadCharValue                                  \
-    ((bStatus_t(*)(uint16_t connHandle, attReadReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(48))
+#define GATT_ReadCharValue                                   \
+    ((bStatus_t (*)(uint16_t connHandle, attReadReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(48))
 
 /**
  * @brief   This sub-procedure is used to read a Characteristic Value
@@ -3945,9 +3945,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_ReadUsingCharUUID                                    \
-    ((bStatus_t(*)(uint16_t connHandle, attReadByTypeReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(49))
+#define GATT_ReadUsingCharUUID                                     \
+    ((bStatus_t (*)(uint16_t connHandle, attReadByTypeReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(49))
 
 /**
  * @brief   This sub-procedure is used to read a Characteristic Value from
@@ -3978,9 +3978,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_ReadLongCharValue                                  \
-    ((bStatus_t(*)(uint16_t connHandle, attReadBlobReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(50))
+#define GATT_ReadLongCharValue                                   \
+    ((bStatus_t (*)(uint16_t connHandle, attReadBlobReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(50))
 
 /**
  * @brief   This sub-procedure is used to read multiple Characteristic Values
@@ -4013,9 +4013,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_ReadMultiCharValues                                 \
-    ((bStatus_t(*)(uint16_t connHandle, attReadMultiReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(51))
+#define GATT_ReadMultiCharValues                                  \
+    ((bStatus_t (*)(uint16_t connHandle, attReadMultiReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(51))
 
 /**
  * @brief   This sub-procedure is used to write a Characteristic Value
@@ -4049,7 +4049,7 @@ typedef struct tag_rf_config {
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 #define GATT_WriteNoRsp \
-    ((bStatus_t(*)(uint16_t connHandle, attWriteReq_t *pReq))BLE_LIB_JT(52))
+    ((bStatus_t (*)(uint16_t connHandle, attWriteReq_t* pReq))BLE_LIB_JT(52))
 
 /**
  * @brief   This sub-procedure is used to write a Characteristic Value
@@ -4088,7 +4088,7 @@ typedef struct tag_rf_config {
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 #define GATT_SignedWriteNoRsp \
-    ((bStatus_t(*)(uint16_t connHandle, attWriteReq_t *pReq))BLE_LIB_JT(53))
+    ((bStatus_t (*)(uint16_t connHandle, attWriteReq_t* pReq))BLE_LIB_JT(53))
 
 /**
  * @brief   This sub-procedure is used to write a characteristic value
@@ -4124,9 +4124,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_WriteCharValue                                  \
-    ((bStatus_t(*)(uint16_t connHandle, attWriteReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(54))
+#define GATT_WriteCharValue                                   \
+    ((bStatus_t (*)(uint16_t connHandle, attWriteReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(54))
 
 /**
  * @brief   This sub-procedure is used to write a Characteristic Value to
@@ -4162,9 +4162,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_WriteLongCharValue                                     \
-    ((bStatus_t(*)(uint16_t connHandle, attPrepareWriteReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(55))
+#define GATT_WriteLongCharValue                                      \
+    ((bStatus_t (*)(uint16_t connHandle, attPrepareWriteReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(55))
 
 /**
  * @brief   This sub-procedure is used to write a Characteristic Value to
@@ -4211,10 +4211,10 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_ReliableWrites                                          \
-    ((bStatus_t(*)(uint16_t connHandle, attPrepareWriteReq_t *pReqs, \
-                   uint8_t numReqs, uint8_t flags,                   \
-                   uint8_t taskId))BLE_LIB_JT(56))
+#define GATT_ReliableWrites                                           \
+    ((bStatus_t (*)(uint16_t connHandle, attPrepareWriteReq_t* pReqs, \
+                    uint8_t numReqs, uint8_t flags,                   \
+                    uint8_t taskId))BLE_LIB_JT(56))
 
 /**
  * @brief   This sub-procedure is used to read a characteristic descriptor
@@ -4247,9 +4247,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_ReadCharDesc                                   \
-    ((bStatus_t(*)(uint16_t connHandle, attReadReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(57))
+#define GATT_ReadCharDesc                                    \
+    ((bStatus_t (*)(uint16_t connHandle, attReadReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(57))
 
 /**
  * @brief   This sub-procedure is used to read a characteristic descriptor
@@ -4284,9 +4284,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_ReadLongCharDesc                                   \
-    ((bStatus_t(*)(uint16_t connHandle, attReadBlobReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(58))
+#define GATT_ReadLongCharDesc                                    \
+    ((bStatus_t (*)(uint16_t connHandle, attReadBlobReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(58))
 
 /**
  * @brief   This sub-procedure is used to write a characteristic
@@ -4319,9 +4319,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_WriteCharDesc                                   \
-    ((bStatus_t(*)(uint16_t connHandle, attWriteReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(59))
+#define GATT_WriteCharDesc                                    \
+    ((bStatus_t (*)(uint16_t connHandle, attWriteReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(59))
 
 /**
  * @brief   This sub-procedure is used to write a Characteristic Value to
@@ -4357,9 +4357,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleTimeout: Previous transaction timed out.<BR>
  */
-#define GATT_WriteLongCharDesc                                      \
-    ((bStatus_t(*)(uint16_t connHandle, attPrepareWriteReq_t *pReq, \
-                   uint8_t taskId))BLE_LIB_JT(60))
+#define GATT_WriteLongCharDesc                                       \
+    ((bStatus_t (*)(uint16_t connHandle, attPrepareWriteReq_t* pReq, \
+                    uint8_t taskId))BLE_LIB_JT(60))
 
 /**
  * @brief   GATT implementation of the allocator functionality.
@@ -4375,8 +4375,8 @@ typedef struct tag_rf_config {
  * @return  pointer to the heap allocation; NULL if error or failure.
  */
 #define GATT_bm_alloc                                               \
-    ((void *(*)(uint16_t connHandle, uint8_t opcode, uint16_t size, \
-                uint16_t *pSizeAlloc, uint8_t flag))BLE_LIB_JT(61))
+    ((void* (*)(uint16_t connHandle, uint8_t opcode, uint16_t size, \
+                uint16_t* pSizeAlloc, uint8_t flag))BLE_LIB_JT(61))
 
 /**
  * @brief   GATT implementation of the de-allocator functionality.
@@ -4404,9 +4404,9 @@ typedef struct tag_rf_config {
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  *          bleInvalidRange: Encryption key size's out of range.<BR>
  */
-#define GATTServApp_RegisterService                                    \
-    ((bStatus_t(*)(gattAttribute_t * pAttrs, uint16_t numAttrs,        \
-                   uint8_t encKeySize, gattServiceCBs_t *pServiceCBs)) \
+#define GATTServApp_RegisterService                                     \
+    ((bStatus_t (*)(gattAttribute_t * pAttrs, uint16_t numAttrs,        \
+                    uint8_t encKeySize, gattServiceCBs_t* pServiceCBs)) \
          BLE_LIB_JT(63))
 
 /**
@@ -4420,7 +4420,8 @@ typedef struct tag_rf_config {
  *          FAILURE: Not enough attribute handles available.<BR>
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  */
-#define GATTServApp_AddService ((bStatus_t(*)(uint32_t services))BLE_LIB_JT(64))
+#define GATTServApp_AddService \
+    ((bStatus_t (*)(uint32_t services))BLE_LIB_JT(64))
 
 /**
  * @brief   Deregister a service's attribute list and callback functions from
@@ -4435,8 +4436,9 @@ typedef struct tag_rf_config {
  * @return  SUCCESS: Service deregistered successfully.<BR>
  *          FAILURE: Service not found.<BR>
  */
-#define GATTServApp_DeregisterService \
-    ((bStatus_t(*)(uint16_t handle, gattAttribute_t **p2pAttrs))BLE_LIB_JT(114))
+#define GATTServApp_DeregisterService                                        \
+    ((bStatus_t (*)(uint16_t handle, gattAttribute_t** p2pAttrs))BLE_LIB_JT( \
+        114))
 
 /**
  * @brief   Initialize the client characteristic configuration table.
@@ -4451,7 +4453,7 @@ typedef struct tag_rf_config {
  * @return  none
  */
 #define GATTServApp_InitCharCfg \
-    ((void (*)(uint16_t connHandle, gattCharCfg_t *charCfgTbl))BLE_LIB_JT(65))
+    ((void (*)(uint16_t connHandle, gattCharCfg_t* charCfgTbl))BLE_LIB_JT(65))
 
 /**
  * @brief   Send out a Service Changed Indication.
@@ -4467,7 +4469,7 @@ typedef struct tag_rf_config {
  *          blePending: A confirmation is pending with this client.<BR>
  */
 #define GATTServApp_SendServiceChangedInd \
-    ((bStatus_t(*)(uint16_t connHandle, tmosTaskID taskID))BLE_LIB_JT(127))
+    ((bStatus_t (*)(uint16_t connHandle, tmosTaskID taskID))BLE_LIB_JT(127))
 
 /**
  * @brief   Read the client characteristic configuration for a given client.
@@ -4482,7 +4484,7 @@ typedef struct tag_rf_config {
  * @return  attribute value
  */
 #define GATTServApp_ReadCharCfg                                                \
-    ((uint16_t (*)(uint16_t connHandle, gattCharCfg_t *charCfgTbl))BLE_LIB_JT( \
+    ((uint16_t (*)(uint16_t connHandle, gattCharCfg_t* charCfgTbl))BLE_LIB_JT( \
         66))
 
 /**
@@ -4499,7 +4501,7 @@ typedef struct tag_rf_config {
  * @return  Success or Failure
  */
 #define GATTServApp_WriteCharCfg                                  \
-    ((uint8_t (*)(uint16_t connHandle, gattCharCfg_t *charCfgTbl, \
+    ((uint8_t (*)(uint16_t connHandle, gattCharCfg_t* charCfgTbl, \
                   uint16_t value))BLE_LIB_JT(67))
 
 /**
@@ -4515,10 +4517,10 @@ typedef struct tag_rf_config {
  *
  * @return  Success or Failure
  */
-#define GATTServApp_ProcessCCCWriteReq                             \
-    ((bStatus_t(*)(uint16_t connHandle, gattAttribute_t *pAttr,    \
-                   uint8_t *pValue, uint16_t len, uint16_t offset, \
-                   uint16_t validCfg))BLE_LIB_JT(68))
+#define GATTServApp_ProcessCCCWriteReq                              \
+    ((bStatus_t (*)(uint16_t connHandle, gattAttribute_t* pAttr,    \
+                    uint8_t* pValue, uint16_t len, uint16_t offset, \
+                    uint16_t validCfg))BLE_LIB_JT(68))
 
 /**
  * @brief   Set a GAP GATT Server parameter.
@@ -4533,7 +4535,7 @@ typedef struct tag_rf_config {
  * @return  bStatus_t
  */
 #define GGS_SetParameter \
-    ((bStatus_t(*)(uint8_t param, uint8_t len, void *value))BLE_LIB_JT(69))
+    ((bStatus_t (*)(uint8_t param, uint8_t len, void* value))BLE_LIB_JT(69))
 
 /**
  * @brief   Get a GAP GATT Server parameter.
@@ -4547,7 +4549,7 @@ typedef struct tag_rf_config {
  * @return  bStatus_t
  */
 #define GGS_GetParameter \
-    ((bStatus_t(*)(uint8_t param, void *value))BLE_LIB_JT(70))
+    ((bStatus_t (*)(uint8_t param, void* value))BLE_LIB_JT(70))
 
 /**
  * @brief   Add function for the GAP GATT Service.
@@ -4560,7 +4562,7 @@ typedef struct tag_rf_config {
  *          FAILURE: Not enough attribute handles available.<BR>
  *          bleMemAllocError: Memory allocation error occurred.<BR>
  */
-#define GGS_AddService ((bStatus_t(*)(uint32_t services))BLE_LIB_JT(71))
+#define GGS_AddService ((bStatus_t (*)(uint32_t services))BLE_LIB_JT(71))
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - Initialization and Configuration
@@ -4575,7 +4577,7 @@ typedef struct tag_rf_config {
  * @return  SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
 #define GAP_SetParamValue \
-    ((bStatus_t(*)(uint16_t paramID, uint16_t paramValue))BLE_LIB_JT(72))
+    ((bStatus_t (*)(uint16_t paramID, uint16_t paramValue))BLE_LIB_JT(72))
 
 /**
  * @brief   Get a GAP Parameter value.
@@ -4601,7 +4603,7 @@ typedef struct tag_rf_config {
  *          If return value isn't SUCCESS, the address type remains the same as before this call.
  */
 #define GAP_ConfigDeviceAddr \
-    ((bStatus_t(*)(uint8_t addrType, uint8_t *pStaticAddr))BLE_LIB_JT(74))
+    ((bStatus_t (*)(uint8_t addrType, uint8_t* pStaticAddr))BLE_LIB_JT(74))
 
 /**
  * @brief   Resolves a private address against an IRK.
@@ -4617,7 +4619,7 @@ typedef struct tag_rf_config {
  *          INVALIDPARAMETER: parameters invalid<BR>
  */
 #define GAP_ResolvePrivateAddr \
-    ((bStatus_t(*)(uint8_t *pIRK, uint8_t *pAddr))BLE_LIB_JT(75))
+    ((bStatus_t (*)(uint8_t* pIRK, uint8_t* pAddr))BLE_LIB_JT(75))
 
 /**
  * @brief   Setup or change advertising and scan response data.
@@ -4633,9 +4635,9 @@ typedef struct tag_rf_config {
  * @return  SUCCESS: data accepted
  *          bleIncorrectMode: invalid profile role
  */
-#define GAP_UpdateAdvertisingData                                    \
-    ((bStatus_t(*)(uint8_t taskID, uint8_t adType, uint16_t dataLen, \
-                   uint8_t *pAdvertData))BLE_LIB_JT(76))
+#define GAP_UpdateAdvertisingData                                     \
+    ((bStatus_t (*)(uint8_t taskID, uint8_t adType, uint16_t dataLen, \
+                    uint8_t* pAdvertData))BLE_LIB_JT(76))
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - GAP Bond API
@@ -4655,7 +4657,7 @@ typedef struct tag_rf_config {
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
 #define GAPBondMgr_SetParameter \
-    ((bStatus_t(*)(uint16_t param, uint8_t len, void *pValue))BLE_LIB_JT(77))
+    ((bStatus_t (*)(uint16_t param, uint8_t len, void* pValue))BLE_LIB_JT(77))
 
 /**
  * @brief   Get a GAP Bond Manager parameter.
@@ -4670,7 +4672,7 @@ typedef struct tag_rf_config {
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
 #define GAPBondMgr_GetParameter \
-    ((bStatus_t(*)(uint16_t param, void *pValue))BLE_LIB_JT(78))
+    ((bStatus_t (*)(uint16_t param, void* pValue))BLE_LIB_JT(78))
 
 /**
  * @brief   Respond to a passcode request.
@@ -4682,9 +4684,9 @@ typedef struct tag_rf_config {
  * @return  SUCCESS - bond record found and changed
  *          bleIncorrectMode - Link not found.
  */
-#define GAPBondMgr_PasscodeRsp                                \
-    ((bStatus_t(*)(uint16_t connectionHandle, uint8_t status, \
-                   uint32_t passcode))BLE_LIB_JT(79))
+#define GAPBondMgr_PasscodeRsp                                 \
+    ((bStatus_t (*)(uint16_t connectionHandle, uint8_t status, \
+                    uint32_t passcode))BLE_LIB_JT(79))
 
 /**
  * @brief   Respond to a passcode request.
@@ -4718,7 +4720,7 @@ typedef struct tag_rf_config {
  *          bleIncorrectMode: wrong GAP role, must be a Peripheral Role
  */
 #define GAPBondMgr_PeriSecurityReq \
-    ((bStatus_t(*)(uint16_t connHandle))BLE_LIB_JT(132))
+    ((bStatus_t (*)(uint16_t connHandle))BLE_LIB_JT(132))
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - GAPRole API
@@ -4737,7 +4739,7 @@ typedef struct tag_rf_config {
  * @return  SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
 #define GAPRole_SetParameter \
-    ((bStatus_t(*)(uint16_t param, uint16_t len, void *pValue))BLE_LIB_JT(80))
+    ((bStatus_t (*)(uint16_t param, uint16_t len, void* pValue))BLE_LIB_JT(80))
 
 /**
  * @brief   Get a GAP Role parameter.
@@ -4753,7 +4755,7 @@ typedef struct tag_rf_config {
  * @return      SUCCESS or INVALIDPARAMETER (invalid paramID)
  */
 #define GAPRole_GetParameter \
-    ((bStatus_t(*)(uint16_t param, void *pValue))BLE_LIB_JT(81))
+    ((bStatus_t (*)(uint16_t param, void* pValue))BLE_LIB_JT(81))
 
 /**
  * @brief       Terminates the existing connection.
@@ -4761,7 +4763,7 @@ typedef struct tag_rf_config {
  * @return      SUCCESS or bleIncorrectMode
  */
 #define GAPRole_TerminateLink \
-    ((bStatus_t(*)(uint16_t connHandle))BLE_LIB_JT(82))
+    ((bStatus_t (*)(uint16_t connHandle))BLE_LIB_JT(82))
 
 /**
  * @brief   Read Rssi Cmd.
@@ -4771,7 +4773,7 @@ typedef struct tag_rf_config {
  * @return  bStatus_t: HCI Error Code.<BR>
  *          
  */
-#define GAPRole_ReadRssiCmd ((bStatus_t(*)(uint16_t connHandle))BLE_LIB_JT(83))
+#define GAPRole_ReadRssiCmd ((bStatus_t (*)(uint16_t connHandle))BLE_LIB_JT(83))
 
 /**
  * @brief   used to synchronize with a periodic advertising train from an advertiser and
@@ -4783,7 +4785,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPRole_CreateSync \
-    ((bStatus_t(*)(gapCreateSync_t * pSync)) BLE_LIB_JT(123))
+    ((bStatus_t (*)(gapCreateSync_t * pSync)) BLE_LIB_JT(123))
 
 /**
  * @brief   used to cancel the HCI_LE_Periodic_Advertising_Create_Sync command while
@@ -4794,7 +4796,7 @@ typedef struct tag_rf_config {
  * @return  bStatus_t: HCI Error Code.<BR>
  *
  */
-#define GAPRole_CancelSync ((bStatus_t(*)(void))BLE_LIB_JT(124))
+#define GAPRole_CancelSync ((bStatus_t (*)(void))BLE_LIB_JT(124))
 
 /**
  * @brief   used to stop reception of the periodic advertising train identified
@@ -4806,7 +4808,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPRole_TerminateSync \
-    ((bStatus_t(*)(uint16_t syncHandle))BLE_LIB_JT(125))
+    ((bStatus_t (*)(uint16_t syncHandle))BLE_LIB_JT(125))
 
 /**
  * @brief   used to instruct the Controller to send synchronization information about the periodic
@@ -4818,7 +4820,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPRole_SyncTransferParameters \
-    ((bStatus_t(*)(gapSyncTransferParam_t * pSync)) BLE_LIB_JT(144))
+    ((bStatus_t (*)(gapSyncTransferParam_t * pSync)) BLE_LIB_JT(144))
 
 /**
  * @brief   used to instruct the Controller to send synchronization information about the periodic
@@ -4830,7 +4832,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPRole_SyncTransferSync \
-    ((bStatus_t(*)(gapSyncTransferSync_t * pSync)) BLE_LIB_JT(145))
+    ((bStatus_t (*)(gapSyncTransferSync_t * pSync)) BLE_LIB_JT(145))
 
 /**
  * @brief   used to instruct the Controller to send synchronization information about the periodic
@@ -4842,7 +4844,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPRole_SyncTransferAdvertising \
-    ((bStatus_t(*)(gapSyncTransferAdvertising_t * pSync)) BLE_LIB_JT(146))
+    ((bStatus_t (*)(gapSyncTransferAdvertising_t * pSync)) BLE_LIB_JT(146))
 
 /**
  * @brief   Update the link connection parameters.
@@ -4856,10 +4858,10 @@ typedef struct tag_rf_config {
  * @return  SUCCESS: Connection update started started.<BR>
  *          bleIncorrectMode: No connection to update.<BR>
  */
-#define GAPRole_UpdateLink                                         \
-    ((bStatus_t(*)(uint16_t connHandle, uint16_t connIntervalMin,  \
-                   uint16_t connIntervalMax, uint16_t connLatency, \
-                   uint16_t connTimeout))BLE_LIB_JT(84))
+#define GAPRole_UpdateLink                                          \
+    ((bStatus_t (*)(uint16_t connHandle, uint16_t connIntervalMin,  \
+                    uint16_t connIntervalMax, uint16_t connLatency, \
+                    uint16_t connTimeout))BLE_LIB_JT(84))
 
 /**
  * @brief   Update the connection phy.
@@ -4875,9 +4877,9 @@ typedef struct tag_rf_config {
  * @return  SUCCESS: PHY update started started .<BR>
  *          bleIncorrectMode: No connection to update.<BR>
  */
-#define GAPRole_UpdatePHY                                                  \
-    ((bStatus_t(*)(uint16_t connHandle, uint8_t all_phys, uint8_t tx_phys, \
-                   uint8_t rx_phys, uint16_t phy_options))BLE_LIB_JT(122))
+#define GAPRole_UpdatePHY                                                   \
+    ((bStatus_t (*)(uint16_t connHandle, uint8_t all_phys, uint8_t tx_phys, \
+                    uint8_t rx_phys, uint16_t phy_options))BLE_LIB_JT(122))
 
 /**
  * @brief   used to allow the Host to specify the privacy mode to be used  for a given entry on the resolving list.
@@ -4895,9 +4897,9 @@ typedef struct tag_rf_config {
  * @return  Command Status.
  *
  */
-#define GAPRole_SetPrivacyMode                              \
-    ((bStatus_t(*)(uint8_t addrTypePeer, uint8_t *peerAddr, \
-                   uint8_t privacyMode))BLE_LIB_JT(133))
+#define GAPRole_SetPrivacyMode                               \
+    ((bStatus_t (*)(uint8_t addrTypePeer, uint8_t* peerAddr, \
+                    uint8_t privacyMode))BLE_LIB_JT(133))
 
 /**
  * @brief   used to set the path loss threshold reporting parameters.
@@ -4908,7 +4910,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPRole_SetPathLossReporting \
-    ((bStatus_t(*)(gapRoleSetPathLossReporting_t * pParm)) BLE_LIB_JT(134))
+    ((bStatus_t (*)(gapRoleSetPathLossReporting_t * pParm)) BLE_LIB_JT(134))
 
 /**
  * @brief   used to set power level management.
@@ -4919,7 +4921,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPRole_SetPowerlevel \
-    ((bStatus_t(*)(gapRolePowerlevelManagement_t * pParm)) BLE_LIB_JT(136))
+    ((bStatus_t (*)(gapRolePowerlevelManagement_t * pParm)) BLE_LIB_JT(136))
 
 /**
  * @brief   used to set the parameters for pawr advertising..
@@ -4930,7 +4932,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPPawr_SetParameters \
-    ((bStatus_t(*)(gapPawrSetParam_t * pParm)) BLE_LIB_JT(141))
+    ((bStatus_t (*)(gapPawrSetParam_t * pParm)) BLE_LIB_JT(141))
 
 /**
  * @brief   used to set the data for one or more subevents of PAwR in reply to an
@@ -4943,9 +4945,9 @@ typedef struct tag_rf_config {
  * @return  Command Status.
  *
  */
-#define GAPPawr_SetSubeventData                             \
-    ((bStatus_t(*)(uint8_t advHandle, uint8_t numSubevents, \
-                   gapPawrSetData_t *pParm))BLE_LIB_JT(142))
+#define GAPPawr_SetSubeventData                              \
+    ((bStatus_t (*)(uint8_t advHandle, uint8_t numSubevents, \
+                    gapPawrSetData_t* pParm))BLE_LIB_JT(142))
 
 /**
  * @brief   used by the Host to set the data for a response slot in a specific subevent
@@ -4957,7 +4959,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPPawr_SetResponseData \
-    ((bStatus_t(*)(gapPawrSetResponseData_t * pParm)) BLE_LIB_JT(143))
+    ((bStatus_t (*)(gapPawrSetResponseData_t * pParm)) BLE_LIB_JT(143))
 
 /**
  * @brief   used to create an ACL connection between a periodic advertiser and a synchronized device.
@@ -4968,7 +4970,7 @@ typedef struct tag_rf_config {
  *
  */
 #define GAPPawr_CreatConnection \
-    ((bStatus_t(*)(gapPawrCreateConnection_t * pParm)) BLE_LIB_JT(147))
+    ((bStatus_t (*)(gapPawrCreateConnection_t * pParm)) BLE_LIB_JT(147))
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - BROADCASTER_PROFILE_API Broadcaster Profile API
@@ -4981,7 +4983,7 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS,bleInvalidRange
  */
-#define GAPRole_BroadcasterInit ((bStatus_t(*)(void))BLE_LIB_JT(85))
+#define GAPRole_BroadcasterInit ((bStatus_t (*)(void))BLE_LIB_JT(85))
 
 /**
  * @brief   Does the device initialization.  Only call this function once.
@@ -4991,7 +4993,7 @@ typedef struct tag_rf_config {
  * @return  SUCCESS or bleAlreadyInRequestedMode
  */
 #define GAPRole_BroadcasterStartDevice \
-    ((bStatus_t(*)(gapRolesBroadcasterCBs_t * pAppCallbacks)) BLE_LIB_JT(86))
+    ((bStatus_t (*)(gapRolesBroadcasterCBs_t * pAppCallbacks)) BLE_LIB_JT(86))
 
 /**
  * @brief   Does the Broadcaster receive scan request call initialization.
@@ -5015,7 +5017,7 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS,bleInvalidRange
  */
-#define GAPRole_ObserverInit ((bStatus_t(*)(void))BLE_LIB_JT(87))
+#define GAPRole_ObserverInit ((bStatus_t (*)(void))BLE_LIB_JT(87))
 
 /**
  * @brief   Start the device in Observer role.  This function is typically
@@ -5027,7 +5029,7 @@ typedef struct tag_rf_config {
  *          bleAlreadyInRequestedMode: Device already started.<BR>
  */
 #define GAPRole_ObserverStartDevice \
-    ((bStatus_t(*)(gapRoleObserverCB_t * pAppCallbacks)) BLE_LIB_JT(88))
+    ((bStatus_t (*)(gapRoleObserverCB_t * pAppCallbacks)) BLE_LIB_JT(88))
 
 /**
  * @brief   Start a device discovery scan.
@@ -5040,9 +5042,9 @@ typedef struct tag_rf_config {
  *          bleIncorrectMode: Invalid profile role.<BR>
  *          bleAlreadyInRequestedMode: Not available.<BR>
  */
-#define GAPRole_ObserverStartDiscovery               \
-    ((bStatus_t(*)(uint8_t mode, uint8_t activeScan, \
-                   uint8_t whiteList))BLE_LIB_JT(89))
+#define GAPRole_ObserverStartDiscovery                \
+    ((bStatus_t (*)(uint8_t mode, uint8_t activeScan, \
+                    uint8_t whiteList))BLE_LIB_JT(89))
 
 /**
  * @brief   Cancel a device discovery scan.
@@ -5051,7 +5053,7 @@ typedef struct tag_rf_config {
  *          bleInvalidTaskID: Not the task that started discovery.<BR>
  *          bleIncorrectMode: Not in discovery mode.<BR>
  */
-#define GAPRole_ObserverCancelDiscovery ((bStatus_t(*)(void))BLE_LIB_JT(90))
+#define GAPRole_ObserverCancelDiscovery ((bStatus_t (*)(void))BLE_LIB_JT(90))
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - PERIPHERAL_PROFILE_API Peripheral Profile API
@@ -5069,7 +5071,7 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS,bleInvalidRange
  */
-#define GAPRole_PeripheralInit          ((bStatus_t(*)(void))BLE_LIB_JT(91))
+#define GAPRole_PeripheralInit          ((bStatus_t (*)(void))BLE_LIB_JT(91))
 
 /**
  * @brief   Does the device initialization.  Only call this function once.
@@ -5078,9 +5080,9 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS or bleAlreadyInRequestedMode
  */
-#define GAPRole_PeripheralStartDevice                 \
-    ((bStatus_t(*)(uint8_t taskid, gapBondCBs_t *pCB, \
-                   gapRolesCBs_t *pAppCallbacks))BLE_LIB_JT(92))
+#define GAPRole_PeripheralStartDevice                  \
+    ((bStatus_t (*)(uint8_t taskid, gapBondCBs_t* pCB, \
+                    gapRolesCBs_t* pAppCallbacks))BLE_LIB_JT(92))
 
 /**
  * @brief   Update the parameters of an existing connection
@@ -5094,10 +5096,10 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS, bleNotConnected or bleInvalidRange
  */
-#define GAPRole_PeripheralConnParamUpdateReq                      \
-    ((bStatus_t(*)(uint16_t connHandle, uint16_t connIntervalMin, \
-                   uint16_t connIntervalMax, uint16_t latency,    \
-                   uint16_t connTimeout, uint8_t taskId))BLE_LIB_JT(93))
+#define GAPRole_PeripheralConnParamUpdateReq                       \
+    ((bStatus_t (*)(uint16_t connHandle, uint16_t connIntervalMin, \
+                    uint16_t connIntervalMax, uint16_t latency,    \
+                    uint16_t connTimeout, uint8_t taskId))BLE_LIB_JT(93))
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - CENTRAL_PROFILE_API Central Profile API
@@ -5111,7 +5113,7 @@ typedef struct tag_rf_config {
  *
  * @return  SUCCESS,bleInvalidRange
  */
-#define GAPRole_CentralInit ((bStatus_t(*)(void))BLE_LIB_JT(94))
+#define GAPRole_CentralInit ((bStatus_t (*)(void))BLE_LIB_JT(94))
 
 /**
  * @brief   Start the device in Central role.  This function is typically
@@ -5122,9 +5124,9 @@ typedef struct tag_rf_config {
  * @return  SUCCESS: Operation successful.<BR>
  *          bleAlreadyInRequestedMode: Device already started.<BR>
  */
-#define GAPRole_CentralStartDevice                    \
-    ((bStatus_t(*)(uint8_t taskid, gapBondCBs_t *pCB, \
-                   gapCentralRoleCB_t *pAppCallbacks))BLE_LIB_JT(95))
+#define GAPRole_CentralStartDevice                     \
+    ((bStatus_t (*)(uint8_t taskid, gapBondCBs_t* pCB, \
+                    gapCentralRoleCB_t* pAppCallbacks))BLE_LIB_JT(95))
 
 /**
  * @brief   Start a device discovery scan.
@@ -5137,9 +5139,9 @@ typedef struct tag_rf_config {
  *          bleIncorrectMode: Invalid profile role.<BR>
  *          bleAlreadyInRequestedMode: Not available.<BR>
  */
-#define GAPRole_CentralStartDiscovery                \
-    ((bStatus_t(*)(uint8_t mode, uint8_t activeScan, \
-                   uint8_t whiteList))BLE_LIB_JT(96))
+#define GAPRole_CentralStartDiscovery                 \
+    ((bStatus_t (*)(uint8_t mode, uint8_t activeScan, \
+                    uint8_t whiteList))BLE_LIB_JT(96))
 
 /**
  * @brief   Cancel a device discovery scan.
@@ -5148,7 +5150,7 @@ typedef struct tag_rf_config {
  *          bleInvalidTaskID: Not the task that started discovery.<BR>
  *          bleIncorrectMode: Not in discovery mode.<BR>
  */
-#define GAPRole_CentralCancelDiscovery ((bStatus_t(*)(void))BLE_LIB_JT(97))
+#define GAPRole_CentralCancelDiscovery ((bStatus_t (*)(void))BLE_LIB_JT(97))
 
 /**
  * @brief   This API is called by the Central to update the Host data channels
@@ -5165,7 +5167,7 @@ typedef struct tag_rf_config {
  * @return  SUCCESS
  */
 #define GAPRole_SetHostChanClassification \
-    (((*)(uint8_t *chanMap))BLE_LIB_JT(128))
+    (((*)(uint8_t* chanMap))BLE_LIB_JT(128))
 
 /**
  * @brief   Establish a link to a peer device.
@@ -5181,9 +5183,9 @@ typedef struct tag_rf_config {
  *          bleAlreadyInRequestedMode: can't process now.<BR>
  *          bleNoResources: too many links.<BR>
  */
-#define GAPRole_CentralEstablishLink                         \
-    ((bStatus_t(*)(uint8_t highDutyCycle, uint8_t whiteList, \
-                   uint8_t addrTypePeer, uint8_t *peerAddr))BLE_LIB_JT(98))
+#define GAPRole_CentralEstablishLink                          \
+    ((bStatus_t (*)(uint8_t highDutyCycle, uint8_t whiteList, \
+                    uint8_t addrTypePeer, uint8_t* peerAddr))BLE_LIB_JT(98))
 
 /*-------------------------------------------------------------------
  * FUNCTIONS - RF_PHY Profile API
@@ -5196,7 +5198,7 @@ typedef struct tag_rf_config {
  *
  * @return  0 - success.
  */
-#define RF_RoleInit ((bStatus_t(*)(void))BLE_LIB_JT(99))
+#define RF_RoleInit ((bStatus_t (*)(void))BLE_LIB_JT(99))
 
 /**
  * @brief   rf config.
@@ -5205,7 +5207,7 @@ typedef struct tag_rf_config {
  *
  * @return  0 - success.
  */
-#define RF_Config   ((bStatus_t(*)(rfConfig_t * pConfig)) BLE_LIB_JT(100))
+#define RF_Config   ((bStatus_t (*)(rfConfig_t * pConfig)) BLE_LIB_JT(100))
 
 /**
  * @brief   rx mode.
@@ -5221,9 +5223,9 @@ typedef struct tag_rf_config {
  *
  * @return  0 - success. 1-access address error 2-busy
  */
-#define RF_Rx                                                        \
-    ((bStatus_t(*)(uint8_t *txBuf, uint8_t txLen, uint8_t pktRxType, \
-                   uint8_t pktTxType))BLE_LIB_JT(101))
+#define RF_Rx                                                         \
+    ((bStatus_t (*)(uint8_t* txBuf, uint8_t txLen, uint8_t pktRxType, \
+                    uint8_t pktTxType))BLE_LIB_JT(101))
 
 /**
  * @brief   tx mode.
@@ -5239,9 +5241,9 @@ typedef struct tag_rf_config {
  *
  * @return  0 - success. 1-access address error 2-busy
  */
-#define RF_Tx                                                        \
-    ((bStatus_t(*)(uint8_t *txBuf, uint8_t txLen, uint8_t pktTxType, \
-                   uint8_t pktRxType))BLE_LIB_JT(102))
+#define RF_Tx                                                         \
+    ((bStatus_t (*)(uint8_t* txBuf, uint8_t txLen, uint8_t pktTxType, \
+                    uint8_t pktRxType))BLE_LIB_JT(102))
 
 /**
  * @brief   shut down,stop tx/rx mode.
@@ -5250,7 +5252,7 @@ typedef struct tag_rf_config {
  *
  * @return  0 - success.
  */
-#define RF_Shut       ((bStatus_t(*)(void))BLE_LIB_JT(103))
+#define RF_Shut       ((bStatus_t (*)(void))BLE_LIB_JT(103))
 
 /**
  * @brief   rf mode set radio channel/frequency.
@@ -5271,7 +5273,7 @@ typedef struct tag_rf_config {
  * @return  0 - success.
  */
 #define RF_SetFrequency \
-    ((bStatus_t(*)(uint32_t frequency, uint8_t channel))BLE_LIB_JT(148))
+    ((bStatus_t (*)(uint32_t frequency, uint8_t channel))BLE_LIB_JT(148))
 
 /**
  * @brief   shut down rf frequency hopping
@@ -5290,7 +5292,7 @@ typedef struct tag_rf_config {
  * @return  0 - success.
  */
 #define RF_FrequencyHoppingTx \
-    ((bStatus_t(*)(uint8_t resendCount))BLE_LIB_JT(117))
+    ((bStatus_t (*)(uint8_t resendCount))BLE_LIB_JT(117))
 
 /**
  * @brief       
@@ -5300,7 +5302,7 @@ typedef struct tag_rf_config {
  * @return  0 - success.1-fail.2-LLEMode error(shall AUTO)
  */
 #define RF_FrequencyHoppingRx \
-    ((bStatus_t(*)(uint32_t timeoutMS))BLE_LIB_JT(118))
+    ((bStatus_t (*)(uint32_t timeoutMS))BLE_LIB_JT(118))
 
 /**
  * @brief   Erase FH bonded device
@@ -5318,7 +5320,7 @@ typedef struct tag_rf_config {
  *
  * @return  0 - success.
  */
-#define LL_SingleChannel ((bStatus_t(*)(uint8_t ch))BLE_LIB_JT(104))
+#define LL_SingleChannel ((bStatus_t (*)(uint8_t ch))BLE_LIB_JT(104))
 
 /**
  * @brief   used to stop any test which is in progress.
@@ -5329,7 +5331,7 @@ typedef struct tag_rf_config {
  *
  * @return  0 - success.
  */
-#define LL_TestEnd       ((bStatus_t(*)(uint8_t *pPktNum))BLE_LIB_JT(105))
+#define LL_TestEnd       ((bStatus_t (*)(uint8_t* pPktNum))BLE_LIB_JT(105))
 
 /**
  * @brief   used to start a test where the DUT receives test reference packets at a fixed interval
@@ -5347,7 +5349,7 @@ typedef struct tag_rf_config {
  * @return  0 - success.
  */
 #define API_LE_ReceiverTestCmd \
-    ((bStatus_t(*)(uint8_t *pParm, uint16_t opcode))BLE_LIB_JT(111))
+    ((bStatus_t (*)(uint8_t* pParm, uint16_t opcode))BLE_LIB_JT(111))
 
 /**
  * @brief   used to start a test where the DUT generates test reference packets at a fixed interval
@@ -5366,7 +5368,7 @@ typedef struct tag_rf_config {
  * @return  0 - success.
  */
 #define API_LE_TransmitterTestCmd \
-    ((bStatus_t(*)(uint8_t *pParm, uint16_t opcode))BLE_LIB_JT(112))
+    ((bStatus_t (*)(uint8_t* pParm, uint16_t opcode))BLE_LIB_JT(112))
 
 /**
  * @brief   used to stop any test which is in progress
@@ -5375,7 +5377,7 @@ typedef struct tag_rf_config {
  *
  * @return  0 - success.
  */
-#define API_LE_TestEndCmd    ((bStatus_t(*)(void))BLE_LIB_JT(113))
+#define API_LE_TestEndCmd    ((bStatus_t (*)(void))BLE_LIB_JT(113))
 
 /**
  * @brief   resv
@@ -5393,7 +5395,7 @@ typedef struct tag_rf_config {
  *
  * @return  Command Status.
  */
-#define RFEND_TXCtuneSet     ((bStatus_t(*)(uint8_t *pParm))BLE_LIB_JT(130))
+#define RFEND_TXCtuneSet     ((bStatus_t (*)(uint8_t* pParm))BLE_LIB_JT(130))
 
 /**
  * @brief   used to get rf TxCtune value
@@ -5402,7 +5404,7 @@ typedef struct tag_rf_config {
  *
  * @return  Command Status.
  */
-#define RFEND_TXCtuneGet     ((bStatus_t(*)(uint8_t *pParm))BLE_LIB_JT(131))
+#define RFEND_TXCtuneGet     ((bStatus_t (*)(uint8_t* pParm))BLE_LIB_JT(131))
 
 /*
  * END @ Profile API

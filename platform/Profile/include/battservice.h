@@ -101,7 +101,7 @@ extern void Batt_Register(battServiceCB_t pfnServiceCB);
  *
  * @return  bStatus_t
  */
-extern bStatus_t Batt_SetParameter(uint8_t param, uint8_t len, void *value);
+extern bStatus_t Batt_SetParameter(uint8_t param, uint8_t len, void* value);
 
 /*********************************************************************
  * @fn      Batt_GetParameter
@@ -116,7 +116,7 @@ extern bStatus_t Batt_SetParameter(uint8_t param, uint8_t len, void *value);
  *
  * @return  bStatus_t
  */
-extern bStatus_t Batt_GetParameter(uint8_t param, void *value);
+extern bStatus_t Batt_GetParameter(uint8_t param, void* value);
 
 /*********************************************************************
  * @fn          Batt_MeasLevel

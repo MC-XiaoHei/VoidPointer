@@ -50,7 +50,9 @@ uint8_t BleGapPolicy_IsConnected(void) {
     return bleGapPolicyConnHandle != GAP_CONNHANDLE_INIT ? TRUE : FALSE;
 }
 
-uint16_t BleGapPolicy_GetConnectionHandle(void) { return bleGapPolicyConnHandle; }
+uint16_t BleGapPolicy_GetConnectionHandle(void) {
+    return bleGapPolicyConnHandle;
+}
 
 void BleGapPolicy_ApplyAdvertising(void) {
     if (!bleGapPolicyGapStarted) {
@@ -58,7 +60,8 @@ void BleGapPolicy_ApplyAdvertising(void) {
     }
 
     if ((bleGapPolicyGapState & GAPROLE_STATE_ADV_MASK) == GAPROLE_CONNECTED ||
-        (bleGapPolicyGapState & GAPROLE_STATE_ADV_MASK) == GAPROLE_CONNECTED_ADV) {
+        (bleGapPolicyGapState & GAPROLE_STATE_ADV_MASK) ==
+            GAPROLE_CONNECTED_ADV) {
         return;
     }
 
@@ -66,7 +69,8 @@ void BleGapPolicy_ApplyAdvertising(void) {
                          &bleGapPolicyAdvertisingAllowed);
 }
 
-void BleGapPolicy_HandleGapState(gapRole_States_t newState, gapRoleEvent_t* pEvent) {
+void BleGapPolicy_HandleGapState(gapRole_States_t newState,
+                                 gapRoleEvent_t*  pEvent) {
     bleGapPolicyGapState = newState;
 
     switch (newState & GAPROLE_STATE_ADV_MASK) {
@@ -129,8 +133,7 @@ void BleGapPolicy_HandleReportNotifyEnabled(uint8_t id, uint8_t type,
                                             uint16_t uuid) {
     if (uuid == GATT_CLIENT_CHAR_CFG_UUID && id == HID_RPT_ID_MOUSE_IN &&
         type == HID_REPORT_TYPE_INPUT) {
-        VP_LOG_DEBUG("ble_gap",
-                     "input notify enabled;id=%u,type=%u", id, type);
+        VP_LOG_DEBUG("ble_gap", "input notify enabled;id=%u,type=%u", id, type);
         vp_on_ble_input_ready(c_vp_rtc_millis());
     }
 }

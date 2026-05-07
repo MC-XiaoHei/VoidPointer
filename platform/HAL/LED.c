@@ -34,7 +34,7 @@ typedef struct {
 static uint8_t HalLedState;  // LED state at last set/clr/blink update
 
 static uint8_t preBlinkState;  // Original State before going to blink mode
-    // bit 0, 1, 2, 3 represent led 0, 1, 2, 3
+// bit 0, 1, 2, 3 represent led 0, 1, 2, 3
 static HalLedStatus_t HalLedStatusControl;
 
 /***************************************************************************************************
@@ -75,7 +75,7 @@ void HAL_LedInit(void) {
  */
 uint8_t HalLedSet(uint8_t leds, uint8_t mode) {
     uint8_t          led;
-    HalLedControl_t *sts;
+    HalLedControl_t* sts;
 
     switch (mode) {
         case HAL_LED_MODE_BLINK: {
@@ -135,7 +135,7 @@ uint8_t HalLedSet(uint8_t leds, uint8_t mode) {
 void HalLedBlink(uint8_t leds, uint8_t numBlinks, uint8_t percent,
                  uint16_t period) {
     uint8_t          led;
-    HalLedControl_t *sts;
+    HalLedControl_t* sts;
 
     if (leds && percent && period) {
         if (percent < 100) {
@@ -180,7 +180,7 @@ void HalLedUpdate(void) {
     uint8_t          led, pct, leds;
     uint16_t         next, wait;
     uint32_t         time;
-    HalLedControl_t *sts;
+    HalLedControl_t* sts;
 
     next = 0;
     led = HAL_LED_1;

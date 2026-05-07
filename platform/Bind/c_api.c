@@ -20,8 +20,6 @@
 #include "board_gpio.h"
 #include "board_input.h"
 
-
-
 typedef struct {
     uint8_t buttons;
     int8_t  dx;
@@ -29,7 +27,7 @@ typedef struct {
     int8_t  wheel;
 } mouse_report_t;
 
-static vp_bool_t debounce_timer_running = 0u;
+static vp_bool_t      debounce_timer_running = 0u;
 static vp_usb_state_t current_usb_state = VP_USB_STATE_DETACHED;
 
 static int8_t clamp_i8_to_hid_range(const int8_t v) {
@@ -42,7 +40,6 @@ static int8_t clamp_i8_to_hid_range(const int8_t v) {
 static vp_bool_t active_low_pin_level(uint32_t port_data, uint32_t pin_mask) {
     return (port_data & pin_mask) ? 0u : 1u;
 }
-
 
 vp_bool_t c_vp_gpio_read(const vp_input_id_t input_id) {
     BoardGpio gpio = {0};
@@ -280,7 +277,8 @@ static vp_hid_send_status_t usb_send_mouse_report(const mouse_report_t* rpt) {
                : VP_HID_SEND_RETRY_LATER;
 }
 
-static vp_hid_send_status_t dongle_send_mouse_report(const mouse_report_t* rpt) {
+static vp_hid_send_status_t dongle_send_mouse_report(
+    const mouse_report_t* rpt) {
     (void)rpt;
     return VP_HID_SEND_NOT_CONNECTED;
 }
@@ -295,9 +293,8 @@ static vp_hid_send_status_t usb_send_vendor_report(const uint8_t* ptr,
         return VP_HID_SEND_NOT_CONNECTED;
     }
 
-    return USBHS_HidDevice_SendVendorReport(ptr, len)
-               ? VP_HID_SEND_SENT
-               : VP_HID_SEND_RETRY_LATER;
+    return USBHS_HidDevice_SendVendorReport(ptr, len) ? VP_HID_SEND_SENT
+                                                      : VP_HID_SEND_RETRY_LATER;
 }
 
 vp_bool_t c_vp_hid_route_ready(const vp_hid_route_t route) {
@@ -366,20 +363,17 @@ vp_status_t c_vp_power_prepare_suspend(void) {
 }
 
 vp_status_t c_vp_power_enter_suspend(void) {
-    VP_LOG_WARN("platform",
-                "feature unavailable;feature=power_enter_suspend");
+    VP_LOG_WARN("platform", "feature unavailable;feature=power_enter_suspend");
     return VP_STATUS_UNSUPPORTED;
 }
 
 vp_status_t c_vp_power_prepare_sleep(void) {
-    VP_LOG_WARN("platform",
-                "feature unavailable;feature=power_prepare_sleep");
+    VP_LOG_WARN("platform", "feature unavailable;feature=power_prepare_sleep");
     return VP_STATUS_UNSUPPORTED;
 }
 
 vp_status_t c_vp_power_enter_sleep(void) {
-    VP_LOG_WARN("platform",
-                "feature unavailable;feature=power_enter_sleep");
+    VP_LOG_WARN("platform", "feature unavailable;feature=power_enter_sleep");
     return VP_STATUS_UNSUPPORTED;
 }
 

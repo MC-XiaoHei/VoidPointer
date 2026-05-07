@@ -12,10 +12,10 @@
 
 #include "CH58x_common.h"
 
-uint8_t *pEP0_RAM_Addr;
-uint8_t *pEP1_RAM_Addr;
-uint8_t *pEP2_RAM_Addr;
-uint8_t *pEP3_RAM_Addr;
+uint8_t* pEP0_RAM_Addr;
+uint8_t* pEP1_RAM_Addr;
+uint8_t* pEP2_RAM_Addr;
+uint8_t* pEP3_RAM_Addr;
 
 /*********************************************************************
  * @fn      USB_DeviceInit

@@ -85,7 +85,7 @@ uint8_t SPI0_MasterRecvByte(void);
  * @param   pbuf    - 待发送的数据内容首地址
  * @param   len     - 请求发送的数据长度，最大4095
  */
-void SPI0_MasterTrans(uint8_t *pbuf, uint16_t len);
+void SPI0_MasterTrans(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   使用FIFO连续接收多字节
@@ -93,7 +93,7 @@ void SPI0_MasterTrans(uint8_t *pbuf, uint16_t len);
  * @param   pbuf    - 待接收的数据首地址
  * @param   len     - 待接收的数据长度，最大4095
  */
-void SPI0_MasterRecv(uint8_t *pbuf, uint16_t len);
+void SPI0_MasterRecv(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   DMA方式连续发送数据
@@ -101,7 +101,7 @@ void SPI0_MasterRecv(uint8_t *pbuf, uint16_t len);
  * @param   pbuf    - 待发送数据起始地址,需要四字节对其
  * @param   len     - 待发送数据长度
  */
-void SPI0_MasterDMATrans(uint8_t *pbuf, uint16_t len);
+void SPI0_MasterDMATrans(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   DMA方式连续接收数据
@@ -109,7 +109,7 @@ void SPI0_MasterDMATrans(uint8_t *pbuf, uint16_t len);
  * @param   pbuf    - 待接收数据存放起始地址,需要四字节对其
  * @param   len     - 待接收数据长度
  */
-void SPI0_MasterDMARecv(uint8_t *pbuf, uint16_t len);
+void SPI0_MasterDMARecv(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   主机模式默认初始化：模式0+3线全双工+8MHz
@@ -150,7 +150,7 @@ uint8_t SPI1_MasterRecvByte(void);
  * @param   pbuf    - 待发送的数据内容首地址
  * @param   len     - 请求发送的数据长度，最大4095
  */
-void SPI1_MasterTrans(uint8_t *pbuf, uint16_t len);
+void SPI1_MasterTrans(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   使用FIFO连续接收多字节
@@ -158,7 +158,7 @@ void SPI1_MasterTrans(uint8_t *pbuf, uint16_t len);
  * @param   pbuf    - 待接收的数据首地址
  * @param   len     - 待接收的数据长度，最大4095
  */
-void SPI1_MasterRecv(uint8_t *pbuf, uint16_t len);
+void SPI1_MasterRecv(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   设备模式默认初始化，建议设置MISO的GPIO对应为输入模式
@@ -192,7 +192,7 @@ uint8_t SPI0_SlaveRecvByte(void);
  * @param   pbuf    - 待发送的数据内容首地址
  * @param   len     - 请求发送的数据长度，最大4095
  */
-void SPI0_SlaveTrans(uint8_t *pbuf, uint16_t len);
+void SPI0_SlaveTrans(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   从机模式，接收多字节数据
@@ -200,7 +200,7 @@ void SPI0_SlaveTrans(uint8_t *pbuf, uint16_t len);
  * @param   pbuf    - 接收收数据存放起始地址
  * @param   len     - 请求接收数据长度
  */
-void SPI0_SlaveRecv(uint8_t *pbuf, uint16_t len);
+void SPI0_SlaveRecv(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   DMA方式连续发送数据
@@ -208,7 +208,7 @@ void SPI0_SlaveRecv(uint8_t *pbuf, uint16_t len);
  * @param   pbuf    - 待发送数据起始地址,需要四字节对其
  * @param   len     - 待发送数据长度
  */
-void SPI0_SlaveDMATrans(uint8_t *pbuf, uint16_t len);
+void SPI0_SlaveDMATrans(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   DMA方式连续接收数据
@@ -216,7 +216,7 @@ void SPI0_SlaveDMATrans(uint8_t *pbuf, uint16_t len);
  * @param   pbuf    - 待接收数据存放起始地址,需要四字节对其
  * @param   len     - 待接收数据长度
  */
-void SPI0_SlaveDMARecv(uint8_t *pbuf, uint16_t len);
+void SPI0_SlaveDMARecv(uint8_t* pbuf, uint16_t len);
 
 /**
  * @brief   配置SPI0中断

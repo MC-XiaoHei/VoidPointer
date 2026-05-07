@@ -85,7 +85,7 @@ static gattAttribute_t scanParamAttrTbl[] = {
         {ATT_BT_UUID_SIZE, primaryServiceUUID}, /* type */
         GATT_PERMIT_READ, /* permissions */
         0, /* handle */
-        (uint8_t *)&scanParamService /* pValue */
+        (uint8_t*)&scanParamService /* pValue */
     },
 
     // Scan Interval Window declaration
@@ -113,7 +113,7 @@ static gattAttribute_t scanParamAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, clientCharCfgUUID},
      GATT_PERMIT_READ | GATT_PERMIT_ENCRYPT_WRITE,
      0,
-     (uint8_t *)&scanParamRefreshClientCharCfg}};
+     (uint8_t*)&scanParamRefreshClientCharCfg}};
 
 // Attribute index enumeration-- these indexes match array elements above
 enum {
@@ -129,12 +129,12 @@ enum {
  * LOCAL FUNCTIONS
  */
 static bStatus_t scanParamWriteAttrCB(uint16_t         connHandle,
-                                      gattAttribute_t *pAttr, uint8_t *pValue,
+                                      gattAttribute_t* pAttr, uint8_t* pValue,
                                       uint16_t len, uint16_t offset,
                                       uint8_t method);
 static bStatus_t scanParamReadAttrCB(uint16_t         connHandle,
-                                     gattAttribute_t *pAttr, uint8_t *pValue,
-                                     uint16_t *pLen, uint16_t offset,
+                                     gattAttribute_t* pAttr, uint8_t* pValue,
+                                     uint16_t* pLen, uint16_t offset,
                                      uint16_t maxLen, uint8_t method);
 
 /*********************************************************************
@@ -201,7 +201,7 @@ extern void ScanParam_Register(scanParamServiceCB_t pfnServiceCB) {
  *
  * @return  bStatus_t
  */
-bStatus_t ScanParam_SetParameter(uint8_t param, uint8_t len, void *value) {
+bStatus_t ScanParam_SetParameter(uint8_t param, uint8_t len, void* value) {
     bStatus_t ret = SUCCESS;
 
     switch (param) {
@@ -226,16 +226,16 @@ bStatus_t ScanParam_SetParameter(uint8_t param, uint8_t len, void *value) {
  *
  * @return  bStatus_t
  */
-bStatus_t ScanParam_GetParameter(uint8_t param, void *value) {
+bStatus_t ScanParam_GetParameter(uint8_t param, void* value) {
     bStatus_t ret = SUCCESS;
     switch (param) {
         case SCAN_PARAM_PARAM_INTERVAL:
-            *((uint16_t *)value) =
+            *((uint16_t*)value) =
                 BUILD_UINT16(scanIntervalWindow[0], scanIntervalWindow[1]);
             break;
 
         case SCAN_PARAM_PARAM_WINDOW:
-            *((uint16_t *)value) =
+            *((uint16_t*)value) =
                 BUILD_UINT16(scanIntervalWindow[2], scanIntervalWindow[3]);
             break;
 
@@ -272,7 +272,7 @@ void ScanParam_RefreshNotify(uint16_t connHandle) {
             noti.pValue[0] = SCAN_PARAM_REFRESH_REQ;
 
             if (GATT_Notification(connHandle, &noti, FALSE) != SUCCESS) {
-                GATT_bm_free((gattMsg_t *)&noti, ATT_HANDLE_VALUE_NOTI);
+                GATT_bm_free((gattMsg_t*)&noti, ATT_HANDLE_VALUE_NOTI);
             }
         }
     }
@@ -293,8 +293,8 @@ void ScanParam_RefreshNotify(uint16_t connHandle) {
  * @return      Success or Failure
  */
 static bStatus_t scanParamReadAttrCB(uint16_t         connHandle,
-                                     gattAttribute_t *pAttr, uint8_t *pValue,
-                                     uint16_t *pLen, uint16_t offset,
+                                     gattAttribute_t* pAttr, uint8_t* pValue,
+                                     uint16_t* pLen, uint16_t offset,
                                      uint16_t maxLen, uint8_t method) {
     bStatus_t status = SUCCESS;
 
@@ -315,7 +315,7 @@ static bStatus_t scanParamReadAttrCB(uint16_t         connHandle,
  * @return  Success or Failure
  */
 static bStatus_t scanParamWriteAttrCB(uint16_t         connHandle,
-                                      gattAttribute_t *pAttr, uint8_t *pValue,
+                                      gattAttribute_t* pAttr, uint8_t* pValue,
                                       uint16_t len, uint16_t offset,
                                       uint8_t method) {
     uint16_t  uuid;

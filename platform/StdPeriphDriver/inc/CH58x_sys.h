@@ -139,7 +139,7 @@ void SYS_ResetExecute(void);
  *
  * @param   pirqv   - 当前保留中断值
  */
-void SYS_DisableAllIrq(uint32_t *pirqv);
+void SYS_DisableAllIrq(uint32_t* pirqv);
 
 /**
  * @brief   恢复之前关闭的中断值

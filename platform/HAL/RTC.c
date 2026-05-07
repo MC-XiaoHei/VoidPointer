@@ -49,9 +49,7 @@ void TMR3_IRQHandler(void)  // TMR3
             R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
             R8_TMR3_CTRL_MOD = RB_TMR_COUNT_EN;
         } else {
-            VP_LOG_WARN(
-                "hal_rtc",
-                "tmos timer irq missing trigger");
+            VP_LOG_WARN("hal_rtc", "tmos timer irq missing trigger");
         }
     }
 }

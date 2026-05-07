@@ -93,8 +93,8 @@ typedef struct {
     uint8_t RESERVED0[4];
 } SysTick_Type;
 
-#define PFIC      ((PFIC_Type *)0xE000E000)
-#define SysTick   ((SysTick_Type *)0xE000F000)
+#define PFIC      ((PFIC_Type*)0xE000E000)
+#define SysTick   ((SysTick_Type*)0xE000F000)
 
 #define PFIC_KEY1 ((uint32_t)0xFA050000)
 #define PFIC_KEY2 ((uint32_t)0xBCAF0000)
@@ -652,9 +652,9 @@ __attribute__((always_inline)) RV_STATIC_INLINE uint32_t __get_SP(void) {
  *
  * @return  None.
  */
-__attribute__((always_inline)) RV_STATIC_INLINE void __MCPY(void *dst,
-                                                            void *start,
-                                                            void *end) {
+__attribute__((always_inline)) RV_STATIC_INLINE void __MCPY(void* dst,
+                                                            void* start,
+                                                            void* end) {
     __asm volatile("mcpy %2, %0, %1"
                    : "+r"(start), "+r"(dst)
                    : "r"(end)

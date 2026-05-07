@@ -23,7 +23,6 @@
 #include "board_gpio.h"
 #include "board_input.h"
 
-
 #include <math.h>
 
 #define VP_USB_BRINGUP_DISABLE_IMU 1
@@ -34,7 +33,7 @@ __attribute__((aligned(4))) uint32_t MEM_BUF[BLE_MEMHEAP_SIZE / 4];
 const uint8_t MacAddr[6] = {0x4F, 0x9D, 0x2A, 0x8B, 0xC1, 0x7E};
 #endif
 
-static void RuntimeTask_Service(void);
+static void     RuntimeTask_Service(void);
 static uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events);
 
 __HIGH_CODE
@@ -55,10 +54,10 @@ void I2C_Hardware_Init() {
 
 #define RUNTIME_CORE_POLL_EVT 0x0001
 
-static tmosTaskID runtime_task_id = 0xFF;
+static tmosTaskID       runtime_task_id = 0xFF;
 static volatile uint8_t runtime_poll_request_pending = 0u;
 static volatile uint8_t runtime_debounce_timer_running = 0u;
-static uint32_t runtime_debounce_next_ms = 0u;
+static uint32_t         runtime_debounce_next_ms = 0u;
 
 static void ServiceLatchedInputInterrupts(void) {
     if (runtime_debounce_timer_running) {
@@ -104,9 +103,7 @@ static uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events) {
     return 0u;
 }
 
-void RuntimeTask_RequestPoll(void) {
-    runtime_poll_request_pending = 1u;
-}
+void RuntimeTask_RequestPoll(void) { runtime_poll_request_pending = 1u; }
 
 void RuntimeTask_RequestPollAfter(const uint32_t ms) {
     if (runtime_task_id == 0xFF) {
@@ -118,7 +115,8 @@ void RuntimeTask_RequestPollAfter(const uint32_t ms) {
         return;
     }
 
-    tmos_start_task(runtime_task_id, RUNTIME_CORE_POLL_EVT, MS1_TO_SYSTEM_TIME(ms));
+    tmos_start_task(runtime_task_id, RUNTIME_CORE_POLL_EVT,
+                    MS1_TO_SYSTEM_TIME(ms));
 }
 
 void RuntimeTask_StartDebounceTimer(void) {
@@ -189,16 +187,19 @@ int main() {
     UART0_DefInit();
 #endif
 
-    board_gpio_mode_cfg((BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_0},
-                        GPIO_ModeOut_PP_5mA);
-    board_gpio_mode_cfg((BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1},
-                        GPIO_ModeOut_PP_5mA);
+    board_gpio_mode_cfg(
+        (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_0},
+        GPIO_ModeOut_PP_5mA);
+    board_gpio_mode_cfg(
+        (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1},
+        GPIO_ModeOut_PP_5mA);
 
-    board_gpio_reset((BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_0});
-    board_gpio_reset((BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1});
+    board_gpio_reset(
+        (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_0});
+    board_gpio_reset(
+        (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1});
 
-    VP_LOG_INFO("main", "ble library version;version=%s",
-                (const char*)VER_LIB);
+    VP_LOG_INFO("main", "ble library version;version=%s", (const char*)VER_LIB);
 
     CH58x_BLEInit();
     HAL_Init();

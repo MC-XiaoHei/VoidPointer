@@ -42,8 +42,8 @@ typedef struct {
 /* rfRole config structure definition */
 typedef struct {
     int8_t             TxPower;
-    RF_DMADESCTypeDef *pTx;
-    RF_DMADESCTypeDef *pRx;
+    RF_DMADESCTypeDef* pTx;
+    RF_DMADESCTypeDef* pRx;
     pfnRfRoleProcess   rfProcessCB;
     uint32_t           processMask;
 #define RF_STATE_RX         (1 << 0)
@@ -97,7 +97,7 @@ typedef struct {
 /* package type */
 typedef struct {
     uint8_t type;  //!< bit0-2:device id
-        //!< bit3-7:reserved
+    //!< bit3-7:reserved
     uint8_t length;  //!< data length
     uint8_t seq;  //!< reserved
     uint8_t resv;  //!< reserved
@@ -109,8 +109,8 @@ typedef struct {
     uint32_t crcInit;  //!< crc initial value
     uint32_t frequency;  //!< rf frequency (2400000kHz-2483500kHz)
     uint32_t properties;  //!< bit0: 0-whitening on 1-whitening off
-        //!< bit1: 0-  1-wait ack
-        //!< BIT4-5 00-1M  01-2M
+    //!< bit1: 0-  1-wait ack
+    //!< BIT4-5 00-1M  01-2M
     uint16_t rxMaxLen;  //!< The maximum length of data received
     uint16_t sendInterval;  //!< Resend interval N*0.5us
     uint16_t sendTime;  //!< Time to switch from Rx t0 Tx (N*0.5us)+24us
@@ -124,9 +124,9 @@ typedef struct {
     uint32_t crcInit;  //!< crc initial value
     uint32_t frequency;  //!< rf frequency (2400000kHz-2483500kHz)
     uint32_t properties;  //!< bit0: 0-whitening on 1-whitening off
-        //!< bit1: 0-  1-wait ack
-        //!< bit2: 0-  1-set the channel index of Data whitening
-        //!< BIT4-5 00-1M  01-2M
+    //!< bit1: 0-  1-wait ack
+    //!< bit2: 0-  1-set the channel index of Data whitening
+    //!< BIT4-5 00-1M  01-2M
     uint32_t txDMA;  //!< Tx DMA address
     uint8_t  whiteChannel;  //!< white channel(properties bit2 = 1)
     uint8_t  sendTime;  //!< Time to switch from Rx t0 Tx (N*0.5us)+24us
@@ -139,8 +139,8 @@ typedef struct {
     uint32_t crcInit;  //!< crc initial value
     uint32_t frequency;  //!< rf frequency (2400000kHz-2483500kHz)
     uint32_t properties;  //!< bit0: 0-whitening on 1-whitening off
-        //!< bit1: 0-  1-send ack
-        //!< BIT4-5 00-1M  01-2M
+    //!< bit1: 0-  1-send ack
+    //!< BIT4-5 00-1M  01-2M
     uint32_t rxDMA;  //!< Rx DMA address
     uint8_t  whiteChannel;  //!< white channel(properties bit2 = 1)
     uint16_t rxMaxLen;  //!< Maximum length of Rx data
@@ -162,7 +162,7 @@ typedef struct {
 } staBound_t;
 
 // Define function type that rfRole bound  process callback
-typedef void (*pfnRfRoleBoundCB)(staBound_t *);
+typedef void (*pfnRfRoleBoundCB)(staBound_t*);
 
 /* Definition of roles */
 #define RF_ROLE_RX_MOD0    0  //!< host
@@ -201,7 +201,7 @@ typedef struct {
     pfnRfRoleBoundCB rfBoundCB;
     uint32_t
         ChannelMap;  //!< indicating  Used and Unused data channels.Every channel is represented with a
-        //!< bit positioned as per the data channel index,The LSB represents data channel index 0
+    //!< bit positioned as per the data channel index,The LSB represents data channel index 0
 } rfBoundHost_t;
 
 /* listing information */
@@ -218,7 +218,7 @@ typedef struct {
 /* Connection or binding management lists */
 typedef struct {
     uint8_t       number;  //!< Number of lists
-    rfRoleList_t *pList;  //!< listing information
+    rfRoleList_t* pList;  //!< listing information
 } rfRoleSpeed_t;
 
 /* The timing of communication for devices */
@@ -231,7 +231,7 @@ typedef struct __attribute__((packed)) {
 /* bound frequency lists */
 typedef struct {
     uint8_t   number;  //!< Number of lists
-    uint32_t *pFrequency;  //!< listing information
+    uint32_t* pFrequency;  //!< listing information
 } rfHostBoundFre_t;
 
 /*******************************************************************************
@@ -254,7 +254,7 @@ int8_t RFIP_ReadRssi(void);
  *
  * @return  the value of crc state.
  */
-uint8_t RFIP_ReadCrc(uint8_t *pBuf);
+uint8_t RFIP_ReadCrc(uint8_t* pBuf);
 
 /**
  * @brief   set output power level@ TxPower
@@ -308,7 +308,7 @@ void RFIP_TestEnd(void);
  *
  * @return  0-success.
  */
-bStatus_t RFRole_FastInit(rfRoleConfig_t *pConf);
+bStatus_t RFRole_FastInit(rfRoleConfig_t* pConf);
 
 /**
  * @brief   used to stop TX/RX
@@ -335,7 +335,7 @@ bStatus_t RFRole_Shut(void);
  *
  * @return  0-success.
  */
-bStatus_t RFRole_SetParam(rfRoleParam_t *pParam);
+bStatus_t RFRole_SetParam(rfRoleParam_t* pParam);
 
 /**
  * @brief   set Connection or binding management lists
@@ -344,7 +344,7 @@ bStatus_t RFRole_SetParam(rfRoleParam_t *pParam);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_SetSpeedType(rfRoleSpeed_t *pList_t);
+bStatus_t RFBound_SetSpeedType(rfRoleSpeed_t* pList_t);
 
 /**
  * @brief   the list of communication frequencies for binding purposes
@@ -357,7 +357,7 @@ bStatus_t RFBound_SetSpeedType(rfRoleSpeed_t *pList_t);
  *          The device mode polls the configured frequency at an 8ms cycle.
  *
  */
-bStatus_t RFBound_SetFrequencyList(rfHostBoundFre_t *pList_t);
+bStatus_t RFBound_SetFrequencyList(rfHostBoundFre_t* pList_t);
 
 /**
  * @brief   set speed of devices(muti fast mode)
@@ -366,7 +366,7 @@ bStatus_t RFBound_SetFrequencyList(rfHostBoundFre_t *pList_t);
  *
  * @return  0-success.
  */
-bStatus_t RFRole_SetDevTimeing(rfDevsTimeing_t *pList);
+bStatus_t RFRole_SetDevTimeing(rfDevsTimeing_t* pList);
 
 /**
  * @brief  Start sending
@@ -395,7 +395,7 @@ bStatus_t RFBound_Stop(void);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_StartLpHost(rfBoundHost_t *pConfig);
+bStatus_t RFBound_StartLpHost(rfBoundHost_t* pConfig);
 
 /**
  * @brief   start host mode(muti fast)
@@ -404,7 +404,7 @@ bStatus_t RFBound_StartLpHost(rfBoundHost_t *pConfig);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_StartMutiHost(rfBoundHost_t *pConfig);
+bStatus_t RFBound_StartMutiHost(rfBoundHost_t* pConfig);
 
 /**
  * @brief   start host mode(8k)
@@ -413,7 +413,7 @@ bStatus_t RFBound_StartMutiHost(rfBoundHost_t *pConfig);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_Start8kHost(rfBoundHost_t *pConfig);
+bStatus_t RFBound_Start8kHost(rfBoundHost_t* pConfig);
 
 /**
  * @brief   start host mode(4k)
@@ -422,7 +422,7 @@ bStatus_t RFBound_Start8kHost(rfBoundHost_t *pConfig);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_StartHost(rfBoundHost_t *pConfig);
+bStatus_t RFBound_StartHost(rfBoundHost_t* pConfig);
 
 /**
  * @brief   start device mode(lower power)
@@ -431,7 +431,7 @@ bStatus_t RFBound_StartHost(rfBoundHost_t *pConfig);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_StartLpDevice(rfBoundDevice_t *pConfig);
+bStatus_t RFBound_StartLpDevice(rfBoundDevice_t* pConfig);
 
 /**
  * @brief   start device mode(muti fast)
@@ -440,7 +440,7 @@ bStatus_t RFBound_StartLpDevice(rfBoundDevice_t *pConfig);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_StartMutiDevice(rfBoundDevice_t *pConfig);
+bStatus_t RFBound_StartMutiDevice(rfBoundDevice_t* pConfig);
 
 /**
  * @brief   start device mode(8k)
@@ -449,7 +449,7 @@ bStatus_t RFBound_StartMutiDevice(rfBoundDevice_t *pConfig);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_Start8kDevice(rfBoundDevice_t *pConfig);
+bStatus_t RFBound_Start8kDevice(rfBoundDevice_t* pConfig);
 
 /**
  * @brief   start device mode(4k)
@@ -458,7 +458,7 @@ bStatus_t RFBound_Start8kDevice(rfBoundDevice_t *pConfig);
  *
  * @return  0-success.
  */
-bStatus_t RFBound_StartDevice(rfBoundDevice_t *pConfig);
+bStatus_t RFBound_StartDevice(rfBoundDevice_t* pConfig);
 
 /**
  * @brief   clear data list
@@ -532,7 +532,7 @@ uint32_t RFRole_GetStatus(uint8_t id);
  *
  * @return  0-success.
  */
-bStatus_t RFRole_BasicInit(rfRoleConfig_t *pConf);
+bStatus_t RFRole_BasicInit(rfRoleConfig_t* pConf);
 
 /**
  * @brief   set tx delay time
@@ -559,7 +559,7 @@ bStatus_t RFIP_SetTxStart(void);
  *
  * @return  0-success.
  */
-bStatus_t RFIP_SetTxParm(rfipTx_t *pParm);
+bStatus_t RFIP_SetTxParm(rfipTx_t* pParm);
 
 /**
  * @brief   set rx parameter and start rx
@@ -568,7 +568,7 @@ bStatus_t RFIP_SetTxParm(rfipTx_t *pParm);
  *
  * @return  0-success.
  */
-bStatus_t RFIP_SetRx(rfipRx_t *pParm);
+bStatus_t RFIP_SetRx(rfipRx_t* pParm);
 
 /*
  * END @ API

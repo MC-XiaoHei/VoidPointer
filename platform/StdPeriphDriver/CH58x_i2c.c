@@ -527,7 +527,7 @@ FlagStatus I2C_GetFlagStatus(uint32_t I2C_FLAG) {
         i2cxbase += 0x18;
     }
 
-    if (((*(__IO uint32_t *)i2cxbase) & I2C_FLAG) != (uint32_t)RESET) {
+    if (((*(__IO uint32_t*)i2cxbase) & I2C_FLAG) != (uint32_t)RESET) {
         bitstatus = SET;
     } else {
         bitstatus = RESET;

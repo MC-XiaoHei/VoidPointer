@@ -13,14 +13,14 @@ typedef enum {
 } lsm6dsv_async_phase_t;
 
 typedef struct {
-    volatile vp_bool_t busy;
-    volatile vp_bool_t read_in_progress;
-    volatile vp_bool_t nack_sent;
-    volatile vp_status_t request_status;
+    volatile vp_bool_t             busy;
+    volatile vp_bool_t             read_in_progress;
+    volatile vp_bool_t             nack_sent;
+    volatile vp_status_t           request_status;
     volatile lsm6dsv_async_phase_t phase;
 
-    uint8_t tx_buf[1];
-    uint8_t rx_buf[7];
+    uint8_t          tx_buf[1];
+    uint8_t          rx_buf[7];
     volatile uint8_t tx_index;
     volatile uint8_t tx_len;
     volatile uint8_t rx_index;
@@ -176,16 +176,17 @@ static void lsm6dsv_async_finish(const vp_status_t status) {
     g_lsm6dsv_async.request_status = status;
 
     if (status == VP_STATUS_OK && g_lsm6dsv_async.latest_raw_valid) {
-        vp_on_imu_sample(g_lsm6dsv_async.latest_raw.x, g_lsm6dsv_async.latest_raw.y,
+        vp_on_imu_sample(g_lsm6dsv_async.latest_raw.x,
+                         g_lsm6dsv_async.latest_raw.y,
                          g_lsm6dsv_async.latest_raw.z, timestamp);
     }
 
     vp_on_imu_fifo_done(status, g_lsm6dsv_async.dropped_count, timestamp);
 }
 
-static void lsm6dsv_async_prepare_write_then_read(const uint8_t reg,
-                                                  const uint8_t rx_len,
-                                                  const lsm6dsv_async_phase_t next_phase) {
+static void lsm6dsv_async_prepare_write_then_read(
+    const uint8_t reg, const uint8_t rx_len,
+    const lsm6dsv_async_phase_t next_phase) {
     g_lsm6dsv_async.tx_buf[0] = reg;
     g_lsm6dsv_async.tx_index = 0u;
     g_lsm6dsv_async.tx_len = 1u;
@@ -203,16 +204,17 @@ static void lsm6dsv_async_prepare_write_then_read(const uint8_t reg,
 static void lsm6dsv_async_begin_next_phase(void) {
     switch (g_lsm6dsv_async.phase) {
         case LSM6DSV_ASYNC_READ_STATUS1_TX:
-            lsm6dsv_async_prepare_write_then_read(LSM6DSV_REG_FIFO_STATUS1, 1u,
-                                                  LSM6DSV_ASYNC_READ_STATUS1_RX);
+            lsm6dsv_async_prepare_write_then_read(
+                LSM6DSV_REG_FIFO_STATUS1, 1u, LSM6DSV_ASYNC_READ_STATUS1_RX);
             break;
         case LSM6DSV_ASYNC_READ_STATUS2_TX:
-            lsm6dsv_async_prepare_write_then_read(LSM6DSV_REG_FIFO_STATUS2, 1u,
-                                                  LSM6DSV_ASYNC_READ_STATUS2_RX);
+            lsm6dsv_async_prepare_write_then_read(
+                LSM6DSV_REG_FIFO_STATUS2, 1u, LSM6DSV_ASYNC_READ_STATUS2_RX);
             break;
         case LSM6DSV_ASYNC_READ_FIFO_WORD_TX:
-            lsm6dsv_async_prepare_write_then_read(LSM6DSV_REG_FIFO_DATA_OUT_TAG, 7u,
-                                                  LSM6DSV_ASYNC_READ_FIFO_WORD_RX);
+            lsm6dsv_async_prepare_write_then_read(
+                LSM6DSV_REG_FIFO_DATA_OUT_TAG, 7u,
+                LSM6DSV_ASYNC_READ_FIFO_WORD_RX);
             break;
         default:
             lsm6dsv_async_finish(VP_STATUS_IO_ERROR);
@@ -244,8 +246,9 @@ static void lsm6dsv_async_consume_fifo_word(void) {
     }
 
     if (g_lsm6dsv_async.fifo_words_remaining == 0u) {
-        lsm6dsv_async_finish(g_lsm6dsv_async.latest_raw_valid ? VP_STATUS_OK
-                              : VP_STATUS_NOT_READY);
+        lsm6dsv_async_finish(g_lsm6dsv_async.latest_raw_valid
+                                 ? VP_STATUS_OK
+                                 : VP_STATUS_NOT_READY);
         return;
     }
 
@@ -433,10 +436,12 @@ void I2C_IRQHandler(void) {
                 return;
             }
 
-            if (event & (RB_I2C_ADDR | RB_I2C_BTF | RB_I2C_TxE | (RB_I2C_TRA << 16))) {
+            if (event &
+                (RB_I2C_ADDR | RB_I2C_BTF | RB_I2C_TxE | (RB_I2C_TRA << 16))) {
                 if (!g_lsm6dsv_async.read_in_progress) {
                     if (g_lsm6dsv_async.tx_index < g_lsm6dsv_async.tx_len) {
-                        I2C_SendData(g_lsm6dsv_async.tx_buf[g_lsm6dsv_async.tx_index++]);
+                        I2C_SendData(
+                            g_lsm6dsv_async.tx_buf[g_lsm6dsv_async.tx_index++]);
                     } else {
                         g_lsm6dsv_async.read_in_progress = 1u;
                         I2C_GenerateSTART(ENABLE);
@@ -455,11 +460,13 @@ void I2C_IRQHandler(void) {
 
             if (event & RB_I2C_RxNE) {
                 if (g_lsm6dsv_async.rx_index < g_lsm6dsv_async.rx_len) {
-                    g_lsm6dsv_async.rx_buf[g_lsm6dsv_async.rx_index++] = I2C_ReceiveData();
+                    g_lsm6dsv_async.rx_buf[g_lsm6dsv_async.rx_index++] =
+                        I2C_ReceiveData();
                 }
 
                 if (g_lsm6dsv_async.rx_index < g_lsm6dsv_async.rx_len) {
-                    if ((g_lsm6dsv_async.rx_len - g_lsm6dsv_async.rx_index) == 1u) {
+                    if ((g_lsm6dsv_async.rx_len - g_lsm6dsv_async.rx_index) ==
+                        1u) {
                         I2C_AcknowledgeConfig(DISABLE);
                     } else {
                         I2C_AcknowledgeConfig(ENABLE);
@@ -470,13 +477,17 @@ void I2C_IRQHandler(void) {
                     switch (g_lsm6dsv_async.phase) {
                         case LSM6DSV_ASYNC_READ_STATUS1_RX:
                             g_lsm6dsv_async.status1 = g_lsm6dsv_async.rx_buf[0];
-                            g_lsm6dsv_async.phase = LSM6DSV_ASYNC_READ_STATUS2_TX;
+                            g_lsm6dsv_async.phase =
+                                LSM6DSV_ASYNC_READ_STATUS2_TX;
                             lsm6dsv_async_begin_next_phase();
                             return;
                         case LSM6DSV_ASYNC_READ_STATUS2_RX: {
                             g_lsm6dsv_async.status2 = g_lsm6dsv_async.rx_buf[0];
                             g_lsm6dsv_async.fifo_total_words =
-                                (uint16_t)((((uint16_t)g_lsm6dsv_async.status2) & 0x01u) << 8) |
+                                (uint16_t)((((uint16_t)
+                                                 g_lsm6dsv_async.status2) &
+                                            0x01u)
+                                           << 8) |
                                 g_lsm6dsv_async.status1;
                             g_lsm6dsv_async.fifo_words_remaining =
                                 g_lsm6dsv_async.fifo_total_words;
@@ -490,13 +501,16 @@ void I2C_IRQHandler(void) {
                                 g_lsm6dsv_async.fifo_total_words >
                                     g_lsm6dsv_async.requested_max_samples) {
                                 g_lsm6dsv_async.fifo_words_to_drop =
-                                    (uint16_t)(g_lsm6dsv_async.fifo_total_words -
-                                               g_lsm6dsv_async.requested_max_samples);
+                                    (uint16_t)(g_lsm6dsv_async
+                                                   .fifo_total_words -
+                                               g_lsm6dsv_async
+                                                   .requested_max_samples);
                             } else {
                                 g_lsm6dsv_async.fifo_words_to_drop = 0u;
                             }
 
-                            g_lsm6dsv_async.phase = LSM6DSV_ASYNC_READ_FIFO_WORD_TX;
+                            g_lsm6dsv_async.phase =
+                                LSM6DSV_ASYNC_READ_FIFO_WORD_TX;
                             lsm6dsv_async_begin_next_phase();
                             return;
                         }

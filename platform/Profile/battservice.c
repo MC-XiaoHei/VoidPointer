@@ -108,7 +108,7 @@ static gattAttribute_t battAttrTbl[] = {
         {ATT_BT_UUID_SIZE, primaryServiceUUID}, /* type */
         GATT_PERMIT_READ, /* permissions */
         0, /* handle */
-        (uint8_t *)&battService /* pValue */
+        (uint8_t*)&battService /* pValue */
     },
 
     // Battery Level Declaration
@@ -121,7 +121,7 @@ static gattAttribute_t battAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, clientCharCfgUUID},
      GATT_PERMIT_READ | GATT_PERMIT_WRITE,
      0,
-     (uint8_t *)&battLevelClientCharCfg},
+     (uint8_t*)&battLevelClientCharCfg},
 
     // HID Report Reference characteristic descriptor, batter level input
     {{ATT_BT_UUID_SIZE, reportRefUUID},
@@ -132,14 +132,14 @@ static gattAttribute_t battAttrTbl[] = {
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-static bStatus_t battReadAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
-                                uint8_t *pValue, uint16_t *pLen,
+static bStatus_t battReadAttrCB(uint16_t connHandle, gattAttribute_t* pAttr,
+                                uint8_t* pValue, uint16_t* pLen,
                                 uint16_t offset, uint16_t maxLen,
                                 uint8_t method);
-static bStatus_t battWriteAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
-                                 uint8_t *pValue, uint16_t len, uint16_t offset,
+static bStatus_t battWriteAttrCB(uint16_t connHandle, gattAttribute_t* pAttr,
+                                 uint8_t* pValue, uint16_t len, uint16_t offset,
                                  uint8_t method);
-static void      battNotifyCB(linkDBItem_t *pLinkItem);
+static void      battNotifyCB(linkDBItem_t* pLinkItem);
 static uint8_t   battMeasure(void);
 static void      battNotifyLevel(void);
 
@@ -206,12 +206,12 @@ extern void Batt_Register(battServiceCB_t pfnServiceCB) {
  *
  * @return  bStatus_t
  */
-bStatus_t Batt_SetParameter(uint8_t param, uint8_t len, void *value) {
+bStatus_t Batt_SetParameter(uint8_t param, uint8_t len, void* value) {
     bStatus_t ret = SUCCESS;
 
     switch (param) {
         case BATT_PARAM_CRITICAL_LEVEL:
-            battCriticalLevel = *((uint8_t *)value);
+            battCriticalLevel = *((uint8_t*)value);
 
             // If below the critical level and critical state not set, notify it
             if (battLevel < battCriticalLevel) {
@@ -240,23 +240,23 @@ bStatus_t Batt_SetParameter(uint8_t param, uint8_t len, void *value) {
  *
  * @return  bStatus_t
  */
-bStatus_t Batt_GetParameter(uint8_t param, void *value) {
+bStatus_t Batt_GetParameter(uint8_t param, void* value) {
     bStatus_t ret = SUCCESS;
     switch (param) {
         case BATT_PARAM_LEVEL:
-            *((uint8_t *)value) = battLevel;
+            *((uint8_t*)value) = battLevel;
             break;
 
         case BATT_PARAM_CRITICAL_LEVEL:
-            *((uint8_t *)value) = battCriticalLevel;
+            *((uint8_t*)value) = battCriticalLevel;
             break;
 
         case BATT_PARAM_SERVICE_HANDLE:
-            *((uint16_t *)value) = GATT_SERVICE_HANDLE(battAttrTbl);
+            *((uint16_t*)value) = GATT_SERVICE_HANDLE(battAttrTbl);
             break;
 
         case BATT_PARAM_BATT_LEVEL_IN_REPORT: {
-            hidRptMap_t *pRpt = (hidRptMap_t *)value;
+            hidRptMap_t* pRpt = (hidRptMap_t*)value;
 
             pRpt->id = hidReportRefBattLevel[0];
             pRpt->type = hidReportRefBattLevel[1];
@@ -342,8 +342,8 @@ void Batt_Setup(uint8_t adc_ch, uint16_t minVal, uint16_t maxVal,
  *
  * @return      Success or Failure
  */
-static bStatus_t battReadAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
-                                uint8_t *pValue, uint16_t *pLen,
+static bStatus_t battReadAttrCB(uint16_t connHandle, gattAttribute_t* pAttr,
+                                uint8_t* pValue, uint16_t* pLen,
                                 uint16_t offset, uint16_t maxLen,
                                 uint8_t method) {
     uint16_t  uuid;
@@ -393,8 +393,8 @@ static bStatus_t battReadAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
  *
  * @return  Success or Failure
  */
-static bStatus_t battWriteAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
-                                 uint8_t *pValue, uint16_t len, uint16_t offset,
+static bStatus_t battWriteAttrCB(uint16_t connHandle, gattAttribute_t* pAttr,
+                                 uint8_t* pValue, uint16_t len, uint16_t offset,
                                  uint8_t method) {
     bStatus_t status = SUCCESS;
 
@@ -431,7 +431,7 @@ static bStatus_t battWriteAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
  *
  * @return      None.
  */
-static void battNotifyCB(linkDBItem_t *pLinkItem) {
+static void battNotifyCB(linkDBItem_t* pLinkItem) {
     if (pLinkItem->stateFlags & LINK_CONNECTED) {
         uint16_t value = GATTServApp_ReadCharCfg(pLinkItem->connectionHandle,
                                                  battLevelClientCharCfg);
@@ -448,7 +448,7 @@ static void battNotifyCB(linkDBItem_t *pLinkItem) {
 
                 if (GATT_Notification(pLinkItem->connectionHandle, &noti,
                                       FALSE) != SUCCESS) {
-                    GATT_bm_free((gattMsg_t *)&noti, ATT_HANDLE_VALUE_NOTI);
+                    GATT_bm_free((gattMsg_t*)&noti, ATT_HANDLE_VALUE_NOTI);
                 }
             }
         }

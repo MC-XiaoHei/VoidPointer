@@ -11,7 +11,8 @@ static vp_bool_t active_low_gpio_level(const BoardGpio gpio) {
     return board_gpio_read_level(gpio) ? 0u : 1u;
 }
 
-static uint16_t* board_input_exti_both_sim_mask_ptr(const BoardGpioGroup group) {
+static uint16_t* board_input_exti_both_sim_mask_ptr(
+    const BoardGpioGroup group) {
     switch (group) {
         case BOARD_GPIO_GROUP_A:
             return &board_input_exti_both_sim_mask_a;
@@ -27,7 +28,7 @@ static vp_bool_t board_input_is_encoder(const vp_input_id_t input_id) {
 }
 
 static vp_bool_t board_input_id_to_button_id(const vp_input_id_t input_id,
-                                             vp_button_id_t*     out_button_id) {
+                                             vp_button_id_t* out_button_id) {
     if (out_button_id == NULL) {
         return 0u;
     }
@@ -54,8 +55,8 @@ static vp_bool_t board_input_id_to_button_id(const vp_input_id_t input_id,
     }
 }
 
-static vp_status_t board_input_map_exti_edge_to_mode(const vp_exti_edge_t edge,
-                                                     GPIOITModeTpDef*     out_mode) {
+static vp_status_t board_input_map_exti_edge_to_mode(
+    const vp_exti_edge_t edge, GPIOITModeTpDef* out_mode) {
     if (out_mode == NULL) {
         return VP_STATUS_INVALID_ARG;
     }
@@ -147,7 +148,8 @@ vp_bool_t board_input_id_to_gpio(const vp_input_id_t input_id,
 
 vp_status_t board_input_exti_unmask(const vp_input_id_t input_id,
                                     const BoardGpio     gpio) {
-    const uint16_t* both_sim_mask = board_input_exti_both_sim_mask_ptr(gpio.group);
+    const uint16_t* both_sim_mask =
+        board_input_exti_both_sim_mask_ptr(gpio.group);
     if (both_sim_mask == NULL) {
         return VP_STATUS_INVALID_ARG;
     }
@@ -161,8 +163,8 @@ vp_status_t board_input_exti_unmask(const vp_input_id_t input_id,
         if (board_input_id_to_button_id(input_id, &button_id)) {
             board_gpio_prepare_level_rearm(gpio);
         } else {
-            board_gpio_clear_it_flag_port(gpio.group,
-                                          board_gpio_read_it_flag_port(gpio.group));
+            board_gpio_clear_it_flag_port(
+                gpio.group, board_gpio_read_it_flag_port(gpio.group));
             board_gpio_clear_it_flag(gpio);
         }
     }
@@ -190,7 +192,7 @@ vp_status_t board_input_exti_set_edge(const vp_input_id_t  input_id,
         return VP_STATUS_OK;
     }
 
-    GPIOITModeTpDef mode;
+    GPIOITModeTpDef   mode;
     const vp_status_t status = board_input_map_exti_edge_to_mode(edge, &mode);
     if (status != VP_STATUS_OK) {
         return status;
@@ -245,8 +247,10 @@ vp_bool_t board_input_service_pending_group(const BoardGpioGroup group) {
 }
 
 vp_bool_t board_input_service_pending_all(void) {
-    const vp_bool_t handled_a = board_input_service_pending_group(BOARD_GPIO_GROUP_A);
-    const vp_bool_t handled_b = board_input_service_pending_group(BOARD_GPIO_GROUP_B);
+    const vp_bool_t handled_a =
+        board_input_service_pending_group(BOARD_GPIO_GROUP_A);
+    const vp_bool_t handled_b =
+        board_input_service_pending_group(BOARD_GPIO_GROUP_B);
     return handled_a || handled_b ? 1u : 0u;
 }
 

@@ -40,7 +40,7 @@ void       Lib_Calibration_LSI(void) { Calibration_LSI(Level_64); }
  *
  * @return  None.
  */
-uint32_t Lib_Read_Flash(uint32_t addr, uint32_t num, uint32_t *pBuf) {
+uint32_t Lib_Read_Flash(uint32_t addr, uint32_t num, uint32_t* pBuf) {
     EEPROM_READ(addr, pBuf, num * 4);
     return 0;
 }
@@ -56,7 +56,7 @@ uint32_t Lib_Read_Flash(uint32_t addr, uint32_t num, uint32_t *pBuf) {
  *
  * @return  None.
  */
-void Lib_Write_Flash_584X(uint32_t addr, uint32_t num, uint32_t *pBuf) {
+void Lib_Write_Flash_584X(uint32_t addr, uint32_t num, uint32_t* pBuf) {
     __attribute__((
         aligned(4))) uint32_t FLASH_BUF[(BLE_SNV_BLOCK * BLE_SNV_NUM) / 4];
     EEPROM_READ(addr & 0xFFFFF000, FLASH_BUF, BLE_SNV_BLOCK * BLE_SNV_NUM);
@@ -79,7 +79,7 @@ void Lib_Write_Flash_584X(uint32_t addr, uint32_t num, uint32_t *pBuf) {
  *
  * @return  None.
  */
-uint32_t Lib_Write_Flash(uint32_t addr, uint32_t num, uint32_t *pBuf) {
+uint32_t Lib_Write_Flash(uint32_t addr, uint32_t num, uint32_t* pBuf) {
     if ((chip_info & 0x0F) == DEF_CHIP_ID_CH584X) {
         Lib_Write_Flash_584X(addr, num, pBuf);
     } else {
@@ -103,8 +103,7 @@ void CH58x_BLEInit(void) {
     uint8_t     i;
     bleConfig_t cfg;
     if (tmos_memcmp(VER_LIB, VER_FILE, strlen(VER_FILE)) == FALSE) {
-        VP_LOG_ERROR("hal_ble",
-                     "ble library version mismatch");
+        VP_LOG_ERROR("hal_ble", "ble library version mismatch");
         while (1);
     }
 
@@ -164,8 +163,7 @@ void CH58x_BLEInit(void) {
     // BLE_Lib 占用了VTF Interrupt 2号和3号
     i = BLE_LibInit(&cfg);
     if (i) {
-        VP_LOG_ERROR("hal_ble", "ble library init failed;code=0x%02x",
-                     i);
+        VP_LOG_ERROR("hal_ble", "ble library init failed;code=0x%02x", i);
         while (1);
     }
 }
@@ -182,7 +180,7 @@ void CH58x_BLEInit(void) {
  * @return  events.
  */
 tmosEvents HAL_ProcessEvent(tmosTaskID task_id, tmosEvents events) {
-    uint8_t *msgPtr;
+    uint8_t* msgPtr;
 
     if (events &
         SYS_EVENT_MSG) {  // 处理HAL层消息，调用tmos_msg_receive读取消息，处理完成后删除消息。

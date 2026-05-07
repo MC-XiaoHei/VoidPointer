@@ -503,6 +503,26 @@ def refresh(args: argparse.Namespace) -> None:
     refresh_clangd(args)
 
 
+def format_sources(_: argparse.Namespace) -> None:
+    clang_format = shutil.which("clang-format")
+    if clang_format is None:
+        raise SystemExit(
+            "Missing clang-format in PATH. Install LLVM/Clang and ensure `clang-format` is available."
+        )
+
+    c_like_files = sorted(
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "platform").rglob("*")
+        if path.is_file() and path.suffix.lower() in {".c", ".h", ".cpp", ".hpp"}
+    )
+    if c_like_files:
+        run([clang_format, "-i", *c_like_files])
+    else:
+        print("No C/C++ sources found under platform/")
+
+    run(["cargo", "fmt", "--manifest-path", "core/Cargo.toml"])
+
+
 def download_only(args: argparse.Namespace) -> None:
     ensure_initialized_for_download()
     load_env_local()
@@ -596,6 +616,7 @@ def main() -> None:
             "init",
             "refresh",
             "build",
+            "format",
             "download",
             "download-only",
             "serial",
@@ -613,6 +634,7 @@ def main() -> None:
         "init": init,
         "refresh": refresh,
         "build": build,
+        "format": format_sources,
         "download": download,
         "download-only": download_only,
         "serial": serial_monitor,

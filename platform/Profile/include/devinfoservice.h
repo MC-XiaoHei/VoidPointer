@@ -86,7 +86,7 @@ extern bStatus_t DevInfo_AddService(void);
  *
  * @return  bStatus_t
  */
-bStatus_t DevInfo_SetParameter(uint8_t param, uint8_t len, void *value);
+bStatus_t DevInfo_SetParameter(uint8_t param, uint8_t len, void* value);
 
 /*
  * DevInfo_GetParameter - Get a Device Information parameter.
@@ -97,7 +97,7 @@ bStatus_t DevInfo_SetParameter(uint8_t param, uint8_t len, void *value);
  *          data type (example: data type of uint16_t will be cast to
  *          uint16_t pointer).
  */
-extern bStatus_t DevInfo_GetParameter(uint8_t param, void *value);
+extern bStatus_t DevInfo_GetParameter(uint8_t param, void* value);
 
 /*********************************************************************
 *********************************************************************/

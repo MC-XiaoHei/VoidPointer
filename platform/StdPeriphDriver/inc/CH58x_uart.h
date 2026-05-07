@@ -114,7 +114,7 @@ void UART0_Reset(void);
  * @param   buf     - 待发送的数据内容首地址
  * @param   l       - 待发送的数据长度
  */
-void UART0_SendString(uint8_t *buf, uint16_t l);
+void UART0_SendString(uint8_t* buf, uint16_t l);
 
 /**
  * @brief   串口读取单字节
@@ -130,7 +130,7 @@ void UART0_SendString(uint8_t *buf, uint16_t l);
  *
  * @return  读取数据长度
  */
-uint16_t UART0_RecvString(uint8_t *buf);
+uint16_t UART0_RecvString(uint8_t* buf);
 
 /**
  * @brief   串口默认初始化配置
@@ -205,7 +205,7 @@ void UART1_Reset(void);
  * @param   buf     - 待发送的数据内容首地址
  * @param   l       - 待发送的数据长度
  */
-void UART1_SendString(uint8_t *buf, uint16_t l);
+void UART1_SendString(uint8_t* buf, uint16_t l);
 
 /**
  * @brief   串口读取单字节
@@ -221,7 +221,7 @@ void UART1_SendString(uint8_t *buf, uint16_t l);
  *
  * @return  读取数据长度
  */
-uint16_t UART1_RecvString(uint8_t *buf);
+uint16_t UART1_RecvString(uint8_t* buf);
 
 /**
  * @brief   串口默认初始化配置
@@ -296,7 +296,7 @@ void UART2_Reset(void);
  * @param   buf     - 待发送的数据内容首地址
  * @param   l       - 待发送的数据长度
  */
-void UART2_SendString(uint8_t *buf, uint16_t l);
+void UART2_SendString(uint8_t* buf, uint16_t l);
 
 /**
  * @brief   串口读取单字节
@@ -312,7 +312,7 @@ void UART2_SendString(uint8_t *buf, uint16_t l);
  *
  * @return  读取数据长度
  */
-uint16_t UART2_RecvString(uint8_t *buf);
+uint16_t UART2_RecvString(uint8_t* buf);
 
 /**
  * @brief   串口默认初始化配置
@@ -387,7 +387,7 @@ void UART3_Reset(void);
  * @param   buf     - 待发送的数据内容首地址
  * @param   l       - 待发送的数据长度
  */
-void UART3_SendString(uint8_t *buf, uint16_t l);
+void UART3_SendString(uint8_t* buf, uint16_t l);
 
 /**
  * @brief   串口读取单字节
@@ -403,7 +403,7 @@ void UART3_SendString(uint8_t *buf, uint16_t l);
  *
  * @return  读取数据长度
  */
-uint16_t UART3_RecvString(uint8_t *buf);
+uint16_t UART3_RecvString(uint8_t* buf);
 
 #ifdef __cplusplus
 }

@@ -75,43 +75,43 @@ typedef unsigned long long volatile UINT64V;
 #endif
 
 #ifndef PVOID
-typedef void *PVOID;
+typedef void* PVOID;
 #endif
 #ifndef PCHAR
-typedef char *PCHAR;
+typedef char* PCHAR;
 #endif
 #ifndef PCHAR
-typedef const char *PCCHAR;
+typedef const char* PCCHAR;
 #endif
 #ifndef PINT8
-typedef char *PINT8;
+typedef char* PINT8;
 #endif
 #ifndef PINT16
-typedef short *PINT16;
+typedef short* PINT16;
 #endif
 #ifndef PINT32
-typedef long *PINT32;
+typedef long* PINT32;
 #endif
 #ifndef PUINT8
-typedef unsigned char *PUINT8;
+typedef unsigned char* PUINT8;
 #endif
 #ifndef PUINT16
-typedef unsigned short *PUINT16;
+typedef unsigned short* PUINT16;
 #endif
 #ifndef PUINT32
-typedef unsigned long *PUINT32;
+typedef unsigned long* PUINT32;
 #endif
 #ifndef PUINT8V
-typedef volatile unsigned char *PUINT8V;
+typedef volatile unsigned char* PUINT8V;
 #endif
 #ifndef PUINT16V
-typedef volatile unsigned short *PUINT16V;
+typedef volatile unsigned short* PUINT16V;
 #endif
 #ifndef PUINT32V
-typedef volatile unsigned long *PUINT32V;
+typedef volatile unsigned long* PUINT32V;
 #endif
 #ifndef PUINT64V
-typedef volatile unsigned long long *PUINT64V;
+typedef volatile unsigned long long* PUINT64V;
 #endif
 
 /* ********************************************************************************************************************* */
@@ -125,19 +125,23 @@ typedef volatile unsigned long long *PUINT64V;
 #endif
 
 #ifdef DEBUG
-#define PRINT(X...) {printf("[DEBUG] ");printf(X);}
+#define PRINT(X...)         \
+    {                       \
+        printf("[DEBUG] "); \
+        printf(X);          \
+    }
 #else
 #define PRINT(X...)
 #endif
 
 /* Calculate the byte offset of a field in a structure of type */
-#define FIELD_OFFSET(Type, Field)    ((UINT16) & (((Type *)0)->Field))
+#define FIELD_OFFSET(Type, Field)    ((UINT16) & (((Type*)0)->Field))
 
 /* Calculate the size of a field in a structure of type */
-#define FIELD_SIZE(Type, Field)      (sizeof(((Type *)0)->Field))
+#define FIELD_SIZE(Type, Field)      (sizeof(((Type*)0)->Field))
 
 /* An expression that yields the type of a field in a struct */
-#define FIELD_TYPE(Type, Field)      (((Type *)0)->Field)
+#define FIELD_TYPE(Type, Field)      (((Type*)0)->Field)
 
 /* Return the number of elements in a statically sized array */
 #define NUMBER_OF(Array)             (sizeof(Array) / sizeof((Array)[0]))
@@ -208,8 +212,8 @@ extern "C" {
 /* ********************************************************************************************************************* */
 
 /* Independent watch-dog register */
-#define R32_IWDG_KR     (*((PUINT32V)0x40001000))  // WO, watch-dog key register
-#define R32_IWDG_CFG    (*((PUINT32V)0x40001004))  // RW, watch-dog configuration
+#define R32_IWDG_KR  (*((PUINT32V)0x40001000))  // WO, watch-dog key register
+#define R32_IWDG_CFG (*((PUINT32V)0x40001004))  // RW, watch-dog configuration
 
 /* System: safe accessing register */
 #define R32_SAFE_ACCESS (*((PUINT32V)0x40001040))  // RW, safe accessing
@@ -441,7 +445,7 @@ extern "C" {
     (*((PUINT16V)0x40001020))  // RWA, power plan before sleep instruction, SAM
 #define RB_PWR_XROM   0x01  // RWA, power for flash ROM
 #define RB_PWR_RAM32K 0x02  // RWA, power for retention 32KB SRAM
-#define RB_PWR_CORE   0x04  // RWA, power retention for core and base peripherals
+#define RB_PWR_CORE 0x04  // RWA, power retention for core and base peripherals
 #define RB_PWR_EXTEND 0x08  // RWA, power retention for USB and BLE
 #define RB_PWR_RAM96K 0x10  // RWA, power for main 96KB SRAM
 #define RB_PWR_SYS_EN 0x80  // RWA, power for system
@@ -529,7 +533,7 @@ extern "C" {
     0x40  // RWA, set 1 to load RTC count low word R32_RTC_CNT_32K, auto clear after loaded
 #define RB_RTC_LOAD_HI \
     0x80  // RWA, set 1 to load RTC count high word R32_RTC_CNT_DAY, auto clear after loaded
-#define R32_RTC_TRIG    (*((PUINT32V)0x40001034))  // RWA, RTC trigger value, SAM
+#define R32_RTC_TRIG (*((PUINT32V)0x40001034))  // RWA, RTC trigger value, SAM
 #define R32_RTC_CNT_32K (*((PUINT32V)0x40001038))  // RO, RTC count based 32KHz
 #define R16_RTC_CNT_32K (*((PUINT16V)0x40001038))  // RO, RTC count based 32KHz
 #define R16_RTC_CNT_2S \
@@ -650,7 +654,7 @@ extern "C" {
 #define RB_ADC_DMA_ENABLE 0x01  // RW, ADC DMA enable
 #define RB_ADC_DMA_LOOP   0x04  // RW, ADC DMA address loop enable
 #define RB_ADC_IE_DMA_END 0x08  // RW, enable interrupt for ADC DMA completion
-#define RB_ADC_IE_EOC     0x10  // RW, enable interrupt for end of ADC conversion
+#define RB_ADC_IE_EOC 0x10  // RW, enable interrupt for end of ADC conversion
 #define RB_SCAN_AUTO_TYPE \
     0x20  // RW, ADC scan mode, 1=contineous trig, 0=periodicity trig
 #define RB_ADC_CONT_EN    0x40  // RW, enable contineous conversion ADC
@@ -693,16 +697,16 @@ extern "C" {
 /* System: Flash ROM control register */
 #define R32_FLASH_DATA     (*((PUINT32V)0x40001800))  // RO/WO, flash ROM data
 #define R32_FLASH_CONTROL  (*((PUINT32V)0x40001804))  // RW, flash ROM control
-#define R8_FLASH_DATA      (*((PUINT8V)0x40001804))  // RO/WO, flash ROM data buffer
-#define R8_FLASH_SCK       (*((PUINT8V)0x40001805))  // RW, flash ROM sck time config
-#define R8_FLASH_CTRL      (*((PUINT8V)0x40001806))  // RW, flash ROM access control
+#define R8_FLASH_DATA (*((PUINT8V)0x40001804))  // RO/WO, flash ROM data buffer
+#define R8_FLASH_SCK  (*((PUINT8V)0x40001805))  // RW, flash ROM sck time config
+#define R8_FLASH_CTRL (*((PUINT8V)0x40001806))  // RW, flash ROM access control
 #define R8_FLASH_CFG \
     (*((PUINT8V)0x40001807))  // RW, flash ROM access config, SAM
 
 /* System: GPIO interrupt control register */
 #define R32_GPIO_INT_EN (*((PUINT32V)0x40001090))  // RW, GPIO interrupt enable
-#define R16_PA_INT_EN   (*((PUINT16V)0x40001090))  // RW, GPIO PA interrupt enable
-#define R16_PB_INT_EN   (*((PUINT16V)0x40001092))  // RW, GPIO PB interrupt enable
+#define R16_PA_INT_EN (*((PUINT16V)0x40001090))  // RW, GPIO PA interrupt enable
+#define R16_PB_INT_EN (*((PUINT16V)0x40001092))  // RW, GPIO PB interrupt enable
 #define R32_GPIO_INT_MODE \
     (*((PUINT32V)0x40001094))  // RW, GPIO interrupt mode: 0=level action, 1=edge action
 #define R16_PA_INT_MODE \
@@ -710,8 +714,8 @@ extern "C" {
 #define R16_PB_INT_MODE \
     (*((PUINT16V)0x40001096))  // RW, GPIO PB interrupt mode: 0=level action, 1=edge action
 #define R32_GPIO_INT_IF (*((PUINT32V)0x4000109C))  // RW1, GPIO interrupt flag
-#define R16_PA_INT_IF   (*((PUINT16V)0x4000109C))  // RW1, GPIO PA interrupt flag
-#define R16_PB_INT_IF   (*((PUINT16V)0x4000109E))  // RW1, GPIO PB interrupt flag
+#define R16_PA_INT_IF (*((PUINT16V)0x4000109C))  // RW1, GPIO PA interrupt flag
+#define R16_PB_INT_IF (*((PUINT16V)0x4000109E))  // RW1, GPIO PB interrupt flag
 
 /* GPIO PA register */
 #define R32_PA_DIR \
@@ -1057,7 +1061,7 @@ extern "C" {
 #define BA_TMR2          ((PUINT8V)0x40002800)  // point TMR2 base address
 #define BA_TMR3          ((PUINT8V)0x40002C00)  // point TMR3 base address
 #define TMR_CTRL_MOD     0
-#define RB_TMR_MODE_IN   0x01  // RW, timer in mode: 0=timer/PWM, 1=capture/count
+#define RB_TMR_MODE_IN 0x01  // RW, timer in mode: 0=timer/PWM, 1=capture/count
 #define RB_TMR_ALL_CLEAR 0x02  // RW, force clear timer FIFO and count
 #define RB_TMR_COUNT_EN  0x04  // RW, timer count enable
 #define RB_TMR_OUT_EN    0x08  // RW, timer output enable
@@ -1103,10 +1107,10 @@ extern "C" {
 /* UART0 register */
 #define R32_UART0_CTRL    (*((PUINT32V)0x40003000))  // RW, UART0 control
 #define R8_UART0_MCR      (*((PUINT8V)0x40003000))  // RW, UART0 modem control
-#define R8_UART0_IER      (*((PUINT8V)0x40003001))  // RW, UART0 interrupt enable
-#define R8_UART0_FCR      (*((PUINT8V)0x40003002))  // RW, UART0 FIFO control
-#define R8_UART0_LCR      (*((PUINT8V)0x40003003))  // RW, UART0 line control
-#define R32_UART0_STAT    (*((PUINT32V)0x40003004))  // RO, UART0 status
+#define R8_UART0_IER   (*((PUINT8V)0x40003001))  // RW, UART0 interrupt enable
+#define R8_UART0_FCR   (*((PUINT8V)0x40003002))  // RW, UART0 FIFO control
+#define R8_UART0_LCR   (*((PUINT8V)0x40003003))  // RW, UART0 line control
+#define R32_UART0_STAT (*((PUINT32V)0x40003004))  // RO, UART0 status
 #define R8_UART0_IIR \
     (*((PUINT8V)0x40003004))  // RO, UART0 interrupt identification
 #define R8_UART0_LSR   (*((PUINT8V)0x40003005))  // RO, UART0 line status
@@ -1287,15 +1291,15 @@ extern "C" {
 /* UART interrupt identification values for IIR bits 3:0 */
 #define UART_II_SLV_ADDR   0x0E  // RO, UART0 slave address match
 #define UART_II_LINE_STAT  0x06  // RO, UART interrupt by receiver line status
-#define UART_II_RECV_RDY   0x04  // RO, UART interrupt by receiver data available
-#define UART_II_RECV_TOUT  0x0C  // RO, UART interrupt by receiver fifo timeout
-#define UART_II_THR_EMPTY  0x02  // RO, UART interrupt by THR empty
-#define UART_II_MODEM_CHG  0x00  // RO, UART0 interrupt by modem status change
-#define UART_II_NO_INTER   0x01  // RO, no UART interrupt is pending
+#define UART_II_RECV_RDY  0x04  // RO, UART interrupt by receiver data available
+#define UART_II_RECV_TOUT 0x0C  // RO, UART interrupt by receiver fifo timeout
+#define UART_II_THR_EMPTY 0x02  // RO, UART interrupt by THR empty
+#define UART_II_MODEM_CHG 0x00  // RO, UART0 interrupt by modem status change
+#define UART_II_NO_INTER  0x01  // RO, no UART interrupt is pending
 
 /* SPI0 register */
-#define R32_SPI0_CONTROL   (*((PUINT32V)0x40004000))  // RW, SPI0 control
-#define R8_SPI0_CTRL_MOD   (*((PUINT8V)0x40004000))  // RW, SPI0 mode control
+#define R32_SPI0_CONTROL  (*((PUINT32V)0x40004000))  // RW, SPI0 control
+#define R8_SPI0_CTRL_MOD  (*((PUINT8V)0x40004000))  // RW, SPI0 mode control
 #define R8_SPI0_CTRL_CFG \
     (*((PUINT8V)0x40004001))  // RW, SPI0 configuration control
 #define R8_SPI0_INTER_EN (*((PUINT8V)0x40004002))  // RW, SPI0 interrupt enable
@@ -1495,32 +1499,32 @@ extern "C" {
 
 /* PWM4/5/6/7/8/9/10/11 register */
 #define R32_PWM_CONTROL (*((PUINT32V)0x40005000))  // RW, PWM control
-#define R8_PWM_OUT_EN   (*((PUINT8V)0x40005000))  // RW, PWM output enable control
+#define R8_PWM_OUT_EN (*((PUINT8V)0x40005000))  // RW, PWM output enable control
 #define R8_PWM_POLAR \
     (*((PUINT8V)0x40005001))  // RW, PWM output polarity control
 #define R8_PWM_CONFIG    (*((PUINT8V)0x40005002))  // RW, PWM configuration
 #define R8_PWM_CLOCK_DIV (*((PUINT8V)0x40005003))  // RW, PWM clock divisor
 #define R32_PWM4_7_DATA  (*((PUINT32V)0x40005004))  // RW, PWM4-7 data holding
-#define R16_PWM4_DATA    (*((PUINT16V)0x40005004))  // RW, PWM4 16bit data holding
-#define R16_PWM5_DATA    (*((PUINT16V)0x40005006))  // RW, PWM5 16bit data holding
-#define R8_PWM4_DATA     (*((PUINT8V)0x40005004))  // RW, PWM4 data holding
-#define R8_PWM5_DATA     (*((PUINT8V)0x40005005))  // RW, PWM5 data holding
-#define R8_PWM6_DATA     (*((PUINT8V)0x40005006))  // RW, PWM6 data holding
-#define R8_PWM7_DATA     (*((PUINT8V)0x40005007))  // RW, PWM7 data holding
+#define R16_PWM4_DATA (*((PUINT16V)0x40005004))  // RW, PWM4 16bit data holding
+#define R16_PWM5_DATA (*((PUINT16V)0x40005006))  // RW, PWM5 16bit data holding
+#define R8_PWM4_DATA  (*((PUINT8V)0x40005004))  // RW, PWM4 data holding
+#define R8_PWM5_DATA  (*((PUINT8V)0x40005005))  // RW, PWM5 data holding
+#define R8_PWM6_DATA  (*((PUINT8V)0x40005006))  // RW, PWM6 data holding
+#define R8_PWM7_DATA  (*((PUINT8V)0x40005007))  // RW, PWM7 data holding
 #define R32_PWM8_11_DATA (*((PUINT32V)0x40005008))  // RW, PWM8-11 data holding
-#define R16_PWM6_DATA    (*((PUINT16V)0x40005008))  // RW, PWM6 16bit data holding
-#define R16_PWM7_DATA    (*((PUINT16V)0x4000500A))  // RW, PWM7 16bit data holding
-#define R8_PWM8_DATA     (*((PUINT8V)0x40005008))  // RW, PWM8 data holding
-#define R8_PWM9_DATA     (*((PUINT8V)0x40005009))  // RW, PWM9 data holding
-#define R8_PWM10_DATA    (*((PUINT8V)0x4000500A))  // RW, PWM10 data holding
-#define R8_PWM11_DATA    (*((PUINT8V)0x4000500B))  // RW, PWM11 data holding
-#define R8_PWM_INT_CTRL  (*((PUINT8V)0x4000500C))  // RW, PWM interrupt control
-#define RB_PWM_IE_CYC    0x01  // RW, enable interrupt for PWM cycle end
+#define R16_PWM6_DATA (*((PUINT16V)0x40005008))  // RW, PWM6 16bit data holding
+#define R16_PWM7_DATA (*((PUINT16V)0x4000500A))  // RW, PWM7 16bit data holding
+#define R8_PWM8_DATA  (*((PUINT8V)0x40005008))  // RW, PWM8 data holding
+#define R8_PWM9_DATA  (*((PUINT8V)0x40005009))  // RW, PWM9 data holding
+#define R8_PWM10_DATA (*((PUINT8V)0x4000500A))  // RW, PWM10 data holding
+#define R8_PWM11_DATA (*((PUINT8V)0x4000500B))  // RW, PWM11 data holding
+#define R8_PWM_INT_CTRL (*((PUINT8V)0x4000500C))  // RW, PWM interrupt control
+#define RB_PWM_IE_CYC   0x01  // RW, enable interrupt for PWM cycle end
 #define RB_PWM_CYC_PRE \
     0x02  // RW, select PWM cycle interrupt point: 0=after count 0xFE (0x7E for 7 bits mode...), 1=after count 0xF0 (0x70 for 7 bits mode...)
 #define RB_PWM_IF_CYC     0x80  // RW1, interrupt flag for PWM cycle end
 #define R32_PWM_REG_DATA8 (*((PUINT32V)0x40005010))  // RW, PWM8-9 data register
-#define R16_PWM8_DATA     (*((PUINT16V)0x40005010))  // RW, PWM8 16bit data holding
+#define R16_PWM8_DATA (*((PUINT16V)0x40005010))  // RW, PWM8 16bit data holding
 #define R16_PWM8_REG_DATA \
     (*((PUINT16V)0x40005010))  // RW, PWM8 16bit data holding
 #define R16_PWM9_DATA (*((PUINT16V)0x40005012))  // RW, PWM9 16bit data holding
@@ -1602,8 +1606,8 @@ extern "C" {
 #define R16_LED_STATUS    (*((PUINT16V)0x4000F004))  // RW, LED status register
 #define RB_LED_FIFO_COUNT 0x0F  // RO, LED fifo current count
 #define RB_LED_CLOCK      0x20  // RO, LED clock current status
-#define RB_LED_IF_FIFO    0x40  // RW1, FIFO count <=2 flag, clear RB_LED_IF_FIFO
-#define RB_LED_LOAD_FAIL  0x80  // R0, result of LED data loading
+#define RB_LED_IF_FIFO   0x40  // RW1, FIFO count <=2 flag, clear RB_LED_IF_FIFO
+#define RB_LED_LOAD_FAIL 0x80  // R0, result of LED data loading
 #define RB_LED_IF_DMA_END \
     0x0100  // RW1, LED DMA complete flag, clear RB_LED_IF_DMA_END
 #define RB_LED_IF_DMA_INT \
@@ -1639,7 +1643,7 @@ extern "C" {
     (*((PUINT32V)(0x4000600C)))  // RW, LCD driver data2, address 8-11
 #define R32_LCD_RAM3 \
     (*((PUINT32V)(0x40006010)))  // RW, LCD driver data3, address 12-15
-#define R32_LCD_SEG_EN     (*((PUINT32V)(0x40006014)))  // RW, LCD SEG27~SEG0 enable
+#define R32_LCD_SEG_EN (*((PUINT32V)(0x40006014)))  // RW, LCD SEG27~SEG0 enable
 #define RB_LCD_SEG0_7_EN   0x000000FF  // RW, SEG0-SEG7 enable
 #define RB_LCD_SEG8_15_EN  0x0000FF00  // RW, SEG8-SEG15 enable
 #define RB_LCD_SEG16_23_EN 0x00FF0000  // RW, SEG16-SEG23 enable
@@ -1847,7 +1851,7 @@ extern "C" {
 #define RB_UIE_FIFO_OV 0x10  // enable interrupt for FIFO overflow
 #define RB_UIE_HST_SOF \
     0x08  // enable interrupt for host SOF timer action for USB host mode
-#define RB_UIE_SUSPEND  0x04  // enable interrupt for USB suspend or resume event
+#define RB_UIE_SUSPEND 0x04  // enable interrupt for USB suspend or resume event
 #define RB_UIE_TRANSFER 0x02  // enable interrupt for USB transfer completion
 #define RB_UIE_DETECT \
     0x01  // enable interrupt for USB device detected event for USB host mode
@@ -1971,15 +1975,15 @@ extern "C" {
 //   1 0:  64 bytes buffer for receiving (IN endpoint)
 //   1 1:  dual 64 bytes buffer by toggle bit bUH_R_TOG selection for receiving (IN endpoint), total=128bytes
 
-#define R32_UEP0_DMA      (*((PUINT32V)0x40008010))  // endpoint 0 DMA buffer address
-#define R32_UEP1_DMA      (*((PUINT32V)0x40008014))  // endpoint 1 DMA buffer address
-#define R32_UEP2_DMA      (*((PUINT32V)0x40008018))  // endpoint 2 DMA buffer address
-#define R32_UH_RX_DMA     R32_UEP2_DMA  // host rx endpoint buffer address
-#define R32_UEP3_DMA      (*((PUINT32V)0x4000801C))  // endpoint 3 DMA buffer address
-#define R32_UH_TX_DMA     R32_UEP3_DMA  // host tx endpoint buffer address
-#define R32_UEP5_DMA      (*((PUINT32V)0x40008054))  // endpoint 5 DMA buffer address
-#define R32_UEP6_DMA      (*((PUINT32V)0x40008058))  // endpoint 6 DMA buffer address
-#define R32_UEP7_DMA      (*((PUINT32V)0x4000805C))  // endpoint 7 DMA buffer address
+#define R32_UEP0_DMA (*((PUINT32V)0x40008010))  // endpoint 0 DMA buffer address
+#define R32_UEP1_DMA (*((PUINT32V)0x40008014))  // endpoint 1 DMA buffer address
+#define R32_UEP2_DMA (*((PUINT32V)0x40008018))  // endpoint 2 DMA buffer address
+#define R32_UH_RX_DMA R32_UEP2_DMA  // host rx endpoint buffer address
+#define R32_UEP3_DMA (*((PUINT32V)0x4000801C))  // endpoint 3 DMA buffer address
+#define R32_UH_TX_DMA R32_UEP3_DMA  // host tx endpoint buffer address
+#define R32_UEP5_DMA (*((PUINT32V)0x40008054))  // endpoint 5 DMA buffer address
+#define R32_UEP6_DMA (*((PUINT32V)0x40008058))  // endpoint 6 DMA buffer address
+#define R32_UEP7_DMA (*((PUINT32V)0x4000805C))  // endpoint 7 DMA buffer address
 #define R32_USB_EP0_CTRL \
     (*((PUINT32V)0x40008020))  // endpoint 0 control & transmittal length
 #define R8_UEP0_T_LEN (*((PUINT8V)0x40008020))  // endpoint 0 transmittal length
@@ -2351,7 +2355,7 @@ typedef struct __PACKED _USB_CONFIG_DESCR_LONG {
     USB_ENDP_DESCR endp_descr[1];
 } USB_CFG_DESCR_LONG, *PUSB_CFG_DESCR_LONG;
 
-typedef USB_CFG_DESCR_LONG *PXUSB_CFG_DESCR_LONG;
+typedef USB_CFG_DESCR_LONG* PXUSB_CFG_DESCR_LONG;
 
 typedef struct __PACKED _USB_HUB_DESCR {
     UINT8 bDescLength;
@@ -2365,7 +2369,7 @@ typedef struct __PACKED _USB_HUB_DESCR {
     UINT8 PortPwrCtrlMask;
 } USB_HUB_DESCR, *PUSB_HUB_DESCR;
 
-typedef USB_HUB_DESCR *PXUSB_HUB_DESCR;
+typedef USB_HUB_DESCR* PXUSB_HUB_DESCR;
 
 typedef struct __PACKED _USB_HID_DESCR {
     UINT8  bLength;
@@ -2378,7 +2382,7 @@ typedef struct __PACKED _USB_HID_DESCR {
     UINT8  wDescriptorLengthH;
 } USB_HID_DESCR, *PUSB_HID_DESCR;
 
-typedef USB_HID_DESCR *PXUSB_HID_DESCR;
+typedef USB_HID_DESCR* PXUSB_HID_DESCR;
 
 typedef struct __PACKED _UDISK_BOC_CBW { /* command of BulkOnly USB-FlashDisk */
     UINT32 mCBW_Sig;
@@ -2390,7 +2394,7 @@ typedef struct __PACKED _UDISK_BOC_CBW { /* command of BulkOnly USB-FlashDisk */
     UINT8  mCBW_CB_Buf[16]; /* command block buffer */
 } UDISK_BOC_CBW, *PUDISK_BOC_CBW;
 
-typedef UDISK_BOC_CBW *PXUDISK_BOC_CBW;
+typedef UDISK_BOC_CBW* PXUDISK_BOC_CBW;
 
 typedef struct __PACKED _UDISK_BOC_CSW { /* status of BulkOnly USB-FlashDisk */
     UINT32 mCSW_Sig;
@@ -2399,7 +2403,7 @@ typedef struct __PACKED _UDISK_BOC_CSW { /* status of BulkOnly USB-FlashDisk */
     UINT8  mCSW_Status; /* return: result status */
 } UDISK_BOC_CSW, *PUDISK_BOC_CSW;
 
-typedef UDISK_BOC_CSW *PXUDISK_BOC_CSW;
+typedef UDISK_BOC_CSW* PXUDISK_BOC_CSW;
 
 #ifdef __cplusplus
 }
@@ -2462,7 +2466,7 @@ typedef UDISK_BOC_CSW *PXUDISK_BOC_CSW;
     (*((PUINT8V)0x40009008))  // RW, USB_high_speed interupt flag register
 #define USBHS_UDIF_FIFO_OV  0x80  // RW1, clear fifo overflow interupt flag
 #define USBHS_UDIF_LINK_RDY 0x40  // RW1, clear USB conect interupt flag
-#define USBHS_UDIF_RX_SOF   0x20  // RW1, clear SOF package received interupt flag
+#define USBHS_UDIF_RX_SOF 0x20  // RW1, clear SOF package received interupt flag
 #define USBHS_UDIF_TRANSFER \
     0x10  // RO,  USB transmit end interupt flag,cleared by USBHS_UDMS_HS_MOD
 #define USBHS_UDIF_LPM_ACT   0x08  // RW1, clear lpm transmit end interupt flag
@@ -2709,17 +2713,17 @@ typedef UDISK_BOC_CSW *PXUDISK_BOC_CSW;
 #define USBHS_UEP7_T_ISO_EN 0x80
 #define R16_U2EP_R_ISO \
     (*((PUINT16V)0x400090BE))  // RW, USB_high_speed end point receive sync mode register
-#define USBHS_UEP1_R_ISO_EN   0x02
-#define USBHS_UEP2_R_ISO_EN   0x04
-#define USBHS_UEP3_R_ISO_EN   0x08
-#define USBHS_UEP4_R_ISO_EN   0x10
-#define USBHS_UEP5_R_ISO_EN   0x20
-#define USBHS_UEP6_R_ISO_EN   0x40
-#define USBHS_UEP7_R_ISO_EN   0x80
+#define USBHS_UEP1_R_ISO_EN 0x02
+#define USBHS_UEP2_R_ISO_EN 0x04
+#define USBHS_UEP3_R_ISO_EN 0x08
+#define USBHS_UEP4_R_ISO_EN 0x10
+#define USBHS_UEP5_R_ISO_EN 0x20
+#define USBHS_UEP6_R_ISO_EN 0x40
+#define USBHS_UEP7_R_ISO_EN 0x80
 
 /* USB high speed host register  */
-#define R8_U2H_CFG            (*((PUINT8V)0x40009100))  // RW, USB_high_speed register
-#define USBHS_UH_LPM_EN       0x80
+#define R8_U2H_CFG      (*((PUINT8V)0x40009100))  // RW, USB_high_speed register
+#define USBHS_UH_LPM_EN 0x80
 #define USBHS_UH_FORCE_FS     0x40
 #define USBHS_UH_SOF_EN       0x20
 #define USBHS_UH_DMA_EN       0x10
@@ -2727,73 +2731,73 @@ typedef UDISK_BOC_CSW *PXUDISK_BOC_CSW;
 #define USBHS_UH_CLR_ALL      0x04
 #define USBHS_RST_SIE         0x02
 #define USBHS_RST_LINK        0x01
-#define R8_U2H_INT_EN         (*((PUINT8V)0x40009102))  // RW, USB_high_speed register
+#define R8_U2H_INT_EN (*((PUINT8V)0x40009102))  // RW, USB_high_speed register
 #define USBHS_UHIE_FIFO_OVER  0x80
 #define USBHS_UHIE_TX_HALT    0x40
 #define USBHS_UHIE_SOF_ACT    0x20
 #define USBHS_UHIE_TRANSFER   0x10
 #define USBHS_UHIE_RESUME_ACT 0x08
 #define USBHS_UHIE_WKUP_ACT   0x04
-#define R8_U2H_DEV_AD         (*((PUINT8V)0x40009103))  // RW, USB_high_speed register
-#define USBHS_UH_DEV_ADDR     0xFF
+#define R8_U2H_DEV_AD (*((PUINT8V)0x40009103))  // RW, USB_high_speed register
+#define USBHS_UH_DEV_ADDR 0xFF
 #define R32_U2H_CONTROL \
     (*((PUINT32V)0x40009104))  // RW, USB_high_speed register
-#define USBHS_UH_RX_NO_RES        0x800000
-#define USBHS_UH_TX_NO_RES        0x400000
-#define USBHS_UH_RX_NO_DATA       0x200000
-#define USBHS_UH_TX_NO_DATA       0x100000
-#define USBHS_UH_PRE_PID_EN       0x080000
-#define USBHS_UH_SPLIT_VALID      0x040000
-#define USBHS_UH_LPM_VALID        0x020000
-#define USBHS_UH_HOST_ACTION      0x010000
-#define USBHS_UH_BUF_MODE         0x0400
-#define USBHS_UH_T_TOG_MASK       0x0300
-#define USBHS_UH_T_TOG_MDATA      0x0300
-#define USBHS_UH_T_TOG_DATA2      0x0200
-#define USBHS_UH_T_TOG_DATA1      0x0100
-#define USBHS_UH_T_TOG_DATA0      0x0000
-#define USBHS_UH_T_ENDP_MASK      0xF0
-#define USBHS_UH_T_TOKEN_MASK     0x0F
+#define USBHS_UH_RX_NO_RES    0x800000
+#define USBHS_UH_TX_NO_RES    0x400000
+#define USBHS_UH_RX_NO_DATA   0x200000
+#define USBHS_UH_TX_NO_DATA   0x100000
+#define USBHS_UH_PRE_PID_EN   0x080000
+#define USBHS_UH_SPLIT_VALID  0x040000
+#define USBHS_UH_LPM_VALID    0x020000
+#define USBHS_UH_HOST_ACTION  0x010000
+#define USBHS_UH_BUF_MODE     0x0400
+#define USBHS_UH_T_TOG_MASK   0x0300
+#define USBHS_UH_T_TOG_MDATA  0x0300
+#define USBHS_UH_T_TOG_DATA2  0x0200
+#define USBHS_UH_T_TOG_DATA1  0x0100
+#define USBHS_UH_T_TOG_DATA0  0x0000
+#define USBHS_UH_T_ENDP_MASK  0xF0
+#define USBHS_UH_T_TOKEN_MASK 0x0F
 
-#define R8_U2H_INT_FLAG           (*((PUINT8V)0x40009108))  // RW, USB_high_speed register
-#define USBHS_UHIF_FIFO_OVER      0x80
-#define USBHS_UHIF_TX_HALT        0x40
-#define USBHS_UHIF_SOF_ACT        0x20
-#define USBHS_UHIF_TRANSFER       0x10
-#define USBHS_UHIF_RESUME_ACT     0x08
-#define USBHS_UHIF_WKUP_ACT       0x04
-#define R8_U2H_INT_ST             (*((PUINT8V)0x40009109))  // RW, USB_high_speed register
+#define R8_U2H_INT_FLAG (*((PUINT8V)0x40009108))  // RW, USB_high_speed register
+#define USBHS_UHIF_FIFO_OVER  0x80
+#define USBHS_UHIF_TX_HALT    0x40
+#define USBHS_UHIF_SOF_ACT    0x20
+#define USBHS_UHIF_TRANSFER   0x10
+#define USBHS_UHIF_RESUME_ACT 0x08
+#define USBHS_UHIF_WKUP_ACT   0x04
+#define R8_U2H_INT_ST (*((PUINT8V)0x40009109))  // RW, USB_high_speed register
 #define USBHS_UHIF_PORT_RX_RESUME 0x10
 #define USBHS_UH_R_TOKEN_MASK     0x0F
-#define R8_U2H_MIS_ST             (*((PUINT8V)0x4000910A))  // RW, USB_high_speed register
-#define USBHS_UHMS_BUS_SE0        0x80
-#define USBHS_UHMS_BUS_J          0x40
-#define USBHS_UHMS_LINESTATE      0x30
-#define USBHS_UHMS_USB_WAKEUP     0x08
-#define USBHS_UHMS_SOF_ACT        0x04
-#define USBHS_UHMS_SOF_PRE        0x02
-#define USBHS_UHMS_SOF_FREE       0x01
+#define R8_U2H_MIS_ST (*((PUINT8V)0x4000910A))  // RW, USB_high_speed register
+#define USBHS_UHMS_BUS_SE0    0x80
+#define USBHS_UHMS_BUS_J      0x40
+#define USBHS_UHMS_LINESTATE  0x30
+#define USBHS_UHMS_USB_WAKEUP 0x08
+#define USBHS_UHMS_SOF_ACT    0x04
+#define USBHS_UHMS_SOF_PRE    0x02
+#define USBHS_UHMS_SOF_FREE   0x01
 #define R32_U2H_LPM_DATA \
     (*((PUINT32V)0x4000910C))  // RW, USB_high_speed register
 #define USBHS_UH_LPM_DATA 0x07FF
 #define R32_U2H_SPLIT_DATA \
     (*((PUINT32V)0x40009110))  // RW, USB_high_speed register
-#define USBHS_UH_SPLIT_DATA  0x07FFFF
-#define R32_U2H_FRAME        (*((PUINT32V)0x40009114))  // RW, USB_high_speed register
+#define USBHS_UH_SPLIT_DATA 0x07FFFF
+#define R32_U2H_FRAME (*((PUINT32V)0x40009114))  // RW, USB_high_speed register
 #define USBHS_UH_SOF_CNT_CLR 0x02000000
 #define USBHS_UH_SOF_CNT_EN  0x01000000
 #define USBHS_UH_MFRAME_NO   0x070000
 #define USBHS_UH_FRAME_NO    0x07FF
-#define R32_U2H_TX_LEN       (*((PUINT32V)0x40009118))  // RW, USB_high_speed register
-#define USBHS_UH_TX_LEN      0x07FF
-#define R32_U2H_RX_LEN       (*((PUINT32V)0x4000911C))  // RW, USB_high_speed register
-#define USBHS_UH_RX_LEN      0x07FF
+#define R32_U2H_TX_LEN (*((PUINT32V)0x40009118))  // RW, USB_high_speed register
+#define USBHS_UH_TX_LEN 0x07FF
+#define R32_U2H_RX_LEN (*((PUINT32V)0x4000911C))  // RW, USB_high_speed register
+#define USBHS_UH_RX_LEN 0x07FF
 #define R32_U2H_RX_MAX_LEN \
     (*((PUINT32V)0x40009120))  // RW, USB_high_speed register
 #define USBHS_UH_RX_MAX_LEN 0x07FF
-#define R32_U2H_RX_DMA      (*((PUINT32V)0x40009124))  // RW, USB_high_speed register
+#define R32_U2H_RX_DMA (*((PUINT32V)0x40009124))  // RW, USB_high_speed register
 #define USBHS_R32_UH_RX_DMA 0x01FFFF
-#define R32_U2H_TX_DMA      (*((PUINT32V)0x40009128))  // RW, USB_high_speed register
+#define R32_U2H_TX_DMA (*((PUINT32V)0x40009128))  // RW, USB_high_speed register
 #define USBHS_R32_UH_TX_DMA 0x01FFFF
 #define R32_U2H_PORT_CTRL \
     (*((PUINT32V)0x4000912C))  // RW, USB_high_speed register
@@ -2806,9 +2810,9 @@ typedef UDISK_BOC_CSW *PXUDISK_BOC_CSW;
 #define USBHS_UH_CLR_PORT_SUSP    0x04
 #define USBHS_UH_SET_PORT_SUSP    0x02
 #define USBHS_UH_SET_PORT_RESET   0x01
-#define R8_U2H_PORT_CFG           (*((PUINT8V)0x40009130))  // RW, USB_high_speed register
-#define USBHS_UH_PD_EN            0x80
-#define USBHS_UH_HOST_EN          0x01
+#define R8_U2H_PORT_CFG (*((PUINT8V)0x40009130))  // RW, USB_high_speed register
+#define USBHS_UH_PD_EN  0x80
+#define USBHS_UH_HOST_EN 0x01
 #define R8_U2H_PORT_INT_EN \
     (*((PUINT8V)0x40009132))  // RW, USB_high_speed register
 #define USBHS_UHIE_PORT_SLP     0x20

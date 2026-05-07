@@ -438,8 +438,8 @@ void RTC_InitTime(uint16_t y, uint16_t mon, uint16_t d, uint16_t h, uint16_t m,
  *
  * @return  none
  */
-void RTC_GetTime(uint16_t *py, uint16_t *pmon, uint16_t *pd, uint16_t *ph,
-                 uint16_t *pm, uint16_t *ps) {
+void RTC_GetTime(uint16_t* py, uint16_t* pmon, uint16_t* pd, uint16_t* ph,
+                 uint16_t* pm, uint16_t* ps) {
     uint32_t t;
     uint16_t day, sec2, t32k;
 

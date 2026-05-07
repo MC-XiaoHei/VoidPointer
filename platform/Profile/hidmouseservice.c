@@ -165,20 +165,17 @@ static gattAttribute_t hidAttrTbl[] = {
         {ATT_BT_UUID_SIZE, primaryServiceUUID}, /* type */
         GATT_PERMIT_READ, /* permissions */
         0, /* handle */
-        (uint8_t *)&hidService /* pValue */
+        (uint8_t*)&hidService /* pValue */
     },
 
     // Included service (battery)
-    {{ATT_BT_UUID_SIZE, includeUUID}, GATT_PERMIT_READ, 0, (uint8_t *)&include},
+    {{ATT_BT_UUID_SIZE, includeUUID}, GATT_PERMIT_READ, 0, (uint8_t*)&include},
 
     // HID Information characteristic declaration
     {{ATT_BT_UUID_SIZE, characterUUID}, GATT_PERMIT_READ, 0, &hidInfoProps},
 
     // HID Information characteristic
-    {{ATT_BT_UUID_SIZE, hidInfoUUID},
-     GATT_PERMIT_READ,
-     0,
-     (uint8_t *)hidInfo},
+    {{ATT_BT_UUID_SIZE, hidInfoUUID}, GATT_PERMIT_READ, 0, (uint8_t*)hidInfo},
 
     // HID Control Point characteristic declaration
     {{ATT_BT_UUID_SIZE, characterUUID},
@@ -214,7 +211,7 @@ static gattAttribute_t hidAttrTbl[] = {
     {{ATT_BT_UUID_SIZE, hidReportMapUUID},
      GATT_PERMIT_READ,
      0,
-     (uint8_t *)hidReportMap},
+     (uint8_t*)hidReportMap},
 
     // HID External Report Reference Descriptor
     {{ATT_BT_UUID_SIZE, extReportRefUUID},
@@ -231,16 +228,13 @@ static gattAttribute_t hidAttrTbl[] = {
      &hidReportMouseInProps},
 
     // HID Report characteristic, mouse input
-    {{ATT_BT_UUID_SIZE, hidReportUUID},
-     GATT_PERMIT_READ,
-     0,
-     &hidReportMouseIn},
+    {{ATT_BT_UUID_SIZE, hidReportUUID}, GATT_PERMIT_READ, 0, &hidReportMouseIn},
 
     // HID Report characteristic client characteristic configuration
     {{ATT_BT_UUID_SIZE, clientCharCfgUUID},
      GATT_PERMIT_READ | GATT_PERMIT_WRITE,
      0,
-     (uint8_t *)&hidReportMouseInClientCharCfg},
+     (uint8_t*)&hidReportMouseInClientCharCfg},
 
     // HID Report Reference characteristic descriptor, mouse input
     {{ATT_BT_UUID_SIZE, reportRefUUID},
@@ -374,14 +368,14 @@ bStatus_t Hid_AddService(void) {
  * @return  GATT status code.
  */
 uint8_t Hid_SetParameter(uint8_t id, uint8_t type, uint16_t uuid, uint8_t len,
-                         void *pValue) {
+                         void* pValue) {
     bStatus_t ret = SUCCESS;
 
     switch (uuid) {
         case REPORT_UUID:
             if (type == HID_REPORT_TYPE_FEATURE) {
                 if (len == 1) {
-                    hidReportFeature = *((uint8_t *)pValue);
+                    hidReportFeature = *((uint8_t*)pValue);
                 } else {
                     ret = ATT_ERR_INVALID_VALUE_SIZE;
                 }
@@ -415,11 +409,11 @@ uint8_t Hid_SetParameter(uint8_t id, uint8_t type, uint16_t uuid, uint8_t len,
  * @return  GATT status code.
  */
 uint8_t Hid_GetParameter(uint8_t id, uint8_t type, uint16_t uuid,
-                         uint16_t *pLen, void *pValue) {
+                         uint16_t* pLen, void* pValue) {
     switch (uuid) {
         case REPORT_UUID:
             if (type == HID_REPORT_TYPE_FEATURE) {
-                *((uint8_t *)pValue) = hidReportFeature;
+                *((uint8_t*)pValue) = hidReportFeature;
                 *pLen = 1;
             } else {
                 *pLen = 0;

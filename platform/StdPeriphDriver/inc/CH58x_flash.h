@@ -24,7 +24,7 @@ extern "C" {
  * @param   Buffer      - read buffer
  * @param   len         - read len
  */
-void FLASH_ROM_READ(uint32_t StartAddr, void *Buffer, uint32_t len);
+void FLASH_ROM_READ(uint32_t StartAddr, void* Buffer, uint32_t len);
 
 uint8_t UserOptionByteConfig(FunctionalState RESET_EN, FunctionalState BOOT_PIN,
                              FunctionalState UART_NO_KEY_EN,
@@ -34,7 +34,7 @@ uint8_t UserOptionByteClose_SWD(void);
 
 void UserOptionByte_Active(void);
 
-void GET_UNIQUE_ID(uint8_t *Buffer);
+void GET_UNIQUE_ID(uint8_t* Buffer);
 #ifdef __cplusplus
 }
 #endif
