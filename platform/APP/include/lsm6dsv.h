@@ -38,6 +38,11 @@ bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
                                            uint16_t*                out_dropped_count);
 bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw);
 
+void        LSM6DSV_AsyncInit(void);
+vp_status_t LSM6DSV_StartAsyncFifoRead(uint16_t max_samples);
+vp_status_t LSM6DSV_AbortAsync(void);
+vp_bool_t   LSM6DSV_IsAsyncBusy(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -16,6 +16,10 @@
 #include "ble_hid_app.h"
 #include "usbhs_hid_device.h"
 #include "lsm6dsv.h"
+#include "board_map.h"
+#include "board_gpio.h"
+#include "board_input.h"
+
 
 
 typedef struct {
@@ -25,20 +29,8 @@ typedef struct {
     int8_t  wheel;
 } mouse_report_t;
 
-static uint16_t gpioa_exti_both_sim_mask = 0u;
 static vp_bool_t debounce_timer_running = 0u;
 static vp_usb_state_t current_usb_state = VP_USB_STATE_DETACHED;
-
-typedef struct {
-    vp_input_id_t input_id;
-    uint32_t      pin_mask;
-} input_pin_map_t;
-
-static const input_pin_map_t INPUT_PIN_MAP[] = {
-    {VP_INPUT_LEFT, LEFT_BTN},     {VP_INPUT_RIGHT, RIGHT_BTN},
-    {VP_INPUT_MIDDLE, MIDDLE_BTN}, {VP_INPUT_ACTION, ACTION_BTN},
-    {VP_INPUT_ENCODER_A, ENC_A},   {VP_INPUT_ENCODER_B, ENC_B},
-};
 
 static int8_t clamp_i8_to_hid_range(const int8_t v) {
     if (v == -128) {
@@ -51,90 +43,14 @@ static vp_bool_t active_low_pin_level(uint32_t port_data, uint32_t pin_mask) {
     return (port_data & pin_mask) ? 0u : 1u;
 }
 
-static vp_bool_t input_id_to_port_a_pin(const vp_input_id_t input_id,
-                                        uint32_t*           out_pin_mask) {
-    if (out_pin_mask == NULL) {
-        return 0u;
-    }
-
-    for (uint8_t i = 0u; i < sizeof(INPUT_PIN_MAP) / sizeof(INPUT_PIN_MAP[0]); i++) {
-        if (INPUT_PIN_MAP[i].input_id == input_id) {
-            *out_pin_mask = INPUT_PIN_MAP[i].pin_mask;
-            return 1u;
-        }
-    }
-
-    *out_pin_mask = 0u;
-    return 0u;
-}
-
-static void gpioa_config_next_edge_for_pin(const uint32_t pin_mask) {
-    if (GPIOA_ReadPortPin(pin_mask)) {
-        GPIOA_ITModeCfg(pin_mask, GPIO_ITMode_FallEdge);
-    } else {
-        GPIOA_ITModeCfg(pin_mask, GPIO_ITMode_RiseEdge);
-    }
-}
-
-static vp_status_t map_exti_edge_to_gpioa_mode(const vp_exti_edge_t edge,
-                                               GPIOITModeTpDef*     out_mode) {
-    if (out_mode == NULL) {
-        return VP_STATUS_INVALID_ARG;
-    }
-
-    switch (edge) {
-        case VP_EXTI_EDGE_RISING:
-            *out_mode = GPIO_ITMode_RiseEdge;
-            return VP_STATUS_OK;
-        case VP_EXTI_EDGE_FALLING:
-            *out_mode = GPIO_ITMode_FallEdge;
-            return VP_STATUS_OK;
-        case VP_EXTI_EDGE_BOTH:
-            return VP_STATUS_UNSUPPORTED;
-        default:
-            return VP_STATUS_INVALID_ARG;
-    }
-}
-
-static vp_bool_t is_encoder_input(const vp_input_id_t input_id) {
-    return input_id == VP_INPUT_ENCODER_A || input_id == VP_INPUT_ENCODER_B;
-}
-
-static vp_bool_t input_id_to_button_id(const vp_input_id_t input_id,
-                                       vp_button_id_t*     out_button_id) {
-    if (out_button_id == NULL) {
-        return 0u;
-    }
-
-    switch (input_id) {
-        case VP_INPUT_LEFT:
-            *out_button_id = VP_BUTTON_LEFT;
-            return 1u;
-        case VP_INPUT_RIGHT:
-            *out_button_id = VP_BUTTON_RIGHT;
-            return 1u;
-        case VP_INPUT_MIDDLE:
-            *out_button_id = VP_BUTTON_MIDDLE;
-            return 1u;
-        case VP_INPUT_ACTION:
-            *out_button_id = VP_BUTTON_ACTION;
-            return 1u;
-        case VP_INPUT_LASER:
-            *out_button_id = VP_BUTTON_LASER;
-            return 1u;
-        default:
-            *out_button_id = 0u;
-            return 0u;
-    }
-}
 
 vp_bool_t c_vp_gpio_read(const vp_input_id_t input_id) {
-    uint32_t pin_mask = 0u;
-    if (!input_id_to_port_a_pin(input_id, &pin_mask)) {
+    BoardGpio gpio = {0};
+    if (!board_input_id_to_gpio(input_id, &gpio)) {
         return 0u;
     }
 
-    return active_low_pin_level(GPIOA_ReadPort(), pin_mask);
+    return board_gpio_read_level(gpio) ? 0u : 1u;
 }
 
 vp_status_t c_vp_gpio_read_inputs(uint16_t* out_snapshot) {
@@ -142,13 +58,23 @@ vp_status_t c_vp_gpio_read_inputs(uint16_t* out_snapshot) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    const uint32_t portA_data = GPIOA_ReadPort();
+    const uint32_t portA_data = board_gpio_read_port(BOARD_GPIO_GROUP_A);
+    const uint32_t portB_data = board_gpio_read_port(BOARD_GPIO_GROUP_B);
     uint16_t       snapshot = 0u;
     for (uint8_t input = VP_INPUT_LEFT; input <= VP_INPUT_IMU_INT2; input++) {
-        uint32_t pin_mask = 0u;
-        if (input_id_to_port_a_pin((vp_input_id_t)input, &pin_mask) &&
-            active_low_pin_level(portA_data, pin_mask)) {
-            snapshot |= (uint16_t)(1u << input);
+        BoardGpio gpio = {0};
+        if (board_input_id_to_gpio((vp_input_id_t)input, &gpio)) {
+            vp_bool_t active = 0u;
+
+            if (gpio.group == BOARD_GPIO_GROUP_A) {
+                active = active_low_pin_level(portA_data, gpio.pin);
+            } else if (gpio.group == BOARD_GPIO_GROUP_B) {
+                active = active_low_pin_level(portB_data, gpio.pin);
+            }
+
+            if (active) {
+                snapshot |= (uint16_t)(1u << input);
+            }
         }
     }
     *out_snapshot = snapshot;
@@ -159,10 +85,13 @@ vp_status_t c_vp_gpio_write(const vp_output_id_t output_id,
                             const vp_bool_t      level) {
     switch (output_id) {
         case VP_OUTPUT_LASER:
+            if (!board_gpio_is_valid(board_btn_laser)) {
+                return VP_STATUS_UNSUPPORTED;
+            }
             if (level) {
-                GPIOA_SetBits(LIGHT_BTN);
+                board_gpio_set(board_btn_laser);
             } else {
-                GPIOA_ResetBits(LIGHT_BTN);
+                board_gpio_reset(board_btn_laser);
             }
             return VP_STATUS_OK;
         default:
@@ -171,132 +100,41 @@ vp_status_t c_vp_gpio_write(const vp_output_id_t output_id,
 }
 
 vp_status_t c_vp_exti_mask(const vp_input_id_t input_id) {
-    uint32_t pin_mask = 0u;
-    if (!input_id_to_port_a_pin(input_id, &pin_mask)) {
+    BoardGpio gpio = {0};
+    if (!board_input_id_to_gpio(input_id, &gpio)) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    R16_PA_INT_EN &= (uint16_t)(~pin_mask);
-    return VP_STATUS_OK;
+    return board_gpio_int_mask(gpio);
 }
 
 vp_status_t c_vp_exti_unmask(const vp_input_id_t input_id) {
-    uint32_t pin_mask = 0u;
-    if (!input_id_to_port_a_pin(input_id, &pin_mask)) {
+    BoardGpio gpio = {0};
+    if (!board_input_id_to_gpio(input_id, &gpio)) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    if (gpioa_exti_both_sim_mask & pin_mask) {
-        GPIOA_ClearITFlagBit(GPIOA_ReadITFlagPort());
-        gpioa_config_next_edge_for_pin(pin_mask);
-    } else {
-        R16_PA_INT_EN &= (uint16_t)(~pin_mask);
-        R16_PA_INT_MODE &= (uint16_t)(~pin_mask);
-        R32_PA_CLR |= pin_mask;
-        GPIOA_ClearITFlagBit(GPIOA_ReadITFlagPort());
-        GPIOA_ClearITFlagBit(pin_mask);
-        R16_PA_INT_EN |= (uint16_t)pin_mask;
-    }
-    PFIC_EnableIRQ(GPIO_A_IRQn);
-    return VP_STATUS_OK;
+    return board_input_exti_unmask(input_id, gpio);
 }
 
 vp_status_t c_vp_exti_clear_pending(const vp_input_id_t input_id) {
-    uint32_t pin_mask = 0u;
-    if (!input_id_to_port_a_pin(input_id, &pin_mask)) {
+    BoardGpio gpio = {0};
+    if (!board_input_id_to_gpio(input_id, &gpio)) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    GPIOA_ClearITFlagBit(pin_mask);
+    board_gpio_clear_it_flag(gpio);
     return VP_STATUS_OK;
 }
 
 vp_status_t c_vp_exti_set_edge(const vp_input_id_t  input_id,
                                const vp_exti_edge_t edge) {
-    uint32_t pin_mask = 0u;
-    if (!input_id_to_port_a_pin(input_id, &pin_mask)) {
+    BoardGpio gpio = {0};
+    if (!board_input_id_to_gpio(input_id, &gpio)) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    if (edge == VP_EXTI_EDGE_BOTH) {
-        if (!is_encoder_input(input_id)) {
-            return VP_STATUS_UNSUPPORTED;
-        }
-        gpioa_exti_both_sim_mask |= (uint16_t)pin_mask;
-        gpioa_config_next_edge_for_pin(pin_mask);
-        PFIC_EnableIRQ(GPIO_A_IRQn);
-        return VP_STATUS_OK;
-    }
-
-    GPIOITModeTpDef mode;
-    const vp_status_t status = map_exti_edge_to_gpioa_mode(edge, &mode);
-    if (status != VP_STATUS_OK) {
-        return status;
-    }
-
-    vp_button_id_t button_id;
-    if (input_id_to_button_id(input_id, &button_id)) {
-        // 低有效二态输入的目标不是抓住某一次边沿，而是等待下一次稳定语义转换
-        // Rust 请求 Falling 或 Rising，平台改映射为 LowLevel 或 HighLevel，避开机械触点一次性边沿锁存不稳定的问题
-        if (edge == VP_EXTI_EDGE_FALLING) {
-            mode = GPIO_ITMode_LowLevel;
-        } else if (edge == VP_EXTI_EDGE_RISING) {
-            mode = GPIO_ITMode_HighLevel;
-        }
-    }
-
-    gpioa_exti_both_sim_mask &= (uint16_t)(~pin_mask);
-    GPIOA_ITModeCfg(pin_mask, mode);
-    PFIC_EnableIRQ(GPIO_A_IRQn);
-    return VP_STATUS_OK;
-}
-
-void GPIOA_ServicePendingInterrupts(void) {
-    // CH585 可能已经锁存 GPIOA IF，但 PFIC 不再补发 GPIO_A IRQ
-    // 这里仍然只消费硬件已经锁存的中断事实，不通过轮询电平制造事件
-    const uint16_t flags = GPIOA_ReadITFlagPort();
-    const uint16_t active_flags = (uint16_t)(flags & R16_PA_INT_EN);
-    if (active_flags == 0u) {
-        if (flags != 0u) {
-            GPIOA_ClearITFlagBit(flags);
-            PFIC_ClearPendingIRQ(GPIO_A_IRQn);
-        }
-        return;
-    }
-
-    const uint32_t port_data = GPIOA_ReadPort();
-
-    for (uint8_t i = 0u; i < sizeof(INPUT_PIN_MAP) / sizeof(INPUT_PIN_MAP[0]); i++) {
-        const vp_input_id_t input_id = INPUT_PIN_MAP[i].input_id;
-        const uint32_t pin_mask = INPUT_PIN_MAP[i].pin_mask;
-        if ((active_flags & pin_mask) == 0u) {
-            continue;
-        }
-
-        GPIOA_ClearITFlagBit(pin_mask);
-        if (is_encoder_input(input_id)) {
-            const vp_bool_t a_level = active_low_pin_level(port_data, ENC_A);
-            const vp_bool_t b_level = active_low_pin_level(port_data, ENC_B);
-            gpioa_config_next_edge_for_pin(pin_mask);
-            vp_on_encoder_exti(a_level, b_level, c_vp_rtc_millis());
-            continue;
-        }
-
-        vp_button_id_t button_id = 0u;
-        if (input_id_to_button_id(input_id, &button_id)) {
-            const vp_bool_t level = active_low_pin_level(port_data, pin_mask);
-            (void)c_vp_exti_mask(input_id);
-            vp_on_button_exti(button_id, level, c_vp_rtc_millis());
-        }
-    }
-
-    PFIC_ClearPendingIRQ(GPIO_A_IRQn);
-}
-
-__INTERRUPT
-__HIGH_CODE
-void GPIOA_IRQHandler(void) {
-    GPIOA_ServicePendingInterrupts();
+    return board_input_exti_set_edge(input_id, gpio, edge);
 }
 
 vp_status_t c_vp_debounce_timer_start(void) {
@@ -375,18 +213,7 @@ vp_status_t c_vp_imu_config_suspend(void) { return VP_STATUS_UNSUPPORTED; }
 vp_status_t c_vp_imu_config_sleep(void) { return VP_STATUS_UNSUPPORTED; }
 
 vp_status_t c_vp_imu_read_fifo_async(const uint16_t max_samples) {
-    sflp_game_rotation_raw_t raw = {0};
-    uint16_t                 dropped_count = 0u;
-    const vp_timestamp_t     timestamp = c_vp_rtc_millis();
-
-    if (!LSM6DSV_ReadLatestSFLPGameRotationRaw(&raw, max_samples, &dropped_count)) {
-        vp_on_imu_fifo_done(VP_STATUS_NOT_READY, 0u, timestamp);
-        return VP_STATUS_NOT_READY;
-    }
-
-    vp_on_imu_sample(raw.x, raw.y, raw.z, timestamp);
-    vp_on_imu_fifo_done(VP_STATUS_OK, dropped_count, timestamp);
-    return VP_STATUS_OK;
+    return LSM6DSV_StartAsyncFifoRead(max_samples);
 }
 
 vp_status_t c_vp_imu_read_whoami(uint8_t* out_id) {
@@ -589,22 +416,5 @@ vp_status_t c_vp_flash_read(const uint32_t offset, uint8_t* ptr,
 vp_status_t c_vp_flash_erase(const uint32_t offset, const uint32_t len) {
     (void)offset;
     (void)len;
-    return VP_STATUS_UNSUPPORTED;
-}
-
-vp_status_t c_vp_flash_write(const uint32_t offset, const uint8_t* ptr,
-                             const uint32_t len) {
-    (void)offset;
-    (void)ptr;
-    (void)len;
-    return VP_STATUS_UNSUPPORTED;
-}
-
-void c_vp_debug_print(const char* ptr, const uint16_t len) {
-    printf("%.*s", (int)len, ptr);
-}
-
-vp_status_t c_vp_platform_reset(const uint32_t reason) {
-    (void)reason;
     return VP_STATUS_UNSUPPORTED;
 }

@@ -19,6 +19,10 @@
 #include "rust_api.h"
 #include "c_api.h"
 #include "usbhs_hid_device.h"
+#include "board_map.h"
+#include "board_gpio.h"
+#include "board_input.h"
+
 
 #include <math.h>
 
@@ -31,7 +35,7 @@ const uint8_t MacAddr[6] = {0x4F, 0x9D, 0x2A, 0x8B, 0xC1, 0x7E};
 #endif
 
 static void RuntimeTask_Service(void);
-extern void GPIOA_ServicePendingInterrupts(void);
+static uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events);
 
 __HIGH_CODE
 __attribute__((noinline)) void Main_Circulation() {
@@ -43,7 +47,8 @@ __attribute__((noinline)) void Main_Circulation() {
 }
 
 void I2C_Hardware_Init() {
-    GPIOB_ModeCfg(I2C_SDA | I2C_SCL, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg(board_i2c_sda, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg(board_i2c_scl, GPIO_ModeIN_PU);
     I2C_Init(I2C_Mode_I2C, 400000, I2C_DutyCycle_16_9, I2C_Ack_Enable,
              I2C_AckAddr_7bit, 0);
 }
@@ -55,14 +60,14 @@ static volatile uint8_t runtime_poll_request_pending = 0u;
 static volatile uint8_t runtime_debounce_timer_running = 0u;
 static uint32_t runtime_debounce_next_ms = 0u;
 
-static void ServiceLatchedGpioAInterrupts(void) {
-    const uint16_t pending_flags = (uint16_t)(GPIOA_ReadITFlagPort() & R16_PA_INT_EN);
-    if (pending_flags == 0u || runtime_debounce_timer_running) {
+static void ServiceLatchedInputInterrupts(void) {
+    if (runtime_debounce_timer_running) {
         return;
     }
 
-    GPIOA_ServicePendingInterrupts();
-    runtime_poll_request_pending = 1u;
+    if (board_input_service_pending_all()) {
+        runtime_poll_request_pending = 1u;
+    }
 }
 
 static void ServiceDebounceTimer(void) {
@@ -79,42 +84,31 @@ static void ServiceDebounceTimer(void) {
     vp_on_debounce_tick(now);
 }
 
-static void ServiceRequestedRuntimePoll(void) {
-    if (!runtime_poll_request_pending) {
-        return;
-    }
-
-    runtime_poll_request_pending = 0u;
-    vp_core_poll();
-}
-
 static void RuntimeTask_Service(void) {
-    if (runtime_task_id == 0xFF) {
-        return;
+    if (runtime_poll_request_pending) {
+        runtime_poll_request_pending = 0u;
+        vp_core_poll();
     }
 
-    ServiceLatchedGpioAInterrupts();
+    ServiceLatchedInputInterrupts();
     ServiceDebounceTimer();
-    ServiceRequestedRuntimePoll();
 }
 
-uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events) {
+static uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events) {
     (void)task_id;
     if (events & RUNTIME_CORE_POLL_EVT) {
         runtime_poll_request_pending = 1u;
         return events & (uint16_t)(~RUNTIME_CORE_POLL_EVT);
     }
 
-    return 0;
+    return 0u;
 }
 
 void RuntimeTask_RequestPoll(void) {
-    if (runtime_task_id != 0xFF) {
-        runtime_poll_request_pending = 1u;
-    }
+    runtime_poll_request_pending = 1u;
 }
 
-void RuntimeTask_RequestPollAfter(uint32_t ms) {
+void RuntimeTask_RequestPollAfter(const uint32_t ms) {
     if (runtime_task_id == 0xFF) {
         return;
     }
@@ -149,10 +143,19 @@ void RuntimeTask_Init() {
 }
 
 void InputGPIO_Init() {
-    const uint32_t target_pins = RIGHT_BTN | LEFT_BTN | ACTION_BTN | ENC_A |
-                                 MIDDLE_BTN | ENC_B;
-    GPIOADigitalCfg(ENABLE, target_pins);
-    GPIOA_ModeCfg(target_pins, GPIO_ModeIN_PU);
+    board_gpio_digital_cfg(board_btn_right, ENABLE);
+    board_gpio_digital_cfg(board_btn_left, ENABLE);
+    board_gpio_digital_cfg(board_btn_action, ENABLE);
+    board_gpio_digital_cfg(board_enc_a, ENABLE);
+    board_gpio_digital_cfg(board_btn_middle, ENABLE);
+    board_gpio_digital_cfg(board_enc_b, ENABLE);
+
+    board_gpio_mode_cfg(board_btn_right, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg(board_btn_left, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg(board_btn_action, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg(board_enc_a, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg(board_btn_middle, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg(board_enc_b, GPIO_ModeIN_PU);
 }
 
 void InputEXTI_Init() {
@@ -174,23 +177,25 @@ int main() {
     SetSysClock(SYSCLK_FREQ);
 
 #if (defined(HAL_SLEEP)) && (HAL_SLEEP == TRUE)
-    GPIOA_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_PU);
-    GPIOB_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg_mask(BOARD_GPIO_GROUP_A, GPIO_Pin_All, GPIO_ModeIN_PU);
+    board_gpio_mode_cfg_mask(BOARD_GPIO_GROUP_B, GPIO_Pin_All, GPIO_ModeIN_PU);
 #endif
 
 #ifdef DEBUG
-    GPIOA_SetBits(DEBUG_TX);
+    board_gpio_set(board_debug_tx);
+    board_gpio_mode_cfg(board_debug_tx, GPIO_ModeOut_PP_5mA);
     GPIOPinRemap(ENABLE, RB_PIN_UART0);
-    GPIOA_ModeCfg(DEBUG_RX, GPIO_ModeIN_PU);
-    GPIOA_ModeCfg(DEBUG_TX, GPIO_ModeOut_PP_5mA);
+    board_gpio_mode_cfg(board_debug_rx, GPIO_ModeIN_PU);
     UART0_DefInit();
 #endif
 
-    GPIOA_ModeCfg(GPIO_Pin_0, GPIO_ModeOut_PP_5mA);
-    GPIOA_ModeCfg(GPIO_Pin_1, GPIO_ModeOut_PP_5mA);
+    board_gpio_mode_cfg((BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_0},
+                        GPIO_ModeOut_PP_5mA);
+    board_gpio_mode_cfg((BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1},
+                        GPIO_ModeOut_PP_5mA);
 
-    GPIOA_ResetBits(GPIO_Pin_0);
-    GPIOA_ResetBits(GPIO_Pin_1);
+    board_gpio_reset((BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_0});
+    board_gpio_reset((BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1});
 
     VP_LOG_INFO("main", "ble library version;version=%s",
                 (const char*)VER_LIB);
