@@ -6,13 +6,13 @@ get_filename_component(TOOLCHAIN_BIN_DIR ${CMAKE_C_COMPILER} DIRECTORY)
 set(TOOLCHAIN_PREFIX "riscv-wch-elf-")
 
 if (CMAKE_HOST_WIN32)
-    set(HOST_EXEC_SUFFIX ".exe")
+  set(HOST_EXEC_SUFFIX ".exe")
 else ()
-    set(HOST_EXEC_SUFFIX "")
+  set(HOST_EXEC_SUFFIX "")
 endif ()
 
 macro(find_toolchain_program VAR NAME)
-    find_program(CMAKE_${VAR}
+  find_program(CMAKE_${VAR}
             NAMES "${TOOLCHAIN_PREFIX}${NAME}${HOST_EXEC_SUFFIX}"
             PATHS "${TOOLCHAIN_BIN_DIR}"
             NO_DEFAULT_PATH
@@ -144,7 +144,7 @@ file(MAKE_DIRECTORY "${CORROSION_TARGET_DIR}")
 set(RUST_LOCAL_TARGET "${CMAKE_CURRENT_SOURCE_DIR}/core/target")
 
 if(EXISTS "${RUST_LOCAL_TARGET}" AND NOT IS_SYMLINK "${RUST_LOCAL_TARGET}")
-    message(WARNING "Please delete the existing 'core/target' directory manually so CMake can create a symlink.")
+  message(WARNING "Please delete the existing 'core/target' directory manually so CMake can create a symlink.")
 else()
-    file(CREATE_LINK "${CORROSION_TARGET_DIR}" "${RUST_LOCAL_TARGET}" SYMBOLIC)
+  file(CREATE_LINK "${CORROSION_TARGET_DIR}" "${RUST_LOCAL_TARGET}" SYMBOLIC)
 endif()
