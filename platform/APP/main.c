@@ -195,8 +195,6 @@ int main() {
     board_gpio_reset(
         (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1});
 
-    VP_LOG_INFO("main", "ble library version;version=%s", (const char*)VER_LIB);
-
     CH58x_BLEInit();
     HAL_Init();
     InputGPIO_Init();

@@ -44,8 +44,8 @@ void ImuPlatform_InitExti(void) {
 void ImuPlatform_InitDevice(void) {
     I2C_Hardware_Init();
     if (!LSM6DSV_Init()) {
-        VP_LOG_ERROR("main", "imu initialization failed");
+        VP_LOG_ERROR("imu", "init failed");
     } else {
-        VP_LOG_INFO("main", "imu initialization ok");
+        VP_LOG_INFO("imu", "initialized");
     }
 }

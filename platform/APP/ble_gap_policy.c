@@ -79,7 +79,7 @@ void BleGapPolicy_HandleGapState(gapRole_States_t newState,
             bleGapPolicyGapStarted = TRUE;
             GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddr);
             GAP_ConfigDeviceAddr(ADDRTYPE_STATIC, ownAddr);
-            VP_LOG_INFO("ble_gap", "ble stack initialized");
+            VP_LOG_INFO("ble_gap", "gap started");
             BleGapPolicy_ApplyAdvertising();
         } break;
 
@@ -133,7 +133,6 @@ void BleGapPolicy_HandleReportNotifyEnabled(uint8_t id, uint8_t type,
                                             uint16_t uuid) {
     if (uuid == GATT_CLIENT_CHAR_CFG_UUID && id == HID_RPT_ID_MOUSE_IN &&
         type == HID_REPORT_TYPE_INPUT) {
-        VP_LOG_DEBUG("ble_gap", "input notify enabled;id=%u,type=%u", id, type);
         vp_on_ble_input_ready(c_vp_rtc_millis());
     }
 }

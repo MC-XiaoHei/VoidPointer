@@ -168,7 +168,6 @@ void HidDev_Init() {
 
 #if VP_BLE_BRINGUP_ERASE_BONDS_AT_BOOT
     GAPBondMgr_SetParameter(GAPBOND_ERASE_ALLBONDS, 0, NULL);
-    VP_LOG_INFO("hiddev", "bonds erased at boot");
 #endif
 
     // Setup the GAP Bond Manager
