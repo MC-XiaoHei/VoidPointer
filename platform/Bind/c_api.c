@@ -201,15 +201,22 @@ vp_status_t c_vp_i2c_init(void) { return VP_STATUS_UNSUPPORTED; }
 
 vp_status_t c_vp_i2c_recover_bus(void) { return VP_STATUS_UNSUPPORTED; }
 
-vp_status_t c_vp_i2c_abort(void) { return VP_STATUS_UNSUPPORTED; }
+vp_status_t c_vp_i2c_abort(void) { return LSM6DSV_AbortAsync(); }
 
-vp_status_t c_vp_imu_config_active(void) { return VP_STATUS_UNSUPPORTED; }
+vp_status_t c_vp_imu_config_active(void) {
+    return LSM6DSV_ConfigActive() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
+}
 
-vp_status_t c_vp_imu_config_suspend(void) { return VP_STATUS_UNSUPPORTED; }
+vp_status_t c_vp_imu_config_suspend(void) {
+    return LSM6DSV_ConfigSuspend() ? VP_STATUS_OK : VP_STATUS_UNSUPPORTED;
+}
 
-vp_status_t c_vp_imu_config_sleep(void) { return VP_STATUS_UNSUPPORTED; }
+vp_status_t c_vp_imu_config_sleep(void) {
+    return LSM6DSV_ConfigSleep() ? VP_STATUS_OK : VP_STATUS_UNSUPPORTED;
+}
 
 vp_status_t c_vp_imu_read_fifo_async(const uint16_t max_samples) {
+    VP_LOG_DEBUG("imu", "read fifo async;max_samples=%u", max_samples);
     return LSM6DSV_StartAsyncFifoRead(max_samples);
 }
 
@@ -410,5 +417,26 @@ vp_status_t c_vp_flash_read(const uint32_t offset, uint8_t* ptr,
 vp_status_t c_vp_flash_erase(const uint32_t offset, const uint32_t len) {
     (void)offset;
     (void)len;
+    return VP_STATUS_UNSUPPORTED;
+}
+
+vp_status_t c_vp_flash_write(const uint32_t offset, const uint8_t* ptr,
+                             const uint32_t len) {
+    (void)offset;
+    (void)ptr;
+    (void)len;
+    return VP_STATUS_UNSUPPORTED;
+}
+
+void c_vp_debug_print(const char* ptr, const uint16_t len) {
+    if (ptr == NULL || len == 0u) {
+        return;
+    }
+
+    UART0_SendString((uint8_t*)ptr, len);
+}
+
+vp_status_t c_vp_platform_reset(const uint32_t reason) {
+    (void)reason;
     return VP_STATUS_UNSUPPORTED;
 }

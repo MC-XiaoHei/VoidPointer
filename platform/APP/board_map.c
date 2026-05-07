@@ -1,5 +1,5 @@
 #include "board_map.h"
-#include "CH58x_gpio.h"
+#include "CH58x_common.h"  // IWYU pragma: keep
 #include "main.h"
 
 const BoardGpio board_btn_left = {
@@ -43,23 +43,23 @@ const BoardGpio board_enc_b = {
 };
 
 const BoardGpio board_imu_int1 = {
-    .group = BOARD_GPIO_GROUP_NONE,
-    .pin = 0u,
+    .group = BOARD_GPIO_GROUP_A,
+    .pin = GPIO_Pin_11,
 };
 
 const BoardGpio board_imu_int2 = {
-    .group = BOARD_GPIO_GROUP_NONE,
-    .pin = 0u,
+    .group = BOARD_GPIO_GROUP_A,
+    .pin = GPIO_Pin_12,
 };
 
 const BoardGpio board_i2c_sda = {
     .group = BOARD_GPIO_GROUP_B,
-    .pin = GPIO_Pin_12,
+    .pin = GPIO_Pin_20,
 };
 
 const BoardGpio board_i2c_scl = {
     .group = BOARD_GPIO_GROUP_B,
-    .pin = GPIO_Pin_13,
+    .pin = GPIO_Pin_21,
 };
 
 const BoardGpio board_debug_tx = {

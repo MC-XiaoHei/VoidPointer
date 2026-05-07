@@ -5,8 +5,9 @@ use crate::attitude::types::SflpGameRotationRaw;
 use crate::attitude::{clear_current_attitude, update_current_attitude_from_raw};
 use crate::config::ConfigManager;
 use crate::ffi::bindings::{
-    VP_STATUS_OK, c_vp_hid_route_ready, c_vp_request_core_poll, c_vp_request_core_poll_after,
-    c_vp_rtc_millis, vp_hid_route_t,
+    VP_INPUT_IMU_INT1, VP_INPUT_IMU_INT2, VP_STATUS_OK, c_vp_exti_clear_pending, c_vp_exti_unmask,
+    c_vp_hid_route_ready, c_vp_request_core_poll, c_vp_request_core_poll_after, c_vp_rtc_millis,
+    vp_hid_route_t,
 };
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::input::types::InputManager;
@@ -444,6 +445,7 @@ impl Runtime {
             }
             RuntimeEvent::ImuInt { timestamp } => {
                 self.mark_activity(timestamp);
+                log::debug!("imu int;ts={}", timestamp);
                 if !self.pending.imu_fifo_read {
                     self.pending.imu_fifo_read = true;
                 }
@@ -456,6 +458,13 @@ impl Runtime {
                 timestamp,
             } => {
                 self.mark_activity(timestamp);
+                log::debug!(
+                    "imu sample;ts={},x=0x{:04x},y=0x{:04x},z=0x{:04x}",
+                    timestamp,
+                    raw_x,
+                    raw_y,
+                    raw_z
+                );
                 let raw = SflpGameRotationRaw {
                     x: raw_x,
                     y: raw_y,
@@ -474,11 +483,13 @@ impl Runtime {
                 status, timestamp, ..
             } => {
                 self.mark_activity(timestamp);
+                log::debug!("imu fifo done;status={},ts={}", status, timestamp);
                 self.pending.imu_fifo_read = false;
                 if status != VP_STATUS_OK as u8 {
                     self.latest_imu_sample.valid = false;
                     clear_current_attitude();
                 }
+                rearm_imu_interrupts();
             }
             RuntimeEvent::HidSendDone { timestamp, .. } => {
                 self.mark_activity(timestamp);
@@ -579,6 +590,13 @@ fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
         1
     } else {
         deadline.wrapping_sub(now).max(1)
+    }
+}
+
+fn rearm_imu_interrupts() {
+    for input_id in [VP_INPUT_IMU_INT1 as u8, VP_INPUT_IMU_INT2 as u8] {
+        let _ = unsafe { c_vp_exti_clear_pending(input_id) };
+        let _ = unsafe { c_vp_exti_unmask(input_id) };
     }
 }
 

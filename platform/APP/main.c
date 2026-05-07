@@ -22,10 +22,9 @@
 #include "board_map.h"
 #include "board_gpio.h"
 #include "board_input.h"
+#include "imu_platform.h"
 
 #include <math.h>
-
-#define VP_USB_BRINGUP_DISABLE_IMU 1
 
 __attribute__((aligned(4))) uint32_t MEM_BUF[BLE_MEMHEAP_SIZE / 4];
 
@@ -36,6 +35,8 @@ const uint8_t MacAddr[6] = {0x4F, 0x9D, 0x2A, 0x8B, 0xC1, 0x7E};
 static void     RuntimeTask_Service(void);
 static uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events);
 
+#define RUNTIME_CORE_POLL_EVT 0x0001
+
 __HIGH_CODE
 __attribute__((noinline)) void Main_Circulation() {
     while (1) {
@@ -44,15 +45,6 @@ __attribute__((noinline)) void Main_Circulation() {
         RuntimeTask_Service();
     }
 }
-
-void I2C_Hardware_Init() {
-    board_gpio_mode_cfg(board_i2c_sda, GPIO_ModeIN_PU);
-    board_gpio_mode_cfg(board_i2c_scl, GPIO_ModeIN_PU);
-    I2C_Init(I2C_Mode_I2C, 400000, I2C_DutyCycle_16_9, I2C_Ack_Enable,
-             I2C_AckAddr_7bit, 0);
-}
-
-#define RUNTIME_CORE_POLL_EVT 0x0001
 
 static tmosTaskID       runtime_task_id = 0xFF;
 static volatile uint8_t runtime_poll_request_pending = 0u;
@@ -154,6 +146,8 @@ void InputGPIO_Init() {
     board_gpio_mode_cfg(board_enc_a, GPIO_ModeIN_PU);
     board_gpio_mode_cfg(board_btn_middle, GPIO_ModeIN_PU);
     board_gpio_mode_cfg(board_enc_b, GPIO_ModeIN_PU);
+
+    ImuPlatform_InitGpio();
 }
 
 void InputEXTI_Init() {
@@ -163,6 +157,8 @@ void InputEXTI_Init() {
     (void)c_vp_exti_set_edge(VP_INPUT_ACTION, VP_EXTI_EDGE_FALLING);
     (void)c_vp_exti_set_edge(VP_INPUT_ENCODER_A, VP_EXTI_EDGE_BOTH);
     (void)c_vp_exti_set_edge(VP_INPUT_ENCODER_B, VP_EXTI_EDGE_BOTH);
+
+    ImuPlatform_InitExti();
 }
 
 int main() {
@@ -204,13 +200,9 @@ int main() {
     CH58x_BLEInit();
     HAL_Init();
     InputGPIO_Init();
+    InputEXTI_Init();
 
-#if !VP_USB_BRINGUP_DISABLE_IMU
-    I2C_Hardware_Init();
-    if (!LSM6DSV_Init()) {
-        VP_LOG_ERROR("main", "imu initialization failed");
-    }
-#endif
+    ImuPlatform_InitDevice();
 
     GAPRole_PeripheralInit();
     HidDev_Init();

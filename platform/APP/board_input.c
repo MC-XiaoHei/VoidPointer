@@ -27,6 +27,10 @@ static vp_bool_t board_input_is_encoder(const vp_input_id_t input_id) {
     return input_id == VP_INPUT_ENCODER_A || input_id == VP_INPUT_ENCODER_B;
 }
 
+static vp_bool_t board_input_is_imu_int(const vp_input_id_t input_id) {
+    return input_id == VP_INPUT_IMU_INT1 || input_id == VP_INPUT_IMU_INT2;
+}
+
 static vp_bool_t board_input_id_to_button_id(const vp_input_id_t input_id,
                                              vp_button_id_t* out_button_id) {
     if (out_button_id == NULL) {
@@ -90,6 +94,12 @@ static vp_bool_t board_input_dispatch_one(const BoardGpio      gpio,
         const vp_bool_t b_level = active_low_gpio_level(board_enc_b);
         board_gpio_config_next_edge(gpio);
         vp_on_encoder_exti(a_level, b_level, timestamp);
+        return 1u;
+    }
+
+    if (board_input_is_imu_int(input_id)) {
+        (void)c_vp_exti_mask(input_id);
+        vp_on_imu_int(timestamp);
         return 1u;
     }
 

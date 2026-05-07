@@ -2,7 +2,7 @@
 #define VOIDPOINTER_BOARD_GPIO_H
 
 #include "board_map.h"
-#include "CH58x_gpio.h"
+#include "CH58x_common.h"  // IWYU pragma: keep
 #include "c_api.h"
 
 #ifdef __cplusplus

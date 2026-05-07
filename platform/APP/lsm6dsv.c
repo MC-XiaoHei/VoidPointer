@@ -41,6 +41,7 @@ typedef struct {
 } lsm6dsv_async_ctx_t;
 
 static lsm6dsv_async_ctx_t g_lsm6dsv_async = {0};
+static uint8_t             g_lsm6dsv_i2c_addr = LSM6DSV_I2C_ADDR;
 
 static bool i2c_wait_event(const uint32_t event) {
     uint32_t timeout = LSM6DSV_I2C_MAX_TIMEOUT;
@@ -60,11 +61,12 @@ static bool i2c_wait_event(const uint32_t event) {
     return true;
 }
 
-static bool lsm6dsv_write_reg(const uint8_t reg, const uint8_t value) {
+static bool lsm6dsv_write_reg_addr(const uint8_t addr, const uint8_t reg,
+                                   const uint8_t value) {
     I2C_GenerateSTART(ENABLE);
     if (!i2c_wait_event(I2C_EVENT_MASTER_MODE_SELECT)) return false;
 
-    I2C_Send7bitAddress(LSM6DSV_I2C_ADDR, I2C_Direction_Transmitter);
+    I2C_Send7bitAddress(addr, I2C_Direction_Transmitter);
     if (!i2c_wait_event(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
         return false;
 
@@ -80,11 +82,16 @@ static bool lsm6dsv_write_reg(const uint8_t reg, const uint8_t value) {
     return true;
 }
 
-static bool lsm6dsv_read_reg(const uint8_t reg, uint8_t* value) {
+static bool lsm6dsv_write_reg(const uint8_t reg, const uint8_t value) {
+    return lsm6dsv_write_reg_addr(g_lsm6dsv_i2c_addr, reg, value);
+}
+
+static bool lsm6dsv_read_reg_addr(const uint8_t addr, const uint8_t reg,
+                                  uint8_t* value) {
     I2C_GenerateSTART(ENABLE);
     if (!i2c_wait_event(I2C_EVENT_MASTER_MODE_SELECT)) return false;
 
-    I2C_Send7bitAddress(LSM6DSV_I2C_ADDR, I2C_Direction_Transmitter);
+    I2C_Send7bitAddress(addr, I2C_Direction_Transmitter);
     if (!i2c_wait_event(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
         return false;
 
@@ -94,7 +101,7 @@ static bool lsm6dsv_read_reg(const uint8_t reg, uint8_t* value) {
     I2C_GenerateSTART(ENABLE);
     if (!i2c_wait_event(I2C_EVENT_MASTER_MODE_SELECT)) return false;
 
-    I2C_Send7bitAddress(LSM6DSV_I2C_ADDR, I2C_Direction_Receiver);
+    I2C_Send7bitAddress(addr, I2C_Direction_Receiver);
     if (!i2c_wait_event(I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED)) return false;
 
     I2C_AcknowledgeConfig(DISABLE);
@@ -110,6 +117,10 @@ static bool lsm6dsv_read_reg(const uint8_t reg, uint8_t* value) {
     return true;
 }
 
+static bool lsm6dsv_read_reg(const uint8_t reg, uint8_t* value) {
+    return lsm6dsv_read_reg_addr(g_lsm6dsv_i2c_addr, reg, value);
+}
+
 static bool lsm6dsv_read_regs(const uint8_t reg, uint8_t* buf,
                               const uint16_t len) {
     if (len == 0) return false;
@@ -117,7 +128,7 @@ static bool lsm6dsv_read_regs(const uint8_t reg, uint8_t* buf,
     I2C_GenerateSTART(ENABLE);
     if (!i2c_wait_event(I2C_EVENT_MASTER_MODE_SELECT)) return false;
 
-    I2C_Send7bitAddress(LSM6DSV_I2C_ADDR, I2C_Direction_Transmitter);
+    I2C_Send7bitAddress(g_lsm6dsv_i2c_addr, I2C_Direction_Transmitter);
     if (!i2c_wait_event(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
         return false;
 
@@ -127,7 +138,7 @@ static bool lsm6dsv_read_regs(const uint8_t reg, uint8_t* buf,
     I2C_GenerateSTART(ENABLE);
     if (!i2c_wait_event(I2C_EVENT_MASTER_MODE_SELECT)) return false;
 
-    I2C_Send7bitAddress(LSM6DSV_I2C_ADDR, I2C_Direction_Receiver);
+    I2C_Send7bitAddress(g_lsm6dsv_i2c_addr, I2C_Direction_Receiver);
     if (!i2c_wait_event(I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED)) return false;
 
     for (uint16_t i = 0; i < len; i++) {
@@ -148,10 +159,69 @@ static bool lsm6dsv_read_regs(const uint8_t reg, uint8_t* buf,
     return true;
 }
 
+static bool lsm6dsv_probe_address(const uint8_t addr) {
+    uint8_t id = 0;
+    if (!lsm6dsv_read_reg_addr(addr, LSM6DSV_REG_WHO_AM_I, &id)) {
+        return false;
+    }
+
+    if (id != LSM6DSV_WHOAMI_VALUE) {
+        return false;
+    }
+
+    g_lsm6dsv_i2c_addr = addr;
+    return true;
+}
+
 static bool lsm6dsv_check_id(void) {
     uint8_t id = 0;
-    if (!lsm6dsv_read_reg(LSM6DSV_REG_WHO_AM_I, &id)) return false;
-    return id == LSM6DSV_WHOAMI_VALUE;
+    if (!lsm6dsv_read_reg(LSM6DSV_REG_WHO_AM_I, &id)) {
+        VP_LOG_ERROR("imu", "read whoami failed");
+        return false;
+    }
+    if (id != LSM6DSV_WHOAMI_VALUE) {
+        VP_LOG_ERROR("imu", "unexpected whoami;value=0x%02X,expected=0x%02X",
+                     id, LSM6DSV_WHOAMI_VALUE);
+        return false;
+    }
+    return true;
+}
+
+static bool lsm6dsv_apply_active_profile(void) {
+#define VP_IMU_WRITE_OR_FAIL(reg, value, name)                               \
+    do {                                                                     \
+        if (!lsm6dsv_write_reg((reg), (value))) {                            \
+            VP_LOG_ERROR(                                                    \
+                "imu",                                                       \
+                "active profile write failed;step=%s,reg=0x%02X,val=0x%02X", \
+                (name), (reg), (value));                                     \
+            return false;                                                    \
+        }                                                                    \
+    } while (0)
+
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL3, 0x44, "ctrl3");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL8, 0x00, "ctrl8");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL6, 0x04, "ctrl6");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL1, 0x06, "ctrl1");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL2, 0x06, "ctrl2");
+
+    mDelaymS(50);
+
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNCTIONS_ENABLE, 0x40,
+                         "functions_enable");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x80,
+                         "func_cfg_access_on");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_EMB_FUNC_EN_A, 0x02, "emb_func_en_a");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_EMB_FUNC_FIFO_EN_A, 0x02,
+                         "emb_func_fifo_en_a");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_SFLP_ODR, 0x5B, "sflp_odr");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_EMB_FUNC_INIT_A, 0x02, "emb_func_init_a");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x00,
+                         "func_cfg_access_off");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FIFO_CTRL4, 0x06, "fifo_ctrl4");
+
+#undef VP_IMU_WRITE_OR_FAIL
+    return true;
 }
 
 static void lsm6dsv_async_reset_io_state(void) {
@@ -304,32 +374,42 @@ vp_status_t LSM6DSV_StartAsyncFifoRead(const uint16_t max_samples) {
 }
 
 bool LSM6DSV_Init(void) {
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_CTRL3, 0x01)) return false;
+    if (!lsm6dsv_probe_address((0x6A << 1)) &&
+        !lsm6dsv_probe_address((0x6B << 1))) {
+        VP_LOG_ERROR("imu", "no imu ack on 0x6A/0x6B");
+        return false;
+    }
+
+    if (!lsm6dsv_write_reg(LSM6DSV_REG_CTRL3, 0x01)) {
+        VP_LOG_ERROR("imu", "soft reset write failed;addr=0x%02X",
+                     g_lsm6dsv_i2c_addr >> 1);
+        return false;
+    }
     mDelaymS(50);
 
-    if (!lsm6dsv_check_id()) return false;
-
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_CTRL3, 0x44)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_CTRL8, 0x00)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_CTRL6, 0x04)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_CTRL1, 0x06)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_CTRL2, 0x06)) return false;
-
-    mDelaymS(50);
-
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_FUNCTIONS_ENABLE, 0x40)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x80)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_EMB_FUNC_EN_A, 0x02)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_EMB_FUNC_FIFO_EN_A, 0x02)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_SFLP_ODR, 0x5B)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_EMB_FUNC_INIT_A, 0x02)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x00)) return false;
-    if (!lsm6dsv_write_reg(LSM6DSV_REG_FIFO_CTRL4, 0x06)) return false;
+    if (!lsm6dsv_check_id()) {
+        return false;
+    }
+    if (!lsm6dsv_apply_active_profile()) {
+        return false;
+    }
 
     LSM6DSV_AsyncInit();
     mDelaymS(100);
     return true;
 }
+
+bool LSM6DSV_ConfigActive(void) {
+    if (g_lsm6dsv_async.busy) {
+        return false;
+    }
+
+    return lsm6dsv_apply_active_profile();
+}
+
+bool LSM6DSV_ConfigSuspend(void) { return false; }
+
+bool LSM6DSV_ConfigSleep(void) { return false; }
 
 bool LSM6DSV_ReadWhoAmI(uint8_t* out_id) {
     if (out_id == 0) {
