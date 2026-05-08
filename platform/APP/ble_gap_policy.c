@@ -31,7 +31,7 @@ uint8_t BleGapPolicy_SetAdvertisingEnabled(uint8_t enabled) {
     bleGapPolicyAdvertisingAllowed = enabled ? TRUE : FALSE;
     VP_LOG_DEBUG(
         "ble_gap",
-        "advertising policy updated;allowed=%u,state=%u,started=%u,handle=%u",
+        "advertising policy changed;allowed=%u,state=%u,started=%u,handle=%u",
         bleGapPolicyAdvertisingAllowed, bleGapPolicyGapState,
         bleGapPolicyGapStarted, bleGapPolicyConnHandle);
     BleGapPolicy_ApplyAdvertising();
@@ -79,7 +79,7 @@ void BleGapPolicy_HandleGapState(gapRole_States_t newState,
             bleGapPolicyGapStarted = TRUE;
             GAPRole_GetParameter(GAPROLE_BD_ADDR, ownAddr);
             GAP_ConfigDeviceAddr(ADDRTYPE_STATIC, ownAddr);
-            VP_LOG_INFO("ble_gap", "gap started");
+            VP_LOG_INFO("ble_gap", "initialized");
             BleGapPolicy_ApplyAdvertising();
         } break;
 
@@ -121,7 +121,7 @@ void BleGapPolicy_HandleGapState(gapRole_States_t newState,
 
         case GAPROLE_ERROR:
             bleGapPolicyConnHandle = GAP_CONNHANDLE_INIT;
-            VP_LOG_ERROR("ble_gap", "gap role error");
+            VP_LOG_ERROR("ble_gap", "gap state failed");
             break;
 
         default:

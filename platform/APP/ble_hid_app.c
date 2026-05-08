@@ -119,7 +119,7 @@ uint16_t BleHidApp_ProcessEvent(uint8_t task_id, uint16_t events) {
     }
 
     if (events & START_PARAM_UPDATE_EVT) {
-        VP_LOG_DEBUG("ble_hid", "connection parameter update requested");
+        VP_LOG_DEBUG("ble_hid", "conn param update requested");
         GAPRole_PeripheralConnParamUpdateReq(
             BleGapPolicy_GetConnectionHandle(),
             BLE_GAP_POLICY_CONN_INTERVAL_MIN, BLE_GAP_POLICY_CONN_INTERVAL_MAX,
@@ -130,7 +130,7 @@ uint16_t BleHidApp_ProcessEvent(uint8_t task_id, uint16_t events) {
 
     if (events & START_PHY_UPDATE_EVT) {
         VP_LOG_DEBUG(
-            "ble_hid", "phy update requested;result=0x%02x",
+            "ble_hid", "phy update requested;status=0x%02x",
             GAPRole_UpdatePHY(BleGapPolicy_GetConnectionHandle(), 0,
                               GAP_PHY_BIT_LE_2M, GAP_PHY_BIT_LE_2M, 0));
         return (events ^ START_PHY_UPDATE_EVT);

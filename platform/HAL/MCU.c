@@ -225,8 +225,6 @@ tmosEvents HAL_ProcessEvent(tmosTaskID task_id, tmosEvents events) {
 #endif
     }
     if (events & HAL_TEST_EVENT) {
-        // TODO: 这是例程遗留的 bring-up 节拍日志，后续确认无用后删除
-        VP_LOG_DEBUG("hal", "hal test tick");
         tmos_start_task(halTaskID, HAL_TEST_EVENT, MS1_TO_SYSTEM_TIME(1000));
         return events ^ HAL_TEST_EVENT;
     }
@@ -258,7 +256,6 @@ void HAL_Init() {
     tmos_start_task(halTaskID, HAL_REG_INIT_EVENT,
                     800);  // 添加校准任务，500ms启动，单次校准耗时小于10ms
 #endif
-    //    tmos_start_task( halTaskID, HAL_TEST_EVENT, 1600 );    // 添加一个测试任务
 }
 
 /*******************************************************************************

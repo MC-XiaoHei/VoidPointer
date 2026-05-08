@@ -488,8 +488,8 @@ impl Runtime {
                 self.router.set_usb_state(usb_state);
                 self.mark_activity(timestamp);
                 log::debug!(
-                    "usb state changed;state={:?},wired_active={}",
-                    usb_state,
+                    "usb state changed;state={},wired_active={}",
+                    usb_state_log_name(usb_state),
                     matches!(usb_state, UsbState::Configured)
                 );
                 self.dirty.mark_report();
@@ -695,6 +695,16 @@ impl Runtime {
             route: route.as_ffi(),
             report,
         })
+    }
+}
+
+fn usb_state_log_name(state: UsbState) -> &'static str {
+    match state {
+        UsbState::Detached => "detached",
+        UsbState::Attached => "attached",
+        UsbState::Configured => "configured",
+        UsbState::Suspended => "suspended",
+        UsbState::Error => "error",
     }
 }
 

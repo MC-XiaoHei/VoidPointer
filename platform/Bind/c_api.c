@@ -363,23 +363,22 @@ vp_status_t c_vp_hid_route_reset(const vp_hid_route_t route) {
 }
 
 vp_status_t c_vp_power_prepare_suspend(void) {
-    VP_LOG_WARN("platform",
-                "feature unavailable;feature=power_prepare_suspend");
+    VP_LOG_WARN("power", "feature unavailable;feature=power_prepare_suspend");
     return VP_STATUS_UNSUPPORTED;
 }
 
 vp_status_t c_vp_power_enter_suspend(void) {
-    VP_LOG_WARN("platform", "feature unavailable;feature=power_enter_suspend");
+    VP_LOG_WARN("power", "feature unavailable;feature=power_enter_suspend");
     return VP_STATUS_UNSUPPORTED;
 }
 
 vp_status_t c_vp_power_prepare_sleep(void) {
-    VP_LOG_WARN("platform", "feature unavailable;feature=power_prepare_sleep");
+    VP_LOG_WARN("power", "feature unavailable;feature=power_prepare_sleep");
     return VP_STATUS_UNSUPPORTED;
 }
 
 vp_status_t c_vp_power_enter_sleep(void) {
-    VP_LOG_WARN("platform", "feature unavailable;feature=power_enter_sleep");
+    VP_LOG_WARN("power", "feature unavailable;feature=power_enter_sleep");
     return VP_STATUS_UNSUPPORTED;
 }
 

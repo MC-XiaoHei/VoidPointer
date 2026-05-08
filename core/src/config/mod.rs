@@ -30,7 +30,7 @@ impl ConfigManager {
     }
 
     pub fn poll(&mut self) {
-        // 等真实 DataFlash 保存路径接入后再清 dirty
+        // TODO: DataFlash 持久化路径接入后，在保存成功时清 dirty
     }
 }
 

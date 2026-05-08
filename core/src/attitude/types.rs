@@ -9,19 +9,12 @@ pub struct SflpGameRotationRaw {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AttitudeData {
-    /// 欧拉角 roll，单位为弧度
     pub roll: f32,
-    /// 欧拉角 pitch，单位为弧度
     pub pitch: f32,
-    /// 欧拉角 yaw，单位为弧度
     pub yaw: f32,
-    /// 四元数标量分量
     pub w: f32,
-    /// 四元数 x 分量
     pub x: f32,
-    /// 四元数 y 分量
     pub y: f32,
-    /// 四元数 z 分量
     pub z: f32,
 }
 
