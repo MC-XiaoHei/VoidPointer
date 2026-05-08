@@ -23,9 +23,9 @@ impl TiltMotionSolver {
             center_y_rad: 0.0,
         };
 
-        let attitude = get_current_attitude().unwrap();
-
-        result.calibrate(attitude);
+        if let Some(attitude) = get_current_attitude() {
+            result.calibrate(attitude);
+        }
 
         result
     }
@@ -33,6 +33,8 @@ impl TiltMotionSolver {
     pub fn calibrate(&mut self, attitude: AttitudeData) {
         self.center_x_rad = HW_MAP_X.extract(&attitude);
         self.center_y_rad = HW_MAP_Y.extract(&attitude);
+        self.filtered_vx = 0.0;
+        self.filtered_vy = 0.0;
     }
 
     pub fn update(&mut self, attitude: AttitudeData) -> MotionState {

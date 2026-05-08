@@ -216,7 +216,6 @@ vp_status_t c_vp_imu_config_sleep(void) {
 }
 
 vp_status_t c_vp_imu_read_fifo_async(const uint16_t max_samples) {
-    VP_LOG_DEBUG("imu", "read fifo async;max_samples=%u", max_samples);
     return LSM6DSV_StartAsyncFifoRead(max_samples);
 }
 

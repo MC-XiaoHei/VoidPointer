@@ -207,7 +207,7 @@ static bool lsm6dsv_apply_active_profile(void) {
 
     mDelaymS(50);
 
-    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNCTIONS_ENABLE, 0x40,
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNCTIONS_ENABLE, 0xC0,
                          "functions_enable");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x80,
                          "func_cfg_access_on");
@@ -265,7 +265,7 @@ static void lsm6dsv_async_prepare_write_then_read(
     g_lsm6dsv_async.read_in_progress = 0u;
     g_lsm6dsv_async.nack_sent = 0u;
     g_lsm6dsv_async.phase = next_phase;
-    g_lsm6dsv_async.addr_rw = LSM6DSV_I2C_ADDR;
+    g_lsm6dsv_async.addr_rw = g_lsm6dsv_i2c_addr;
 
     I2C_GenerateSTOP(DISABLE);
     I2C_GenerateSTART(ENABLE);
@@ -524,6 +524,8 @@ void I2C_IRQHandler(void) {
                             g_lsm6dsv_async.tx_buf[g_lsm6dsv_async.tx_index++]);
                     } else {
                         g_lsm6dsv_async.read_in_progress = 1u;
+                        g_lsm6dsv_async.addr_rw =
+                            (uint8_t)(g_lsm6dsv_i2c_addr | 0x01u);
                         I2C_GenerateSTART(ENABLE);
                     }
                 }

@@ -2,16 +2,23 @@ pub mod commands;
 pub mod events;
 
 use crate::attitude::types::SflpGameRotationRaw;
-use crate::attitude::{clear_current_attitude, update_current_attitude_from_raw};
+use crate::attitude::{
+    clear_current_attitude, get_current_attitude, update_current_attitude_from_raw,
+};
 use crate::config::ConfigManager;
 use crate::ffi::bindings::{
-    VP_INPUT_IMU_INT1, VP_INPUT_IMU_INT2, VP_STATUS_OK, c_vp_exti_clear_pending, c_vp_exti_unmask,
-    c_vp_hid_route_ready, c_vp_request_core_poll, c_vp_request_core_poll_after, c_vp_rtc_millis,
-    vp_hid_route_t,
+    VP_INPUT_IMU_INT1, VP_INPUT_IMU_INT2, VP_STATUS_NOT_READY, VP_STATUS_OK,
+    c_vp_exti_clear_pending, c_vp_exti_unmask, c_vp_hid_route_ready, c_vp_request_core_poll,
+    c_vp_request_core_poll_after, c_vp_rtc_millis, vp_hid_route_t,
 };
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::input::types::InputManager;
-use crate::power::PowerManager;
+use crate::motion::config::MotionConfig;
+use crate::motion::resolver::TiltMotionSolver;
+use crate::motion::state::MotionState;
+use crate::power::{PowerManager, PowerState};
+use crate::report::config::ReportConfig;
+use crate::report::state::ReportState;
 use crate::route::{HidRoute, HidRouter, UsbState};
 use crate::runtime::commands::{RuntimeCommand, RuntimeCommandResult};
 use crate::runtime::events::{EventQueue, RuntimeEvent};
@@ -20,6 +27,8 @@ use crate::vendor::{PendingVendorTx, VendorRuntime};
 use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 const HID_RETRY_DELAY_MS: u32 = 8;
+const IMU_POLL_ACTIVE_MS: u32 = 30;
+const MOTION_REPORT_MS: u32 = 10;
 const ENABLE_POWER_MANAGER: bool = false;
 
 pub static RUNTIME: MainLoopGlobal<Runtime> = MainLoopGlobal::new();
@@ -124,7 +133,15 @@ pub struct Runtime {
     pub last_sent_buttons: u8,
     pub last_activity_ms: AtomicU32,
     pub power_eval_deadline_ms: Option<u32>,
+    pub imu_poll_deadline_ms: Option<u32>,
     pub latest_imu_sample: LatestImuSample,
+    pub last_motion_sample_ts: Option<u32>,
+    pub motion_report_deadline_ms: Option<u32>,
+    pub motion_calibration_pending: bool,
+    pub motion_solver: TiltMotionSolver,
+    pub current_motion: MotionState,
+    pub report_state: ReportState,
+    pub motion_capture_active: bool,
 }
 
 impl Runtime {
@@ -146,7 +163,17 @@ impl Runtime {
             last_sent_buttons: 0,
             last_activity_ms: AtomicU32::new(now),
             power_eval_deadline_ms: None,
+            imu_poll_deadline_ms: Some(now),
             latest_imu_sample: LatestImuSample::default(),
+            last_motion_sample_ts: None,
+            motion_report_deadline_ms: Some(now),
+            motion_calibration_pending: false,
+            motion_solver: TiltMotionSolver::new(MotionConfig::default()),
+            current_motion: MotionState::default(),
+            report_state: ReportState::new(ReportConfig {
+                report_hz: 1000.0 / MOTION_REPORT_MS as f32,
+            }),
+            motion_capture_active: false,
         }
     }
 
@@ -171,6 +198,51 @@ impl Runtime {
             self.dirty.mark_power();
             self.pending.power_eval = true;
         }
+    }
+
+    fn reset_motion_capture_state(&mut self, calibration_pending: bool) {
+        self.report_state.reset_all();
+        self.current_motion = MotionState::default();
+        self.last_motion_sample_ts = None;
+        self.motion_report_deadline_ms = Some(unsafe { c_vp_rtc_millis() });
+        self.motion_calibration_pending = calibration_pending;
+    }
+
+    fn imu_poll_enabled(&self) -> bool {
+        self.power.state() == PowerState::Active
+    }
+
+    fn schedule_next_imu_poll(&mut self, base_timestamp_ms: u32) {
+        if !self.imu_poll_enabled() {
+            self.imu_poll_deadline_ms = None;
+            return;
+        }
+
+        let deadline = base_timestamp_ms.wrapping_add(IMU_POLL_ACTIVE_MS);
+        self.imu_poll_deadline_ms = Some(deadline);
+        Self::request_poll_after(IMU_POLL_ACTIVE_MS);
+    }
+
+    fn maybe_start_imu_poll(&mut self) -> Option<RuntimeCommand> {
+        if !self.imu_poll_enabled() {
+            self.imu_poll_deadline_ms = None;
+            return None;
+        }
+
+        if self.pending.imu_fifo_read {
+            return None;
+        }
+
+        let now = unsafe { c_vp_rtc_millis() };
+        let deadline = self.imu_poll_deadline_ms.unwrap_or(now);
+        if !deadline_due(now, deadline) {
+            Self::request_poll_after(deadline_remaining_ms(now, deadline));
+            return None;
+        }
+
+        self.pending.imu_fifo_read = true;
+        self.imu_poll_deadline_ms = Some(now.wrapping_add(IMU_POLL_ACTIVE_MS));
+        Some(RuntimeCommand::ReadImuFifo { max_samples: 8 })
     }
 
     pub fn poll(&mut self) -> Option<RuntimeCommand> {
@@ -208,6 +280,11 @@ impl Runtime {
                 if status == HidSendStatus::Sent {
                     self.pending_wheel = self.pending_wheel.saturating_sub(report.wheel as i16);
                     self.last_sent_buttons = report.buttons.pack();
+                    self.report_state
+                        .commit_sent(crate::report::types::ReportDelta {
+                            dx: report.dx,
+                            dy: report.dy,
+                        });
                 }
 
                 self.dirty.clear_report();
@@ -252,6 +329,8 @@ impl Runtime {
             RuntimeCommandResult::ImuFifoReadRequested { status } => {
                 if status != VP_STATUS_OK as u8 {
                     self.pending.imu_fifo_read = false;
+                    let now = unsafe { c_vp_rtc_millis() };
+                    self.schedule_next_imu_poll(now);
                 }
             }
         }
@@ -290,6 +369,10 @@ impl Runtime {
             self.vendor
                 .poll(&self.router, &mut self.config, &self.power);
             self.pending.vendor_rx = false;
+        }
+
+        if let Some(command) = self.maybe_start_imu_poll() {
+            return Some(command);
         }
 
         if let Some(tx) = self.vendor.take_pending_tx() {
@@ -445,10 +528,7 @@ impl Runtime {
             }
             RuntimeEvent::ImuInt { timestamp } => {
                 self.mark_activity(timestamp);
-                log::debug!("imu int;ts={}", timestamp);
-                if !self.pending.imu_fifo_read {
-                    self.pending.imu_fifo_read = true;
-                }
+                rearm_imu_interrupts();
                 self.dirty.mark_motion();
             }
             RuntimeEvent::ImuSample {
@@ -458,13 +538,6 @@ impl Runtime {
                 timestamp,
             } => {
                 self.mark_activity(timestamp);
-                log::debug!(
-                    "imu sample;ts={},x=0x{:04x},y=0x{:04x},z=0x{:04x}",
-                    timestamp,
-                    raw_x,
-                    raw_y,
-                    raw_z
-                );
                 let raw = SflpGameRotationRaw {
                     x: raw_x,
                     y: raw_y,
@@ -480,16 +553,20 @@ impl Runtime {
                 self.dirty.mark_report();
             }
             RuntimeEvent::ImuFifoDone {
-                status, timestamp, ..
+                status,
+                timestamp,
+                dropped_count: _,
             } => {
                 self.mark_activity(timestamp);
-                log::debug!("imu fifo done;status={},ts={}", status, timestamp);
                 self.pending.imu_fifo_read = false;
                 if status != VP_STATUS_OK as u8 {
+                    if status != VP_STATUS_NOT_READY as u8 {
+                        log::warn!("imu fifo read failed;status={},ts={}", status, timestamp);
+                    }
                     self.latest_imu_sample.valid = false;
                     clear_current_attitude();
                 }
-                rearm_imu_interrupts();
+                self.schedule_next_imu_poll(timestamp);
             }
             RuntimeEvent::HidSendDone { timestamp, .. } => {
                 self.mark_activity(timestamp);
@@ -533,6 +610,40 @@ impl Runtime {
             middle: input.middle,
         };
         let packed_buttons = buttons.pack();
+        let motion_capture_active = input.action || input.middle;
+
+        if motion_capture_active && !self.motion_capture_active {
+            self.reset_motion_capture_state(true);
+        } else if !motion_capture_active && self.motion_capture_active {
+            self.reset_motion_capture_state(false);
+        }
+        self.motion_capture_active = motion_capture_active;
+
+        if motion_capture_active
+            && self.latest_imu_sample.valid
+            && self.last_motion_sample_ts != Some(self.latest_imu_sample.timestamp_ms)
+        {
+            if let Some(attitude) = get_current_attitude() {
+                if self.motion_calibration_pending {
+                    self.motion_solver.calibrate(attitude);
+                    self.current_motion = MotionState::default();
+                    self.report_state.reset_all();
+                    self.motion_calibration_pending = false;
+                } else {
+                    self.current_motion = self.motion_solver.update(attitude);
+                }
+                self.last_motion_sample_ts = Some(self.latest_imu_sample.timestamp_ms);
+            }
+        }
+
+        let now = unsafe { c_vp_rtc_millis() };
+        let motion_report_deadline = self.motion_report_deadline_ms.unwrap_or(now);
+        if motion_capture_active && deadline_due(now, motion_report_deadline) {
+            self.report_state.ingest_motion(self.current_motion);
+            self.motion_report_deadline_ms = Some(now.wrapping_add(MOTION_REPORT_MS));
+            Self::request_poll_after(MOTION_REPORT_MS);
+        }
+        let motion_delta = self.report_state.peek_report();
 
         // 运行时把输入侧滚轮增量汇总到发送侧缓冲，避免短时间多个步进被后来的 report 覆盖
         self.pending_wheel = self
@@ -541,7 +652,6 @@ impl Runtime {
             .clamp(i8::MIN as i16, i8::MAX as i16);
 
         if input.wheel_delta != 0 || packed_buttons != self.last_sent_buttons {
-            let now = unsafe { c_vp_rtc_millis() };
             self.mark_activity(now);
             self.dirty.mark_report();
         }
@@ -551,7 +661,12 @@ impl Runtime {
             return self.defer_report_until_route_event();
         }
 
-        if self.pending_wheel == 0
+        if motion_capture_active && !deadline_due(now, motion_report_deadline) {
+            Self::request_poll_after(deadline_remaining_ms(now, motion_report_deadline));
+        }
+
+        if motion_delta.is_none()
+            && self.pending_wheel == 0
             && packed_buttons == self.last_sent_buttons
             && !self.pending.hid_retry
             && !self.dirty.report
@@ -565,10 +680,14 @@ impl Runtime {
         }
 
         let wheel = self.pending_wheel.clamp(-127, 127) as i8;
+        let (dx, dy) = match motion_delta {
+            Some(delta) => (delta.dx, delta.dy),
+            None => (0, 0),
+        };
         let report = MouseReport {
             buttons,
-            dx: 0,
-            dy: 0,
+            dx,
+            dy,
             wheel,
         };
 

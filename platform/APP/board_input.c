@@ -2,6 +2,7 @@
 
 #include "CH58x_common.h"  // IWYU pragma: keep
 #include "board_gpio.h"
+#include "c_api.h"
 #include "rust_api.h"
 
 static uint16_t board_input_exti_both_sim_mask_a = 0u;
