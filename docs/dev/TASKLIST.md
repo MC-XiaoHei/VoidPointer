@@ -9,7 +9,7 @@
 
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
-| Runtime / FFI | Partial | 已切到 `vp_core_init()` / `vp_core_poll()`，TMOS bottom-half 主路径已接通；仍需清理旧 `tick()` 残留、继续收敛长耗时操作边界。 |
+| Runtime / FFI | Partial | 已切到 `vp_core_init()` / `vp_core_poll()`，TMOS bottom-half 主路径已接通；长耗时路径边界与文档沉淀仍需继续收敛。 |
 | Input | Partial | 按键 EXTI + debounce、编码器 EXTI + wheel 已跑通；Mode switch 当前板无硬件，暂不实现。 |
 | IMU / I2C | Partial | CH585 I2C + LSM6DSV 基础通信、WHO_AM_I、active profile、异步 FIFO 读取主链路已完成；bus recovery、suspend/sleep profile、通用 I2C API 未完成。 |
 | Motion / Attitude | Partial | FIFO → latest sample cache → 姿态更新 → motion 主链路已通；参数整理、validity check、session/policy 仍需继续收敛。 |
@@ -27,9 +27,9 @@
 只保留近期真正要推进的事项。
 
 ### P0：先把文档与代码状态对齐
-- [ ] 清理 `TASKLIST.md` 中过时或重复描述。
-- [ ] 清理 `core/src/utils/runtime.rs` 中旧 `tick()` 残留，避免 Runtime 双语义并存。
-- [ ] 为新增 Rust→C API 明确标注 `ISR-safe` 或 `bottom-half only` 约束。
+- [x] 清理 `TASKLIST.md` 中过时或重复描述。
+- [x] 清理旧 `tick()` 残留，避免 Runtime 双语义并存。
+- [x] 为 Rust→C API 明确标注 `ISR-safe` 或 `bottom-half only` 约束。
 
 ### P1：补齐 IMU / I2C 的缺口
 - [ ] 实现通用 `c_vp_i2c_init()` API，避免文档与实际初始化路径分裂。
@@ -83,11 +83,11 @@
 - [x] `HID retry`、`Power transition`、`IMU FIFO read request` 已建立 RuntimeCommand 边界。
 - [x] `bindgen` / `cbindgen` 生成链保持可用。
 - [x] `c_vp_*` 前缀迁移已完成。
+- [x] 旧 `tick()` 残留已清理。
+- [x] Rust→C API 调用上下文已在 `c_api.h` 标注。
 
 ### 未完成
-- [ ] 清理旧 `tick()` 相关残留。
 - [ ] 继续拆分长耗时路径，避免持有 Runtime 可变借用跨越慢调用。
-- [ ] 为新增 Rust→C API 标注 ISR-safe / bottom-half only。
 - [ ] 将“当前事实”更多沉淀到长期文档，减少 TaskList 负担。
 
 ## 4.2 Input
