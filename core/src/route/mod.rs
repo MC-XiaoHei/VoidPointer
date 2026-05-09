@@ -113,27 +113,32 @@ impl HidRouter {
         self.usb_state == UsbState::Configured
     }
 
+    fn preferred_wireless_route(&self) -> HidRoute {
+        // TODO
+        // 当前硬件没有 mode switch，2.4G 协议栈也还未接入，
+        // 所以在 USB 之外临时固定只选择 BLE，不对 dongle 做 fallback。
+        // 后续如果新板加入 mode switch，或 2.4G 路由开始落地，
+        // 这里要恢复为“根据 mode switch / policy 在 BLE 与 2.4G 间选择”。
+        if self.is_ble_input_ready() {
+            HidRoute::Ble
+        } else {
+            HidRoute::None
+        }
+    }
+
     pub fn preferred_mouse_route(&self) -> HidRoute {
         if self.is_usb_configured() {
             HidRoute::Usb
-        } else if self.is_ble_input_ready() {
-            HidRoute::Ble
-        } else if self.dongle_connected {
-            HidRoute::Dongle2G4
         } else {
-            HidRoute::None
+            self.preferred_wireless_route()
         }
     }
 
     pub fn preferred_custom_route(&self) -> HidRoute {
         if self.is_usb_configured() {
             HidRoute::Usb
-        } else if self.is_ble_input_ready() {
-            HidRoute::Ble
-        } else if self.dongle_connected {
-            HidRoute::Dongle2G4
         } else {
-            HidRoute::None
+            self.preferred_wireless_route()
         }
     }
 
@@ -146,7 +151,7 @@ impl HidRouter {
     }
 
     pub fn has_wireless_connection(&self) -> bool {
-        self.ble_connected || self.dongle_connected
+        self.is_ble_input_ready()
     }
 }
 

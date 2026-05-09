@@ -27,6 +27,10 @@ const BoardGpio board_btn_laser = {
     .pin = GPIO_Pin_7,
 };
 
+// TODO
+// 当前板子没有物理 mode switch，所以这里保持空映射。
+// 如果后续硬件版本加入该开关，需要在这里补真实 GPIO，
+// 并同步接通 InputGPIO_Init/InputEXTI_Init、Rust switch debounce、route policy。
 const BoardGpio board_mode_switch = {
     .group = BOARD_GPIO_GROUP_NONE,
     .pin = 0u,
