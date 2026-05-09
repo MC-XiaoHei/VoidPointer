@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod events;
+pub mod report_runtime;
 
 use crate::attitude::types::SflpGameRotationRaw;
 use crate::attitude::{
@@ -22,6 +23,7 @@ use crate::report::state::ReportState;
 use crate::route::{HidRoute, HidRouter, UsbState};
 use crate::runtime::commands::{RuntimeCommand, RuntimeCommandResult};
 use crate::runtime::events::{EventQueue, RuntimeEvent};
+use crate::runtime::report_runtime::MouseReportRuntime;
 use crate::utils::global::MainLoopGlobal;
 use crate::vendor::{PendingVendorTx, VendorRuntime};
 use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -129,8 +131,7 @@ pub struct Runtime {
     pub input: InputManager,
     pub dirty: DirtyFlags,
     pub pending: PendingFlags,
-    pub pending_wheel: i16,
-    pub last_sent_buttons: u8,
+    pub mouse_report: MouseReportRuntime,
     pub last_activity_ms: AtomicU32,
     pub power_eval_deadline_ms: Option<u32>,
     pub imu_poll_deadline_ms: Option<u32>,
@@ -159,8 +160,7 @@ impl Runtime {
             input,
             dirty: DirtyFlags::default(),
             pending: PendingFlags::default(),
-            pending_wheel: 0,
-            last_sent_buttons: 0,
+            mouse_report: MouseReportRuntime::new(),
             last_activity_ms: AtomicU32::new(now),
             power_eval_deadline_ms: None,
             imu_poll_deadline_ms: Some(now),
@@ -270,6 +270,50 @@ impl Runtime {
         None
     }
 
+    fn schedule_hid_retry(&mut self) {
+        self.pending.hid_retry = true;
+        Self::request_poll_after(HID_RETRY_DELAY_MS);
+    }
+
+    fn apply_mouse_send_status(&mut self, report: MouseReport, status: HidSendStatus) {
+        self.mouse_report
+            .apply_send_status(report, status, &mut self.report_state);
+        self.dirty.clear_report();
+
+        match status {
+            HidSendStatus::Sent => {
+                self.pending.hid_retry = false;
+            }
+            HidSendStatus::RetryLater => {
+                self.schedule_hid_retry();
+            }
+            HidSendStatus::NotConnected | HidSendStatus::Fatal => {
+                self.pending.hid_retry = false;
+            }
+        }
+    }
+
+    fn apply_vendor_send_status(
+        &mut self,
+        route: vp_hid_route_t,
+        report: crate::hid::types::CustomReport,
+        status: HidSendStatus,
+    ) {
+        match status {
+            HidSendStatus::Sent => {
+                self.pending.hid_retry = false;
+            }
+            HidSendStatus::RetryLater => {
+                self.vendor
+                    .requeue_pending_tx(PendingVendorTx { route, report });
+                self.schedule_hid_retry();
+            }
+            HidSendStatus::NotConnected | HidSendStatus::Fatal => {
+                self.pending.hid_retry = false;
+            }
+        }
+    }
+
     pub fn apply_command_result(&mut self, result: RuntimeCommandResult) {
         match result {
             RuntimeCommandResult::MouseSent {
@@ -277,49 +321,15 @@ impl Runtime {
                 report,
                 status,
             } => {
-                if status == HidSendStatus::Sent {
-                    self.pending_wheel = self.pending_wheel.saturating_sub(report.wheel as i16);
-                    self.last_sent_buttons = report.buttons.pack();
-                    self.report_state
-                        .commit_sent(crate::report::types::ReportDelta {
-                            dx: report.dx,
-                            dy: report.dy,
-                        });
-                }
-
-                self.dirty.clear_report();
-
-                match status {
-                    HidSendStatus::Sent => {
-                        self.pending.hid_retry = false;
-                    }
-                    HidSendStatus::RetryLater => {
-                        self.pending.hid_retry = true;
-                        Self::request_poll_after(HID_RETRY_DELAY_MS);
-                    }
-                    HidSendStatus::NotConnected | HidSendStatus::Fatal => {
-                        self.pending.hid_retry = false;
-                    }
-                }
+                self.apply_mouse_send_status(report, status);
             }
             RuntimeCommandResult::VendorSent {
                 route,
                 report,
                 status,
-            } => match status {
-                HidSendStatus::Sent => {
-                    self.pending.hid_retry = false;
-                }
-                HidSendStatus::RetryLater => {
-                    self.vendor
-                        .requeue_pending_tx(PendingVendorTx { route, report });
-                    self.pending.hid_retry = true;
-                    Self::request_poll_after(HID_RETRY_DELAY_MS);
-                }
-                HidSendStatus::NotConnected | HidSendStatus::Fatal => {
-                    self.pending.hid_retry = false;
-                }
-            },
+            } => {
+                self.apply_vendor_send_status(route, report, status);
+            }
             RuntimeCommandResult::PowerTransitionDone { target, accepted } => {
                 self.power_eval_deadline_ms = None;
                 self.power.apply_transition_result(target, accepted);
@@ -377,7 +387,7 @@ impl Runtime {
 
         if let Some(tx) = self.vendor.take_pending_tx() {
             if !self.route_ready(tx.route) {
-                return self.defer_vendor_retry(tx);
+                return self.defer_vendor_until_route_event(tx);
             }
 
             self.pending.hid_retry = false;
@@ -595,12 +605,11 @@ impl Runtime {
         None
     }
 
-    /// vendor 待发包已经真实存在，route not-ready 时不能直接放弃
-    /// 这里保留待发包并做短退避，等待下一次 ready 窗口
-    fn defer_vendor_retry(&mut self, tx: PendingVendorTx) -> Option<RuntimeCommand> {
+    /// vendor 待发包已经真实存在，但 route not-ready 不等于可短退避重试
+    /// 这里保留待发包并收敛本次尝试，等待 BLE ready、USB 状态变化等 route 事件再次唤醒
+    fn defer_vendor_until_route_event(&mut self, tx: PendingVendorTx) -> Option<RuntimeCommand> {
         self.vendor.requeue_pending_tx(tx);
-        self.pending.hid_retry = true;
-        Self::request_poll_after(HID_RETRY_DELAY_MS);
+        self.pending.hid_retry = false;
         None
     }
 
@@ -649,14 +658,27 @@ impl Runtime {
         let motion_delta = self.report_state.peek_report();
 
         // 运行时把输入侧滚轮增量汇总到发送侧缓冲，避免短时间多个步进被后来的 report 覆盖
-        self.pending_wheel = self
-            .pending_wheel
-            .saturating_add(input.wheel_delta as i16)
-            .clamp(i8::MIN as i16, i8::MAX as i16);
+        self.mouse_report.ingest_wheel_delta(input.wheel_delta);
 
-        if input.wheel_delta != 0 || packed_buttons != self.last_sent_buttons {
+        let button_changed = self.mouse_report.buttons_changed(packed_buttons);
+        let wheel_changed = input.wheel_delta != 0;
+        if wheel_changed || button_changed {
             self.mark_activity(now);
             self.dirty.mark_report();
+        }
+
+        if motion_capture_active && !deadline_due(now, motion_report_deadline) {
+            Self::request_poll_after(deadline_remaining_ms(now, motion_report_deadline));
+        }
+
+        if !self.mouse_report.send_needed(
+            motion_delta,
+            packed_buttons,
+            self.pending.hid_retry,
+            self.dirty.report,
+        ) {
+            // 没有 motion、wheel、button 变化，也没有 retry/dirty 压力时直接退出
+            return None;
         }
 
         let route = self.router.preferred_mouse_route();
@@ -664,35 +686,11 @@ impl Runtime {
             return self.defer_report_until_route_event();
         }
 
-        if motion_capture_active && !deadline_due(now, motion_report_deadline) {
-            Self::request_poll_after(deadline_remaining_ms(now, motion_report_deadline));
-        }
-
-        if motion_delta.is_none()
-            && self.pending_wheel == 0
-            && packed_buttons == self.last_sent_buttons
-            && !self.pending.hid_retry
-            && !self.dirty.report
-        {
-            // 没有新状态也没有重试压力时直接退出，避免无意义重发空 report
-            return None;
-        }
-
         if !self.route_ready(route.as_ffi()) {
             return self.defer_report_until_route_event();
         }
 
-        let wheel = self.pending_wheel.clamp(-127, 127) as i8;
-        let (dx, dy) = match motion_delta {
-            Some(delta) => (delta.dx, delta.dy),
-            None => (0, 0),
-        };
-        let report = MouseReport {
-            buttons,
-            dx,
-            dy,
-            wheel,
-        };
+        let report = self.mouse_report.build_report(buttons, motion_delta);
 
         Some(RuntimeCommand::SendMouse {
             route: route.as_ffi(),
