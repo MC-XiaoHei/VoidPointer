@@ -187,6 +187,23 @@ static bool lsm6dsv_check_id(void) {
     return true;
 }
 
+static bool lsm6dsv_route_basic_interrupts(const uint8_t md1_cfg,
+                                           const uint8_t md2_cfg) {
+    if (!lsm6dsv_write_reg(LSM6DSV_REG_MD1_CFG, md1_cfg)) {
+        VP_LOG_ERROR("imu", "route wake failed;reg=0x%02X,val=0x%02X",
+                     LSM6DSV_REG_MD1_CFG, md1_cfg);
+        return false;
+    }
+
+    if (!lsm6dsv_write_reg(LSM6DSV_REG_MD2_CFG, md2_cfg)) {
+        VP_LOG_ERROR("imu", "route wake failed;reg=0x%02X,val=0x%02X",
+                     LSM6DSV_REG_MD2_CFG, md2_cfg);
+        return false;
+    }
+
+    return true;
+}
+
 static bool lsm6dsv_apply_active_profile(void) {
 #define VP_IMU_WRITE_OR_FAIL(reg, value, name)                               \
     do {                                                                     \
@@ -221,7 +238,86 @@ static bool lsm6dsv_apply_active_profile(void) {
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FIFO_CTRL4, 0x06, "fifo_ctrl4");
 
 #undef VP_IMU_WRITE_OR_FAIL
-    return true;
+
+    return lsm6dsv_route_basic_interrupts(0x00, 0x00);
+}
+
+static bool lsm6dsv_apply_suspend_profile(void) {
+#define VP_IMU_WRITE_OR_FAIL(reg, value, name)                                \
+    do {                                                                      \
+        if (!lsm6dsv_write_reg((reg), (value))) {                             \
+            VP_LOG_ERROR(                                                     \
+                "imu",                                                        \
+                "suspend profile write failed;step=%s,reg=0x%02X,val=0x%02X", \
+                (name), (reg), (value));                                      \
+            return false;                                                     \
+        }                                                                     \
+    } while (0)
+
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FIFO_CTRL4, 0x00, "fifo_ctrl4");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNCTIONS_ENABLE, 0x48,
+                         "functions_enable");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x80,
+                         "func_cfg_access_on");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_EMB_FUNC_EN_A, 0x00, "emb_func_en_a");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_EMB_FUNC_FIFO_EN_A, 0x00,
+                         "emb_func_fifo_en_a");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_SFLP_ODR, 0x00, "sflp_odr");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x00,
+                         "func_cfg_access_off");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_DUR, 0x29,
+                         "inactivity_dur");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_THS, 0x02,
+                         "inactivity_ths");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_WAKE_UP_THS, 0x02, "wake_up_ths");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_WAKE_UP_DUR, 0x01, "wake_up_dur");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL2, 0x00, "ctrl2");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL6, 0x00, "ctrl6");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL8, 0x00, "ctrl8");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL1, 0x03, "ctrl1");
+
+#undef VP_IMU_WRITE_OR_FAIL
+
+    return lsm6dsv_route_basic_interrupts(0x60, 0x00);
+}
+
+static bool lsm6dsv_apply_sleep_profile(void) {
+#define VP_IMU_WRITE_OR_FAIL(reg, value, name)                              \
+    do {                                                                    \
+        if (!lsm6dsv_write_reg((reg), (value))) {                           \
+            VP_LOG_ERROR(                                                   \
+                "imu",                                                      \
+                "sleep profile write failed;step=%s,reg=0x%02X,val=0x%02X", \
+                (name), (reg), (value));                                    \
+            return false;                                                   \
+        }                                                                   \
+    } while (0)
+
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FIFO_CTRL4, 0x00, "fifo_ctrl4");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNCTIONS_ENABLE, 0x4C,
+                         "functions_enable");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x80,
+                         "func_cfg_access_on");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_EMB_FUNC_EN_A, 0x00, "emb_func_en_a");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_EMB_FUNC_FIFO_EN_A, 0x00,
+                         "emb_func_fifo_en_a");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_SFLP_ODR, 0x00, "sflp_odr");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x00,
+                         "func_cfg_access_off");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_DUR, 0x00,
+                         "inactivity_dur");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_THS, 0x04,
+                         "inactivity_ths");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_WAKE_UP_THS, 0x04, "wake_up_ths");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_WAKE_UP_DUR, 0x02, "wake_up_dur");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL1, 0x02, "ctrl1");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL2, 0x00, "ctrl2");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL6, 0x00, "ctrl6");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL8, 0x00, "ctrl8");
+
+#undef VP_IMU_WRITE_OR_FAIL
+
+    return lsm6dsv_route_basic_interrupts(0x60, 0x00);
 }
 
 static void lsm6dsv_async_reset_io_state(void) {
@@ -337,6 +433,8 @@ void LSM6DSV_AsyncInit(void) {
     PFIC_EnableIRQ(I2C_IRQn);
 }
 
+void LSM6DSV_ReinitAsync(void) { LSM6DSV_AsyncInit(); }
+
 vp_bool_t LSM6DSV_IsAsyncBusy(void) { return g_lsm6dsv_async.busy; }
 
 vp_status_t LSM6DSV_AbortAsync(void) {
@@ -407,9 +505,21 @@ bool LSM6DSV_ConfigActive(void) {
     return lsm6dsv_apply_active_profile();
 }
 
-bool LSM6DSV_ConfigSuspend(void) { return false; }
+bool LSM6DSV_ConfigSuspend(void) {
+    if (g_lsm6dsv_async.busy) {
+        return false;
+    }
 
-bool LSM6DSV_ConfigSleep(void) { return false; }
+    return lsm6dsv_apply_suspend_profile();
+}
+
+bool LSM6DSV_ConfigSleep(void) {
+    if (g_lsm6dsv_async.busy) {
+        return false;
+    }
+
+    return lsm6dsv_apply_sleep_profile();
+}
 
 bool LSM6DSV_ReadWhoAmI(uint8_t* out_id) {
     if (out_id == 0) {
@@ -417,6 +527,23 @@ bool LSM6DSV_ReadWhoAmI(uint8_t* out_id) {
     }
 
     return lsm6dsv_read_reg(LSM6DSV_REG_WHO_AM_I, out_id);
+}
+
+bool LSM6DSV_ReadWakeStatus(lsm6dsv_wake_status_t* out_status) {
+    uint8_t raw = 0u;
+
+    if (out_status == 0) {
+        return false;
+    }
+
+    if (!lsm6dsv_read_reg(LSM6DSV_REG_WAKE_UP_SRC, &raw)) {
+        return false;
+    }
+
+    out_status->raw = raw;
+    out_status->wake_event = (raw & 0x08u) ? 1u : 0u;
+    out_status->sleep_change = (raw & 0x20u) ? 1u : 0u;
+    return true;
 }
 
 bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
@@ -518,98 +645,82 @@ void I2C_IRQHandler(void) {
 
             if (event &
                 (RB_I2C_ADDR | RB_I2C_BTF | RB_I2C_TxE | (RB_I2C_TRA << 16))) {
+                if (g_lsm6dsv_async.tx_index < g_lsm6dsv_async.tx_len) {
+                    I2C_SendData(g_lsm6dsv_async.tx_buf[g_lsm6dsv_async.tx_index++]);
+                    return;
+                }
+
                 if (!g_lsm6dsv_async.read_in_progress) {
-                    if (g_lsm6dsv_async.tx_index < g_lsm6dsv_async.tx_len) {
-                        I2C_SendData(
-                            g_lsm6dsv_async.tx_buf[g_lsm6dsv_async.tx_index++]);
-                    } else {
-                        g_lsm6dsv_async.read_in_progress = 1u;
-                        g_lsm6dsv_async.addr_rw =
-                            (uint8_t)(g_lsm6dsv_i2c_addr | 0x01u);
-                        I2C_GenerateSTART(ENABLE);
-                    }
+                    g_lsm6dsv_async.read_in_progress = 1u;
+                    g_lsm6dsv_async.addr_rw = g_lsm6dsv_i2c_addr | 0x01u;
+                    I2C_GenerateSTART(ENABLE);
+                    return;
                 }
             }
         } else {
             if (event & RB_I2C_ADDR) {
-                if (g_lsm6dsv_async.rx_len > 1u) {
-                    I2C_AcknowledgeConfig(ENABLE);
-                } else {
+                if (g_lsm6dsv_async.rx_len == 1u && !g_lsm6dsv_async.nack_sent) {
                     I2C_AcknowledgeConfig(DISABLE);
+                    I2C_GenerateSTOP(ENABLE);
                     g_lsm6dsv_async.nack_sent = 1u;
                 }
+                return;
             }
 
             if (event & RB_I2C_RxNE) {
+                const uint8_t value = I2C_ReceiveData();
+
                 if (g_lsm6dsv_async.rx_index < g_lsm6dsv_async.rx_len) {
-                    g_lsm6dsv_async.rx_buf[g_lsm6dsv_async.rx_index++] =
-                        I2C_ReceiveData();
+                    g_lsm6dsv_async.rx_buf[g_lsm6dsv_async.rx_index++] = value;
+                }
+
+                if (g_lsm6dsv_async.rx_index + 1u == g_lsm6dsv_async.rx_len &&
+                    !g_lsm6dsv_async.nack_sent) {
+                    I2C_AcknowledgeConfig(DISABLE);
+                    I2C_GenerateSTOP(ENABLE);
+                    g_lsm6dsv_async.nack_sent = 1u;
                 }
 
                 if (g_lsm6dsv_async.rx_index < g_lsm6dsv_async.rx_len) {
-                    if ((g_lsm6dsv_async.rx_len - g_lsm6dsv_async.rx_index) ==
-                        1u) {
-                        I2C_AcknowledgeConfig(DISABLE);
-                    } else {
-                        I2C_AcknowledgeConfig(ENABLE);
-                    }
-                } else {
-                    I2C_GenerateSTOP(ENABLE);
+                    return;
+                }
 
-                    switch (g_lsm6dsv_async.phase) {
-                        case LSM6DSV_ASYNC_READ_STATUS1_RX:
-                            g_lsm6dsv_async.status1 = g_lsm6dsv_async.rx_buf[0];
-                            g_lsm6dsv_async.phase =
-                                LSM6DSV_ASYNC_READ_STATUS2_TX;
-                            lsm6dsv_async_begin_next_phase();
-                            return;
-                        case LSM6DSV_ASYNC_READ_STATUS2_RX: {
-                            g_lsm6dsv_async.status2 = g_lsm6dsv_async.rx_buf[0];
-                            g_lsm6dsv_async.fifo_total_words =
-                                (uint16_t)((((uint16_t)
-                                                 g_lsm6dsv_async.status2) &
-                                            0x01u)
-                                           << 8) |
-                                g_lsm6dsv_async.status1;
-                            g_lsm6dsv_async.fifo_words_remaining =
-                                g_lsm6dsv_async.fifo_total_words;
-
-                            if (g_lsm6dsv_async.fifo_total_words == 0u) {
-                                lsm6dsv_async_finish(VP_STATUS_NOT_READY);
-                                return;
-                            }
-
-                            if (g_lsm6dsv_async.requested_max_samples != 0u &&
-                                g_lsm6dsv_async.fifo_total_words >
-                                    g_lsm6dsv_async.requested_max_samples) {
-                                g_lsm6dsv_async.fifo_words_to_drop =
-                                    (uint16_t)(g_lsm6dsv_async
-                                                   .fifo_total_words -
-                                               g_lsm6dsv_async
-                                                   .requested_max_samples);
-                            } else {
-                                g_lsm6dsv_async.fifo_words_to_drop = 0u;
-                            }
-
-                            g_lsm6dsv_async.phase =
-                                LSM6DSV_ASYNC_READ_FIFO_WORD_TX;
-                            lsm6dsv_async_begin_next_phase();
+                switch (g_lsm6dsv_async.phase) {
+                    case LSM6DSV_ASYNC_READ_STATUS1_RX:
+                        g_lsm6dsv_async.status1 = g_lsm6dsv_async.rx_buf[0];
+                        g_lsm6dsv_async.phase = LSM6DSV_ASYNC_READ_STATUS2_TX;
+                        lsm6dsv_async_begin_next_phase();
+                        return;
+                    case LSM6DSV_ASYNC_READ_STATUS2_RX: {
+                        g_lsm6dsv_async.status2 = g_lsm6dsv_async.rx_buf[0];
+                        g_lsm6dsv_async.fifo_total_words =
+                            (uint16_t)((((uint16_t)g_lsm6dsv_async.status2) & 0x01u) << 8) |
+                            g_lsm6dsv_async.status1;
+                        if (g_lsm6dsv_async.fifo_total_words == 0u) {
+                            lsm6dsv_async_finish(VP_STATUS_NOT_READY);
                             return;
                         }
-                        case LSM6DSV_ASYNC_READ_FIFO_WORD_RX:
-                            lsm6dsv_async_consume_fifo_word();
-                            return;
-                        default:
-                            lsm6dsv_async_finish(VP_STATUS_IO_ERROR);
-                            return;
-                    }
-                }
-            }
 
-            if (event & RB_I2C_AF) {
-                I2C_ClearFlag(I2C_FLAG_AF);
-                lsm6dsv_async_finish(VP_STATUS_IO_ERROR);
-                return;
+                        g_lsm6dsv_async.fifo_words_remaining =
+                            g_lsm6dsv_async.fifo_total_words;
+                        if (g_lsm6dsv_async.requested_max_samples != 0u &&
+                            g_lsm6dsv_async.fifo_words_remaining >
+                                g_lsm6dsv_async.requested_max_samples) {
+                            g_lsm6dsv_async.fifo_words_to_drop =
+                                (uint16_t)(g_lsm6dsv_async.fifo_words_remaining -
+                                           g_lsm6dsv_async.requested_max_samples);
+                        }
+                        g_lsm6dsv_async.phase = LSM6DSV_ASYNC_READ_FIFO_WORD_TX;
+                        lsm6dsv_async_begin_next_phase();
+                        return;
+                    }
+                    case LSM6DSV_ASYNC_READ_FIFO_WORD_RX:
+                        lsm6dsv_async_consume_fifo_word();
+                        return;
+                    default:
+                        lsm6dsv_async_finish(VP_STATUS_IO_ERROR);
+                        return;
+                }
             }
         }
     }

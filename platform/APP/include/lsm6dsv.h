@@ -22,26 +22,42 @@ extern "C" {
 #define LSM6DSV_REG_CTRL8              0x17
 #define LSM6DSV_REG_FIFO_STATUS1       0x1B
 #define LSM6DSV_REG_FIFO_STATUS2       0x1C
-#define LSM6DSV_REG_FUNCTIONS_ENABLE   0x50
 #define LSM6DSV_REG_EMB_FUNC_FIFO_EN_A 0x44
+#define LSM6DSV_REG_WAKE_UP_SRC        0x45
+#define LSM6DSV_REG_FUNCTIONS_ENABLE   0x50
+#define LSM6DSV_REG_INACTIVITY_DUR     0x54
+#define LSM6DSV_REG_INACTIVITY_THS     0x55
+#define LSM6DSV_REG_WAKE_UP_THS        0x5B
+#define LSM6DSV_REG_WAKE_UP_DUR        0x5C
+/* 0x5E 在不同 bank 下复用，写 SFLP_ODR 前必须先切到 embedded function bank */
 #define LSM6DSV_REG_SFLP_ODR           0x5E
+#define LSM6DSV_REG_MD1_CFG            0x5E
+#define LSM6DSV_REG_MD2_CFG            0x5F
 #define LSM6DSV_REG_EMB_FUNC_INIT_A    0x66
 #define LSM6DSV_REG_FIFO_DATA_OUT_TAG  0x78
 
 #define LSM6DSV_WHOAMI_VALUE           0x70
 #define LSM6DSV_FIFO_TAG_SFLP_GAME     0x13
 
+typedef struct {
+    vp_bool_t wake_event;
+    vp_bool_t sleep_change;
+    uint8_t   raw;
+} lsm6dsv_wake_status_t;
+
 bool LSM6DSV_Init(void);
 bool LSM6DSV_ConfigActive(void);
 bool LSM6DSV_ConfigSuspend(void);
 bool LSM6DSV_ConfigSleep(void);
 bool LSM6DSV_ReadWhoAmI(uint8_t* out_id);
+bool LSM6DSV_ReadWakeStatus(lsm6dsv_wake_status_t* out_status);
 bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
                                            uint16_t  max_samples,
                                            uint16_t* out_dropped_count);
 bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw);
 
 void        LSM6DSV_AsyncInit(void);
+void        LSM6DSV_ReinitAsync(void);
 vp_status_t LSM6DSV_StartAsyncFifoRead(uint16_t max_samples);
 vp_status_t LSM6DSV_AbortAsync(void);
 vp_bool_t   LSM6DSV_IsAsyncBusy(void);

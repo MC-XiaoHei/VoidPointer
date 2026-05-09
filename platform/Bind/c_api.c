@@ -19,6 +19,7 @@
 #include "board_map.h"
 #include "board_gpio.h"
 #include "board_input.h"
+#include "imu_platform.h"
 
 typedef struct {
     uint8_t buttons;
@@ -197,9 +198,9 @@ void Platform_NotifyUsbStateChanged(const vp_usb_state_t state) {
     vp_on_usb_state_changed(effective_state, c_vp_rtc_millis());
 }
 
-vp_status_t c_vp_i2c_init(void) { return VP_STATUS_UNSUPPORTED; }
+vp_status_t c_vp_i2c_init(void) { return ImuPlatform_I2cInit(); }
 
-vp_status_t c_vp_i2c_recover_bus(void) { return VP_STATUS_UNSUPPORTED; }
+vp_status_t c_vp_i2c_recover_bus(void) { return ImuPlatform_I2cRecoverBus(); }
 
 vp_status_t c_vp_i2c_abort(void) { return LSM6DSV_AbortAsync(); }
 
@@ -208,11 +209,11 @@ vp_status_t c_vp_imu_config_active(void) {
 }
 
 vp_status_t c_vp_imu_config_suspend(void) {
-    return LSM6DSV_ConfigSuspend() ? VP_STATUS_OK : VP_STATUS_UNSUPPORTED;
+    return LSM6DSV_ConfigSuspend() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
 }
 
 vp_status_t c_vp_imu_config_sleep(void) {
-    return LSM6DSV_ConfigSleep() ? VP_STATUS_OK : VP_STATUS_UNSUPPORTED;
+    return LSM6DSV_ConfigSleep() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
 }
 
 vp_status_t c_vp_imu_read_fifo_async(const uint16_t max_samples) {
@@ -229,6 +230,28 @@ vp_status_t c_vp_imu_read_whoami(uint8_t* out_id) {
         return VP_STATUS_IO_ERROR;
     }
 
+    return VP_STATUS_OK;
+}
+
+vp_status_t c_vp_imu_read_wake_status(vp_bool_t* out_wake_event,
+                                      vp_bool_t* out_sleep_change,
+                                      uint8_t*   out_raw) {
+    lsm6dsv_wake_status_t status = {0};
+
+    if (out_wake_event == NULL || out_sleep_change == NULL || out_raw == NULL) {
+        return VP_STATUS_INVALID_ARG;
+    }
+
+    if (!LSM6DSV_ReadWakeStatus(&status)) {
+        *out_wake_event = 0u;
+        *out_sleep_change = 0u;
+        *out_raw = 0u;
+        return VP_STATUS_IO_ERROR;
+    }
+
+    *out_wake_event = status.wake_event;
+    *out_sleep_change = status.sleep_change;
+    *out_raw = status.raw;
     return VP_STATUS_OK;
 }
 
@@ -318,69 +341,81 @@ vp_bool_t c_vp_hid_route_ready(const vp_hid_route_t route) {
 
 vp_hid_send_status_t c_vp_hid_send_mouse(const vp_hid_route_t route,
                                          const uint8_t buttons, const int8_t dx,
-                                         const int8_t dy, const int8_t wheel) {
-    mouse_report_t rpt;
-    rpt.buttons = buttons;
-    rpt.dx = clamp_i8_to_hid_range(dx);
-    rpt.dy = clamp_i8_to_hid_range(dy);
-    rpt.wheel = clamp_i8_to_hid_range(wheel);
+                                         const int8_t dy,
+                                         const int8_t wheel) {
+    mouse_report_t report = {
+        .buttons = buttons,
+        .dx = clamp_i8_to_hid_range(dx),
+        .dy = clamp_i8_to_hid_range(dy),
+        .wheel = wheel,
+    };
 
     switch (route) {
         case VP_HID_ROUTE_BLE:
-            return ble_send_mouse_report(&rpt);
+            if (!ble_mouse_route_ready()) {
+                return VP_HID_SEND_NOT_CONNECTED;
+            }
+            return ble_send_mouse_report(&report);
         case VP_HID_ROUTE_USB:
-            return usb_send_mouse_report(&rpt);
+            return usb_send_mouse_report(&report);
         case VP_HID_ROUTE_DONGLE_2G4:
-            return dongle_send_mouse_report(&rpt);
+            return dongle_send_mouse_report(&report);
         default:
-            return VP_HID_SEND_NOT_CONNECTED;
+            return VP_HID_SEND_FATAL;
     }
 }
 
 vp_hid_send_status_t c_vp_hid_send_vendor(const vp_hid_route_t route,
-                                          const uint8_t*       ptr,
-                                          const uint16_t       len) {
+                                          const uint8_t* ptr,
+                                          const uint16_t len) {
     switch (route) {
         case VP_HID_ROUTE_USB:
             return usb_send_vendor_report(ptr, len);
         case VP_HID_ROUTE_BLE:
         case VP_HID_ROUTE_DONGLE_2G4:
-        default:
             return VP_HID_SEND_NOT_CONNECTED;
+        default:
+            return VP_HID_SEND_FATAL;
     }
 }
 
 vp_status_t c_vp_hid_route_enable(const vp_hid_route_t route,
                                   const vp_bool_t      enabled) {
-    (void)route;
-    (void)enabled;
-    return VP_STATUS_UNSUPPORTED;
+    switch (route) {
+        case VP_HID_ROUTE_BLE:
+            return BleHidApp_SetAdvertisingEnabled(enabled ? TRUE : FALSE)
+                       ? VP_STATUS_OK
+                       : VP_STATUS_IO_ERROR;
+        case VP_HID_ROUTE_USB:
+            return VP_STATUS_OK;
+        case VP_HID_ROUTE_DONGLE_2G4:
+            return VP_STATUS_UNSUPPORTED;
+        default:
+            return VP_STATUS_INVALID_ARG;
+    }
 }
 
 vp_status_t c_vp_hid_route_reset(const vp_hid_route_t route) {
-    (void)route;
-    return VP_STATUS_UNSUPPORTED;
+    switch (route) {
+        case VP_HID_ROUTE_BLE:
+            return BleHidApp_Disconnect() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
+        case VP_HID_ROUTE_USB:
+            USBHS_HidDevice_ResetLinkState();
+            return VP_STATUS_OK;
+        case VP_HID_ROUTE_DONGLE_2G4:
+            return VP_STATUS_UNSUPPORTED;
+        default:
+            return VP_STATUS_INVALID_ARG;
+    }
 }
 
-vp_status_t c_vp_power_prepare_suspend(void) {
-    VP_LOG_WARN("power", "feature unavailable;feature=power_prepare_suspend");
-    return VP_STATUS_UNSUPPORTED;
-}
+vp_status_t c_vp_power_prepare_suspend(void) { return VP_STATUS_UNSUPPORTED; }
 
-vp_status_t c_vp_power_enter_suspend(void) {
-    VP_LOG_WARN("power", "feature unavailable;feature=power_enter_suspend");
-    return VP_STATUS_UNSUPPORTED;
-}
+vp_status_t c_vp_power_enter_suspend(void) { return VP_STATUS_UNSUPPORTED; }
 
-vp_status_t c_vp_power_prepare_sleep(void) {
-    VP_LOG_WARN("power", "feature unavailable;feature=power_prepare_sleep");
-    return VP_STATUS_UNSUPPORTED;
-}
+vp_status_t c_vp_power_prepare_sleep(void) { return VP_STATUS_UNSUPPORTED; }
 
-vp_status_t c_vp_power_enter_sleep(void) {
-    VP_LOG_WARN("power", "feature unavailable;feature=power_enter_sleep");
-    return VP_STATUS_UNSUPPORTED;
-}
+vp_status_t c_vp_power_enter_sleep(void) { return VP_STATUS_UNSUPPORTED; }
 
 vp_status_t c_vp_power_restore_from_sleep(void) {
     return VP_STATUS_UNSUPPORTED;
@@ -394,13 +429,7 @@ vp_status_t c_vp_wake_source_enable(const vp_wake_source_t source,
 }
 
 vp_status_t c_vp_flash_config_region(vp_flash_region_t* out_info) {
-    if (out_info == NULL) {
-        return VP_STATUS_INVALID_ARG;
-    }
-    out_info->offset = 0u;
-    out_info->length = 0u;
-    out_info->page_size = 0u;
-    out_info->write_alignment = 0u;
+    (void)out_info;
     return VP_STATUS_UNSUPPORTED;
 }
 
@@ -431,10 +460,13 @@ void c_vp_debug_print(const char* ptr, const uint16_t len) {
         return;
     }
 
-    UART0_SendString((uint8_t*)ptr, len);
+    for (uint16_t i = 0; i < len; i++) {
+        PRINT("%c", ptr[i]);
+    }
 }
 
 vp_status_t c_vp_platform_reset(const uint32_t reason) {
     (void)reason;
-    return VP_STATUS_UNSUPPORTED;
+    SYS_ResetExecute();
+    return VP_STATUS_OK;
 }

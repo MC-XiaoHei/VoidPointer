@@ -167,6 +167,9 @@ vp_status_t c_vp_imu_config_suspend(void);
 vp_status_t c_vp_imu_config_sleep(void);
 vp_status_t c_vp_imu_read_fifo_async(uint16_t max_samples);
 vp_status_t c_vp_imu_read_whoami(uint8_t* out_id);
+vp_status_t c_vp_imu_read_wake_status(vp_bool_t* out_wake_event,
+                                      vp_bool_t* out_sleep_change,
+                                      uint8_t*   out_raw);
 
 /* HID 与 route API，只能在 bottom-half 调用 */
 vp_bool_t            c_vp_hid_route_ready(vp_hid_route_t route);

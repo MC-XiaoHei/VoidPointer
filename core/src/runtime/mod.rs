@@ -529,7 +529,10 @@ impl Runtime {
             RuntimeEvent::ImuInt { timestamp } => {
                 self.mark_activity(timestamp);
                 rearm_imu_interrupts();
-                self.dirty.mark_motion();
+
+                self.pending.imu_fifo_read = false;
+                self.imu_poll_deadline_ms = Some(timestamp);
+                self.dirty.mark_power();
             }
             RuntimeEvent::ImuSample {
                 raw_x,
