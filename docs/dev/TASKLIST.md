@@ -13,7 +13,7 @@
 | Input | Partial | 按键 EXTI + debounce、编码器 EXTI + wheel 已跑通；Mode switch 当前板无硬件，暂不实现。 |
 | IMU / I2C | Partial | CH585 I2C + LSM6DSV 基础通信、WHO_AM_I、active/suspend/sleep profile、通用 I2C API、bus idle / recovery、异步 FIFO 读取主链路已完成；profile API 整理与完整低功耗闭环仍需继续收敛。 |
 | Motion / Attitude | Partial | FIFO → latest sample cache → 姿态更新 → motion 主链路已通；参数整理、validity check、session/policy 仍需继续收敛。 |
-| HID / Report | Partial | BLE/USB mouse report 已接入，wheel/buttons/motion 已能出报告；统一 report runtime、异步完成模型和细化错误恢复仍待补齐。 |
+| HID / Report | Partial | BLE/USB mouse report 已接入，wheel/buttons/motion 已能出报告；USB vendor 收发已接通；mouse 发送条件已收敛为 motion/wheel/button/retry/dirty 五类触发，并已抽出最小 `MouseReportRuntime`；统一 `ReportRuntime` 结构和无线 vendor backend 仍待补齐。 |
 | Route | Partial | 当前策略为“USB configured 优先且独占，否则无线固定 BLE”；2.4G 仍为 stub。 |
 | Power | Partial | Rust `PowerManager` 骨架与 delayed poll 已有；平台 suspend/sleep API、wake/restore、低功耗 profile 尚未落地。 |
 | Config | Not started | 仅有 `ConfigManager` dirty flag 骨架；配置结构、序列化、双槽、CRC、migration 均未完成。 |
@@ -40,9 +40,9 @@
 - [x] 完成 IMU wake source 接入，并收敛为“INT 只负责唤醒、FIFO 读取由 Rust bottom-half 发起”的模型。
 
 ### P2：收敛 Report / Route / 2.4G stub 边界
-- [ ] 明确并统一 2.4G stub 的 `route ready` / `send` / `vendor` 返回语义。
-- [ ] 收敛 `ReportState` 与发送条件，形成更清晰的统一 report runtime。
-- [ ] 明确 HID send result 在 `Sent / RetryLater / NotConnected / Fatal` 下的收敛行为。
+- [x] 明确并统一 2.4G stub 的 `route ready` / `send` / `vendor` 返回语义。
+- [x] 收敛 `ReportState` 与发送条件，形成更清晰的统一 report runtime。
+- [x] 明确 HID send result 在 `Sent / RetryLater / NotConnected / Fatal` 下的收敛行为。
 
 ### P3：推进 Power 平台接口
 - [ ] 补齐 `prepare/enter suspend` 平台 API。
@@ -163,11 +163,17 @@
 - [x] `HidRoute` / `UsbState` / route ready 基础判断。
 - [x] 当前最小路由策略：USB configured 优先且独占，否则无线固定 BLE。
 - [x] USB configured 时关闭 BLE 广播并断开现有 BLE 连接。
+- [x] 2.4G stub 已统一为 `route ready = false`，mouse/vendor send 返回 `NotConnected`。
+- [x] route not-ready 时 mouse/vendor 发送都收敛本次尝试，等待 route 事件再次唤醒。
+- [x] mouse 发送条件已收敛为 motion delta、wheel、button 变化、retry、report dirty 五类触发。
+- [x] `Sent / RetryLater / NotConnected / Fatal` 已有明确收敛规则并在 runtime 中显式处理。
+- [x] 已抽出最小 `MouseReportRuntime`，承接 wheel/button/send-decision/send-commit 逻辑。
 
 ### 未完成
 - [ ] 更独立、清晰的 `ReportRuntime` 结构。
 - [ ] 异步 `hid_send_done` 模型真正接入（如果后续发送模型需要）。
 - [ ] 2.4G route ready / mouse send / vendor send 真实实现。
+- [ ] BLE / 2.4G vendor transport backend 的真实发送实现。
 - [ ] route error recovery。
 - [ ] `usb_mouse_policy` 配置化。
 
@@ -221,9 +227,11 @@
 
 - [ ] **滚轮流程**：编码器边沿 → Rust 解码 → wheel event → report send → commit 正常，抖动不误触发。
 - [ ] **普通按键流程**：Left/Right/Middle/Action 经 Rust debounce 后稳定地产生 pressed/released，button change 即使 `dx/dy=0` 也会发出。
+- [ ] **mouse report 收敛流程**：仅在 motion delta、wheel、button 变化、retry 或 report dirty 存在时尝试发送；否则不重发空 report。
+- [ ] **HID send result 收敛流程**：`Sent` 提交 pending，`RetryLater` 短退避重试，`NotConnected` 等 route 事件，`Fatal` 不做定时重试。
 - [ ] **Middle / Action motion 流程**：trigger → IMU sample → attitude → motion dx/dy → release stop 无惯性。
 - [ ] **IMU 流程**：IMU INT → Rust bottom-half 决策 → async FIFO read → sample callback → attitude update → motion。
-- [ ] **有线/无线流程**：USB configured 时只走 USB；USB 退出后无线恢复 BLE；route 不可用时不累计失效 motion。
+- [ ] **有线/无线流程**：USB configured 时只走 USB；USB 退出后无线恢复 BLE；route 不可用时不累计失效 motion，也不靠定时自旋重试 vendor 发送。
 - [ ] **低功耗流程**：在补齐平台 API 后验证 `Active / Suspend / Sleep / wake` 闭环。
 
 ---

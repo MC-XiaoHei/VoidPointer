@@ -48,15 +48,19 @@
 | 用例 | 验收标准 |
 | --- | --- |
 | BLE connected report | report 格式正确，按钮/dx/dy/wheel 正确。 |
+| idle no-op report | 无 motion、无 wheel、无 button 变化，且无 retry/dirty 压力时不重发空 report。 |
+| HID Sent | 提交本次发送对应的 pending 状态，不残留无效 retry。 |
 | HID RetryLater | Rust 保留 pending 并重试，不丢关键状态。 |
+| HID NotConnected | 收敛本次发送尝试，等待 route 相关事件再次唤醒。 |
+| HID Fatal | 不做定时重试，交由更高层做 route reset 或降级。 |
 | Disconnect | 清 motion pending，避免重连后跳变。 |
 | Reconnect | 按配置同步当前 button state。 |
 | USB 策略：全部禁用 | USB 插入时不发送 mouse report。 |
 | USB 策略：仅禁用移动 | USB 插入时 `dx/dy = 0`，buttons/wheel 仍按 route 策略发送。 |
 | USB 策略：全部开启 | USB 插入时 mouse report 完整启用。 |
 | Vendor over USB | WebHID/vendor command 可通过 USB 收发。 |
-| Vendor over BLE | WebHID/vendor command 可通过 BLE 收发。 |
-| Vendor over 2.4G | WebHID/vendor command 可通过 2.4G 收发。 |
+| Vendor over BLE | 当前发送侧返回 `NotConnected`，不应错误进入定时重试。 |
+| Vendor over 2.4G | 当前 stub 返回 `NotConnected`，不应阻塞 BLE/USB 闭环。 |
 
 ## 4. Power 测试
 
@@ -94,6 +98,7 @@
 | IMU WHO_AM_I 失败 | 进入诊断/降级路径，不崩溃。 |
 | I2C bus stuck | 执行 bus recovery。 |
 | HID fatal | route reset 或降级。 |
+| route not ready | 收敛本次发送尝试，等待 route 相关事件再次唤醒；不做定时自旋重试。 |
 | Rust panic | 输出 panic reason，后续策略待确认。 |
 
 ## 7. 功耗验收

@@ -228,6 +228,10 @@ Rust 根据状态做决策，再通过 FFI 调 C 执行动作
 - 尤其是 BLE，链路存在不代表输入路径已经 secure 或 notify-ready
 - route 不可用时，runtime 必须收敛本次发送尝试，不能靠脏状态自旋重试
 - 只有底层明确返回 `RetryLater` 且存在合理恢复窗口时，才允许延时重试
+- `Sent`：提交本次发送对应的 pending 状态，并清除 retry
+- `RetryLater`：保留待发状态，设置短退避重试
+- `NotConnected`：收敛本次尝试，等待 route 相关事件再次唤醒
+- `Fatal`：按本次发送失败收敛，不做定时重试；后续是否 route reset 由更高层策略决定
 
 ### 7.5 Power 与 DataFlash
 

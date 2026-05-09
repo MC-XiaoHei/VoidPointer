@@ -18,7 +18,7 @@ v1 route 实现范围已确认：
 - BLE route 必须进入可用状态。
 - USB route 必须进入可用状态，至少覆盖 USB state、USB HID/vendor 发送和 Vendor/WebHID 配置通道。
 - 2.4G route v1 保留 stub：保留类型、状态、API 入口和错误映射，但不要求真实 dongle 协议栈可用。
-- CH585 2.4G dongle 协议栈暂无确定方案；文档和代码中保持 `Dongle2G4` route 类型，但 v1 返回 `Unsupported` 或 `NotConnected`，不阻塞 BLE/USB 闭环。
+- CH585 2.4G dongle 协议栈暂无确定方案；文档和代码中保持 `Dongle2G4` route 类型，但 v1 一律按 `NotConnected` 收口，不阻塞 BLE/USB 闭环。
 - v1 不需要 shipping/storage mode，只做普通 `Sleep`。
 
 ---
@@ -64,19 +64,17 @@ v1 route 实现范围已确认：
 
 ### 4.2 Vendor/WebHID route
 
-结论：Vendor/WebHID 三个 route 都支持：
+结论：v1 当前只有 USB route 完整支持 Vendor/WebHID 收发。
 
-- USBHS Vendor HID。
-- BLE Vendor / custom HID。
-- 2.4G Vendor / custom channel。
+- USBHS Vendor HID：已接入。
+- BLE Vendor / custom HID：接口保留，但当前发送侧仍按 `NotConnected` 收口。
+- 2.4G Vendor / custom channel：保留 stub，当前发送侧按 `NotConnected` 收口。
 
-路由优先级：
+当前回复规则：
 
-1. USB。
-2. 当前物理模式开关对应的无线 route。
-3. 另一个无线 route。
-
-哪个 route 收到请求，原则上从同一路径回复；当设备主动选择配置通道或 UI 同时发现多个 route 时，使用上述优先级。
+1. 优先沿收到请求的同一路径回复。
+2. 如果该路径当前不可用，则退回 `preferred_custom_route()`。
+3. 如果最终 route 仍不可用，本次发送尝试收敛，等待 route 相关事件再次唤醒。
 
 Vendor/config 会话不作为特殊 power blocker；如果设备满足普通 idle 条件，允许进入 `Suspend`。收到新的 vendor report 时再唤醒处理。
 
