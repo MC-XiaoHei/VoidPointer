@@ -40,8 +40,8 @@
 | Middle motion | 配置启用时行为同 Action。 |
 | 小角度微操 | deadzone 与低速曲线符合配置。 |
 | 大角度移动 | 达到最大速度限制，无溢出。 |
-| FIFO 多样本 | 使用 latest-sample 策略，低延迟优先。 |
-| IMU wake | Suspend/Sleep 下由 accel wake interrupt 唤醒，不依赖 SFLP。 |
+| FIFO 多样本 | 使用 latest-sample 策略，低延迟优先；FIFO 读取由 Rust bottom-half 发起。 |
+| IMU wake | Suspend/Sleep 下由 accel wake interrupt 唤醒，不依赖 SFLP；IMU INT 不直接承载姿态数据语义。 |
 
 ## 3. HID / Route 测试
 
@@ -65,11 +65,11 @@
 | Active → Suspend | 有连接静置超过 timeout 后进入，RF 保持连接。 |
 | USB configured idle | 保持 `Active`，不进入 `Suspend` / `Sleep`。 |
 | Suspend wake by button | 秒唤醒，按键事件不丢。 |
-| Suspend wake by IMU | 拿起/移动后恢复 Active。 |
+| Suspend wake by IMU | 拿起/移动后由 IMU wake interrupt 唤醒并恢复 Active。 |
 | Suspend disconnect grace | 断连后从断连时刻重新计算 `disconnect_sleep_timeout_ms`，不立即 Sleep。 |
 | Active → Sleep | 无连接、USB detached、静置超过 timeout 后进入，RF 关闭。 |
 | Sleep wake by button | 外设恢复，Rust 收到 wake 事件。 |
-| Sleep wake by IMU | 由低功耗 accel wake 唤醒。 |
+| Sleep wake by IMU | 由低功耗 accel wake interrupt 唤醒；wake 后姿态数据仍由 bottom-half FIFO 路径获取。 |
 | Flash write blocker | 写入期间禁止 Suspend/Sleep。 |
 | Config dirty | 进入 Sleep 前必须先保存。 |
 | Laser stuck-on | 进入低功耗前自动关闭 Laser，并记录/诊断为异常或硬件 bug。 |

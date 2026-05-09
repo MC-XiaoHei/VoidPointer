@@ -222,7 +222,7 @@ v1 profile 决策：
 Rust 策略：
 
 - 有连接且无输入/HID pending，超过 suspend timeout 后进入。
-- IMU wake 或按键/编码器唤醒后回到 Active。
+- IMU wake interrupt 或按键/编码器唤醒后回到 Active。
 
 ### 3.3 Sleep profile
 
@@ -238,7 +238,7 @@ Rust 策略：
 | Accel | ultra-low-power motion/wake source |
 | Gyro | power-down |
 | RF | off |
-| Wake source | GPIO buttons, encoder, USB attach, IMU motion |
+| Wake source | GPIO buttons, encoder, USB attach, IMU accel wake interrupt |
 
 Rust 策略：
 
@@ -261,9 +261,9 @@ Rust 策略：
 
 推荐：
 
-| 场景 | 默认唤醒方案 |
+| 场景 | 默认方案 |
 | --- | --- |
-| `Active` | IMU FIFO/SFLP INT + GPIO input。 |
+| `Active` | 姿态数据由 Rust bottom-half 按需发起 FIFO 读取；如启用 IMU INT，也只用于唤醒主循环，不承载姿态数据语义。 |
 | `Suspend` | activity/inactivity 或 wake-up interrupt + GPIO input，RF 保持连接。 |
 | `Sleep` | wake-up interrupt 或 significant motion + GPIO input + USB attach，RF 关闭。 |
 
@@ -297,7 +297,7 @@ SFLP 只在以下场景使用：
 | `WAKE_UP_DUR` | `0x5C` | wake-up duration 与 sleep duration。 |
 | `MD1_CFG` | `0x5E` | basic interrupt route to INT1。 |
 | `MD2_CFG` | `0x5F` | basic interrupt route to INT2。 |
-| `WAKE_UP_SRC` | `0x45` | wake-up/activity status source。 |
+| `WAKE_UP_SRC` | `0x45` | wake-up/status source，供平台调试或诊断读取。 |
 
 `FUNCTIONS_ENABLE.INTERRUPTS_ENABLE` 需要置位以启用 basic interrupts。
 
@@ -323,7 +323,7 @@ SFLP 只在以下场景使用：
 
 | 字段 | 说明 |
 | --- | --- |
-| `SLEEP_STATUS_ON_INT` | 选择 INT pin 输出 sleep status 或 sleep change。 |
+| `SLEEP_STATUS_ON_INT` | 选择 INT pin 输出 sleep status 或 sleep change；属于平台寄存器能力，不改变“INT 只负责唤醒”的运行时语义。 |
 | `WU_INACT_THS_W_[2:0]` | wake-up/activity threshold LSB 权重。 |
 | `XL_INACT_ODR_[1:0]` | inactivity 下 accel ODR。 |
 | `INACT_DUR_[1:0]` | stationary→motion 转换需要的连续过阈值次数。 |

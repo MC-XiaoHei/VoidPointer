@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | Runtime / FFI | Partial | 已切到 `vp_core_init()` / `vp_core_poll()`，TMOS bottom-half 主路径已接通；长耗时路径边界与文档沉淀仍需继续收敛。 |
 | Input | Partial | 按键 EXTI + debounce、编码器 EXTI + wheel 已跑通；Mode switch 当前板无硬件，暂不实现。 |
-| IMU / I2C | Partial | CH585 I2C + LSM6DSV 基础通信、WHO_AM_I、active profile、异步 FIFO 读取主链路已完成；bus recovery、suspend/sleep profile、通用 I2C API 未完成。 |
+| IMU / I2C | Partial | CH585 I2C + LSM6DSV 基础通信、WHO_AM_I、active/suspend/sleep profile、通用 I2C API、bus idle / recovery、异步 FIFO 读取主链路已完成；profile API 整理与完整低功耗闭环仍需继续收敛。 |
 | Motion / Attitude | Partial | FIFO → latest sample cache → 姿态更新 → motion 主链路已通；参数整理、validity check、session/policy 仍需继续收敛。 |
 | HID / Report | Partial | BLE/USB mouse report 已接入，wheel/buttons/motion 已能出报告；统一 report runtime、异步完成模型和细化错误恢复仍待补齐。 |
 | Route | Partial | 当前策略为“USB configured 优先且独占，否则无线固定 BLE”；2.4G 仍为 stub。 |
@@ -32,12 +32,12 @@
 - [x] 为 Rust→C API 明确标注 `ISR-safe` 或 `bottom-half only` 约束。
 
 ### P1：补齐 IMU / I2C 的缺口
-- [ ] 实现通用 `c_vp_i2c_init()` API，避免文档与实际初始化路径分裂。
-- [ ] 实现 `c_vp_i2c_recover_bus()`。
-- [ ] 增加 bus idle 检查。
-- [ ] 实现 `LSM6DSV` suspend profile。
-- [ ] 实现 `LSM6DSV` sleep profile。
-- [ ] 完成 IMU wake source / wake status / wake policy 接入。
+- [x] 实现通用 `c_vp_i2c_init()` API，避免文档与实际初始化路径分裂。
+- [x] 实现 `c_vp_i2c_recover_bus()`。
+- [x] 增加 bus idle 检查。
+- [x] 实现 `LSM6DSV` suspend profile。
+- [x] 实现 `LSM6DSV` sleep profile。
+- [x] 完成 IMU wake source 接入，并收敛为“INT 只负责唤醒、FIFO 读取由 Rust bottom-half 发起”的模型。
 
 ### P2：收敛 Report / Route / 2.4G stub 边界
 - [ ] 明确并统一 2.4G stub 的 `route ready` / `send` / `vendor` 返回语义。
@@ -119,21 +119,21 @@
 - [x] LSM6DSV 基础寄存器访问：read / write / burst read。
 - [x] `WHO_AM_I` 检查与地址探测（`0x6A / 0x6B`）。
 - [x] Active profile 工作实现。
+- [x] `LSM6DSV_ConfigSuspend()`。
+- [x] `LSM6DSV_ConfigSleep()`。
+- [x] 通用 `c_vp_i2c_init()` API。
+- [x] 通用 `c_vp_i2c_recover_bus()` API。
+- [x] bus idle 检查。
+- [x] I2C bus recovery：SCL pulse / STOP condition / peripheral reset。
 - [x] `vp_on_imu_int()` / `vp_on_imu_sample()` / `vp_on_imu_fifo_done()` 事件链。
 - [x] Rust 请求异步 FIFO 读取。
 - [x] I2C IRQ 驱动 FIFO 读取状态机。
 - [x] FIFO tag 解析并筛选 `SFLP game rotation raw`。
 - [x] latest sample cache 与姿态更新主链路。
+- [x] IMU wake source 已接入，并对齐为“INT 只负责唤醒”的语义。
 
 ### 未完成
-- [ ] 通用 `c_vp_i2c_init()` API（当前仍是 `UNSUPPORTED`）。
-- [ ] 通用 `c_vp_i2c_recover_bus()` API（当前仍是 `UNSUPPORTED`）。
-- [ ] bus idle 检查。
-- [ ] I2C bus recovery：SCL pulse / STOP condition / peripheral reset。
-- [ ] `LSM6DSV_ConfigSuspend()`。
-- [ ] `LSM6DSV_ConfigSleep()`。
-- [ ] IMU wake 配置与 wake status 读取。
-- [ ] 将当前 active profile 整理成更稳定的 profile API / table。
+- [ ] 将当前 active/suspend/sleep profile 整理成更稳定的 profile API / table。
 
 ## 4.4 Motion / Attitude
 
@@ -222,7 +222,7 @@
 - [ ] **滚轮流程**：编码器边沿 → Rust 解码 → wheel event → report send → commit 正常，抖动不误触发。
 - [ ] **普通按键流程**：Left/Right/Middle/Action 经 Rust debounce 后稳定地产生 pressed/released，button change 即使 `dx/dy=0` 也会发出。
 - [ ] **Middle / Action motion 流程**：trigger → IMU sample → attitude → motion dx/dy → release stop 无惯性。
-- [ ] **IMU 流程**：IMU INT → Rust 决策 → async FIFO read → sample callback → attitude update → motion。
+- [ ] **IMU 流程**：IMU INT → Rust bottom-half 决策 → async FIFO read → sample callback → attitude update → motion。
 - [ ] **有线/无线流程**：USB configured 时只走 USB；USB 退出后无线恢复 BLE；route 不可用时不累计失效 motion。
 - [ ] **低功耗流程**：在补齐平台 API 后验证 `Active / Suspend / Sleep / wake` 闭环。
 
