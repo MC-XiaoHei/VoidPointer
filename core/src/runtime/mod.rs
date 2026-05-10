@@ -537,6 +537,7 @@ impl Runtime {
         self.current_motion = MotionState::default();
         self.last_motion_sample_ts = None;
         self.report_state.reset_all();
+        self.mouse_report.reset_all();
 
         let status = unsafe { c_vp_imu_config_active() };
         if status != VP_STATUS_OK as u8 {
@@ -711,6 +712,7 @@ impl Runtime {
     fn defer_report_until_route_event(&mut self) -> Option<RuntimeCommand> {
         // route 不可用时不累计失效 motion，避免恢复后回放旧移动。
         self.clear_unsent_motion_output();
+        self.mouse_report.reset_all();
         self.pending.hid_retry = false;
         self.dirty.clear_report();
         None

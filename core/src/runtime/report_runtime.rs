@@ -15,6 +15,19 @@ impl MouseReportRuntime {
         }
     }
 
+    pub fn reset_pending_output(&mut self) {
+        self.pending_wheel = 0;
+    }
+
+    pub fn reset_route_sync(&mut self) {
+        self.last_sent_buttons = 0;
+    }
+
+    pub fn reset_all(&mut self) {
+        self.reset_pending_output();
+        self.reset_route_sync();
+    }
+
     pub fn ingest_wheel_delta(&mut self, wheel_delta: i8) {
         self.pending_wheel = self
             .pending_wheel

@@ -13,9 +13,9 @@
 | Input | Partial | 按键 EXTI + debounce、编码器 EXTI + wheel 已跑通；Mode switch 当前板无硬件，暂不实现。 |
 | IMU / I2C | Partial | CH585 I2C + LSM6DSV 基础通信、WHO_AM_I、active/suspend/sleep profile、通用 I2C API、bus idle / recovery、异步 FIFO 读取主链路已完成；profile API 整理与完整低功耗闭环仍需继续收敛。 |
 | Motion / Attitude | Partial | FIFO → latest sample cache → 姿态更新 → motion 主链路已通；参数整理、validity check、session/policy 仍需继续收敛。 |
-| HID / Report | Partial | BLE/USB mouse report 已接入，wheel/buttons/motion 已能出报告；USB vendor 收发已接通；mouse 发送条件已收敛为 motion/wheel/button/retry/dirty 五类触发，并已抽出最小 `MouseReportRuntime`；统一 `ReportRuntime` 结构和无线 vendor backend 仍待补齐。 |
+| HID / Report | Partial | BLE/USB mouse report 已接入，wheel/buttons/motion 已能出报告；USB vendor 收发已接通；mouse 发送条件已收敛为 motion/wheel/button/retry/dirty 五类触发，并已抽出最小 `MouseReportRuntime`；统一 `ReportRuntime` 结构和无线 vendor backend 仍待补齐；当前 route 不可用时会丢弃未发送的 motion/wheel 暂存，并重置 button sync 基线，避免恢复后回放旧输入或沿用过期按钮发送状态。 |
 | Route | Partial | 当前策略为“USB configured 优先且独占，否则无线固定 BLE”；2.4G 仍为 stub。 |
-| Power | Partial | Rust `PowerManager` 已接通，Suspend 最小闭环已进入实现；button/encoder/IMU 的 Suspend wake source 已接通最小实现，并可在 wake 后恢复 Active IMU profile；`Sleep` 的 `prepare/enter/restore` 已补成项目级最小闭环，但尚未映射到真实 deep low-power；当前 `Sleep restore` 已避免在 `USB configured` 时误重新打开 BLE advertising，并且 runtime 已把 requeue 中的 vendor 待发包视为低功耗 blocker；恢复回 `Active` 时还会清掉旧 attitude / IMU sample / motion cache，并重置 report 累积状态，避免 wake 后误用陈旧姿态或残余累计量；待确认重点仍是 **BLE connected 下能否映射到真实平台浅低功耗且不断链**，以及更完整的 deep low-power enter/restore。 |
+| Power | Partial | Rust `PowerManager` 已接通，Suspend 最小闭环已进入实现；button/encoder/IMU 的 Suspend wake source 已接通最小实现，并可在 wake 后恢复 Active IMU profile；`Sleep` 的 `prepare/enter/restore` 已补成项目级最小闭环，但尚未映射到真实 deep low-power；当前 `Sleep restore` 已避免在 `USB configured` 时误重新打开 BLE advertising，并且 runtime 已把 requeue 中的 vendor 待发包视为低功耗 blocker；恢复回 `Active` 时还会清掉旧 attitude / IMU sample / motion cache，重置 report 累积状态，并清理旧 wheel 暂存 / button sync 基线，避免 wake 后误用陈旧姿态、残余累计量或过期 mouse transport 状态；待确认重点仍是 **BLE connected 下能否映射到真实平台浅低功耗且不断链**，以及更完整的 deep low-power enter/restore。 |
 | Config | Not started | 仅有 `ConfigManager` dirty flag 骨架；配置结构、序列化、双槽、CRC、migration 均未完成。 |
 | Vendor / WebHID | Partial | 单包 RX queue、协议解析、基础查询命令已接通；多包分片、配置读写会话和完整 transport backend 未完成。 |
 | 2.4G | Not started | 目前仅保留 route / HID stub。 |
@@ -51,7 +51,7 @@
   - 当前审计结论：暂不直接启用 `LowPower_Halt_WFE()`；首先要证明 **BLE connected 场景下进入该低功耗后仍能保持连接**。USBHS halt 后恢复、TMOS/runtime deep-sleep 恢复边界随后再补齐。
 - [x] 补齐 `Suspend` 最小 wake source 配置，并在 resume 后恢复 Active IMU profile。
 - [ ] 将更完整的 power profile / RF / route 恢复真正连上。
-  - 当前已补齐四条确定性收口：`Sleep restore` 不会在 `USB configured` 时误开 BLE advertising；requeue 中的 vendor 待发包会阻止进入低功耗；恢复回 `Active` 时会清掉旧 attitude / IMU sample / motion cache；同时会重置 report 累积状态，避免 wake 后误用陈旧姿态或残余累计量。其余恢复联动继续按审计推进。
+  - 当前已补齐五条确定性收口：`Sleep restore` 不会在 `USB configured` 时误开 BLE advertising；requeue 中的 vendor 待发包会阻止进入低功耗；恢复回 `Active` 时会清掉旧 attitude / IMU sample / motion cache；同时会重置 report 累积状态，避免 wake 后误用陈旧姿态或残余累计量；并会清理旧 wheel 暂存 / button sync 基线，避免 wake 或 route 恢复后回放过期 mouse transport 状态。其余恢复联动继续按审计推进。
 
 ### P4：启动 Config 最小闭环
 - [ ] 定义最小 `DeviceConfig`。
@@ -169,6 +169,7 @@
 - [x] 2.4G stub 已统一为 `route ready = false`，mouse/vendor send 返回 `NotConnected`。
 - [x] route not-ready 时 mouse/vendor 发送都收敛本次尝试，等待 route 事件再次唤醒。
 - [x] route 不可用时丢弃未发送的 motion 累积，避免恢复后回放旧移动。
+- [x] route 不可用或 wake 恢复时清理旧 wheel 暂存，并重置 button sync 基线，避免恢复后回放旧滚轮或沿用断连前按钮发送状态。
 - [x] mouse 发送条件已收敛为 motion delta、wheel、button 变化、retry、report dirty 五类触发。
 - [x] `Sent / RetryLater / NotConnected / Fatal` 已有明确收敛规则并在 runtime 中显式处理。
 - [x] 已抽出最小 `MouseReportRuntime`，承接 wheel/button/send-decision/send-commit 逻辑。
