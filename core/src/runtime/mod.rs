@@ -102,7 +102,7 @@ pub struct PendingFlags {
     pub imu_fifo_read: bool,
     pub vendor_rx: bool,
     pub config_save: bool,
-    pub power_eval: bool,
+    pub power_recheck: bool,
 }
 
 impl PendingFlags {
@@ -112,7 +112,7 @@ impl PendingFlags {
             || self.imu_fifo_read
             || self.vendor_rx
             || self.config_save
-            || self.power_eval
+            || self.power_recheck
     }
 }
 
@@ -133,7 +133,7 @@ pub struct Runtime {
     pub pending: PendingFlags,
     pub mouse_report: MouseReportRuntime,
     pub last_activity_ms: AtomicU32,
-    pub power_eval_deadline_ms: Option<u32>,
+    pub power_recheck_deadline_ms: Option<u32>,
     pub imu_poll_deadline_ms: Option<u32>,
     pub latest_imu_sample: LatestImuSample,
     pub last_motion_sample_ts: Option<u32>,
@@ -162,7 +162,7 @@ impl Runtime {
             pending: PendingFlags::default(),
             mouse_report: MouseReportRuntime::new(),
             last_activity_ms: AtomicU32::new(now),
-            power_eval_deadline_ms: None,
+            power_recheck_deadline_ms: None,
             imu_poll_deadline_ms: Some(now),
             latest_imu_sample: LatestImuSample::default(),
             last_motion_sample_ts: None,
@@ -194,9 +194,9 @@ impl Runtime {
     pub fn mark_activity(&mut self, timestamp_ms: u32) {
         self.last_activity_ms.store(timestamp_ms, Ordering::Release);
         if ENABLE_POWER_MANAGER {
-            self.power_eval_deadline_ms = None;
+            self.power_recheck_deadline_ms = None;
             self.dirty.mark_power();
-            self.pending.power_eval = true;
+            self.pending.power_recheck = true;
         }
     }
 
@@ -330,10 +330,10 @@ impl Runtime {
             } => {
                 self.apply_vendor_send_status(route, report, status);
             }
-            RuntimeCommandResult::PowerTransitionDone { target, accepted } => {
-                self.power_eval_deadline_ms = None;
-                self.power.apply_transition_result(target, accepted);
-                self.pending.power_eval = false;
+            RuntimeCommandResult::PowerStateRequestDone { target, accepted } => {
+                self.power_recheck_deadline_ms = None;
+                self.power.apply_request_result(target, accepted);
+                self.pending.power_recheck = false;
                 self.dirty.clear_power();
             }
             RuntimeCommandResult::ImuFifoReadRequested { status } => {
@@ -346,7 +346,7 @@ impl Runtime {
         }
 
         if !self.pending.hid_retry {
-            self.reschedule_power_eval_deadline();
+            self.reschedule_power_recheck_deadline();
         }
 
         if self.pending.events
@@ -354,7 +354,7 @@ impl Runtime {
             || self.pending.imu_fifo_read
             || self.pending.vendor_rx
             || self.pending.config_save
-            || self.pending.power_eval
+            || self.pending.power_recheck
             || self.dirty.any()
         {
             Self::request_poll();
@@ -414,13 +414,13 @@ impl Runtime {
         None
     }
 
-    fn reschedule_power_eval_deadline(&mut self) {
+    fn reschedule_power_recheck_deadline(&mut self) {
         if !ENABLE_POWER_MANAGER {
             return;
         }
 
         let now = unsafe { c_vp_rtc_millis() };
-        let Some(deadline) = self.power_eval_deadline_ms else {
+        let Some(deadline) = self.power_recheck_deadline_ms else {
             return;
         };
 
@@ -431,7 +431,7 @@ impl Runtime {
     fn poll_power(&mut self) {
         let now = unsafe { c_vp_rtc_millis() };
 
-        if let Some(deadline) = self.power_eval_deadline_ms {
+        if let Some(deadline) = self.power_recheck_deadline_ms {
             if !deadline_due(now, deadline) {
                 let delay_ms = deadline_remaining_ms(now, deadline);
                 Self::request_poll_after(delay_ms);
@@ -439,8 +439,8 @@ impl Runtime {
             }
         }
 
-        self.power_eval_deadline_ms = None;
-        self.pending.power_eval = false;
+        self.power_recheck_deadline_ms = None;
+        self.pending.power_recheck = false;
         self.dirty.clear_power();
     }
 

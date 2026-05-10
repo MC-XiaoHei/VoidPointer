@@ -80,7 +80,7 @@
 - [x] 即时 poll 与 delayed poll 都走 TMOS event。
 - [x] fallback polling bridge 已移除。
 - [x] 基础 ISR event queue 已建立。
-- [x] `HID retry`、`Power transition`、`IMU FIFO read request` 已建立 RuntimeCommand 边界。
+- [x] `HID retry`、`Power state request`、`IMU FIFO read request` 已建立 RuntimeCommand 边界。
 - [x] `bindgen` / `cbindgen` 生成链保持可用。
 - [x] `c_vp_*` 前缀迁移已完成。
 - [x] 旧 `tick()` 残留已清理。

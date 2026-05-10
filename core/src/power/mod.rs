@@ -1,7 +1,7 @@
 use crate::route::{HidRouter, UsbState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PowerTransition {
+pub struct PowerRequest {
     pub target: PowerState,
 }
 
@@ -54,7 +54,7 @@ impl PowerManager {
         last_activity_ms: u32,
         config_dirty: bool,
         router: &HidRouter,
-    ) -> Option<PowerTransition> {
+    ) -> Option<PowerRequest> {
         if router.usb_state() == UsbState::Configured {
             self.state = PowerState::Active;
             return None;
@@ -76,10 +76,10 @@ impl PowerManager {
             PowerState::Active
         };
 
-        self.transition(target)
+        self.request_state(target)
     }
 
-    pub fn next_eval_delay_ms(
+    pub fn next_recheck_delay_ms(
         &self,
         now_ms: u32,
         last_activity_ms: u32,
@@ -114,7 +114,7 @@ impl PowerManager {
         None
     }
 
-    fn transition(&mut self, target: PowerState) -> Option<PowerTransition> {
+    fn request_state(&mut self, target: PowerState) -> Option<PowerRequest> {
         if self.state == target {
             return None;
         }
@@ -124,11 +124,11 @@ impl PowerManager {
                 self.state = PowerState::Active;
                 None
             }
-            PowerState::Suspend | PowerState::Sleep => Some(PowerTransition { target }),
+            PowerState::Suspend | PowerState::Sleep => Some(PowerRequest { target }),
         }
     }
 
-    pub fn apply_transition_result(&mut self, target: PowerState, accepted: bool) {
+    pub fn apply_request_result(&mut self, target: PowerState, accepted: bool) {
         if accepted {
             self.state = target;
         } else {

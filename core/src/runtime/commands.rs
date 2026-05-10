@@ -12,7 +12,7 @@ pub enum RuntimeCommand {
         route: vp_hid_route_t,
         report: CustomReport,
     },
-    PowerTransition {
+    RequestPowerState {
         target: PowerState,
     },
     ReadImuFifo {
@@ -32,7 +32,7 @@ pub enum RuntimeCommandResult {
         report: CustomReport,
         status: HidSendStatus,
     },
-    PowerTransitionDone {
+    PowerStateRequestDone {
         target: PowerState,
         accepted: bool,
     },
@@ -71,9 +71,9 @@ impl RuntimeCommand {
                     status: map_hid_status(status),
                 }
             }
-            Self::PowerTransition { target } => RuntimeCommandResult::PowerTransitionDone {
+            Self::RequestPowerState { target } => RuntimeCommandResult::PowerStateRequestDone {
                 target,
-                accepted: execute_power_transition(target),
+                accepted: execute_power_state_request(target),
             },
             Self::ReadImuFifo { max_samples } => RuntimeCommandResult::ImuFifoReadRequested {
                 status: unsafe { c_vp_imu_read_fifo_async(max_samples) },
@@ -82,7 +82,7 @@ impl RuntimeCommand {
     }
 }
 
-fn execute_power_transition(target: PowerState) -> bool {
+fn execute_power_state_request(target: PowerState) -> bool {
     // Active 是稳态，不需要额外切换动作
     let (prepare_status, enter_status) = unsafe {
         match target {
