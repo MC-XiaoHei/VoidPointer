@@ -1,4 +1,5 @@
 use crate::ffi::bindings::*;
+use crate::ffi::bindings::{VP_WAKE_SOURCE_BUTTON, VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU};
 use crate::hid::types::{CustomReport, HidSendStatus, MouseReport};
 use crate::power::PowerState;
 
@@ -84,15 +85,52 @@ impl RuntimeCommand {
 
 fn execute_power_state_request(target: PowerState) -> bool {
     // Active 是稳态，不需要额外切换动作
-    let (prepare_status, enter_status) = unsafe {
-        match target {
-            PowerState::Active => return true,
-            PowerState::Suspend => (c_vp_power_prepare_suspend(), c_vp_power_enter_suspend()),
-            PowerState::Sleep => (c_vp_power_prepare_sleep(), c_vp_power_enter_sleep()),
-        }
-    };
+    match target {
+        PowerState::Active => true,
+        PowerState::Suspend => {
+            if !enable_low_power_resume_sources(true) {
+                return false;
+            }
 
-    prepare_status == VP_STATUS_OK as u8 && enter_status == VP_STATUS_OK as u8
+            let prepare_status = unsafe { c_vp_power_prepare_suspend() };
+            let enter_status = unsafe { c_vp_power_enter_suspend() };
+            let accepted =
+                prepare_status == VP_STATUS_OK as u8 && enter_status == VP_STATUS_OK as u8;
+            if !accepted {
+                let _ = enable_low_power_resume_sources(false);
+            }
+            accepted
+        }
+        PowerState::Sleep => {
+            if !enable_low_power_resume_sources(true) {
+                return false;
+            }
+
+            let prepare_status = unsafe { c_vp_power_prepare_sleep() };
+            let enter_status = unsafe { c_vp_power_enter_sleep() };
+            let accepted =
+                prepare_status == VP_STATUS_OK as u8 && enter_status == VP_STATUS_OK as u8;
+            if !accepted {
+                let _ = enable_low_power_resume_sources(false);
+            }
+            accepted
+        }
+    }
+}
+
+fn enable_low_power_resume_sources(enabled: bool) -> bool {
+    for source in [
+        VP_WAKE_SOURCE_BUTTON,
+        VP_WAKE_SOURCE_ENCODER,
+        VP_WAKE_SOURCE_IMU,
+    ] {
+        let status = unsafe { c_vp_wake_source_enable(source, if enabled { 1 } else { 0 }) };
+        if status != VP_STATUS_OK as u8 {
+            return false;
+        }
+    }
+
+    true
 }
 
 #[allow(non_upper_case_globals)]

@@ -14,6 +14,7 @@
 
 - 当前可以继续保留 `power`、`route`、`config` 的模块骨架与部分 stub
 - 某些 v1 范围虽然已经写入长期文档，但实现仍可能分阶段落地，具体差距继续看 `TASKLIST.md`
+- `Suspend` 的设计语义已经明确为“**保持无线连接的浅休眠**”；在没有明确证据证明 **BLE connected** 场景下可通过某个 CH585 low-power 入口 **不断链** 之前，不得把项目 `Suspend` 直接映射到 `LowPower_Halt_WFE()` 或其他可能断链的芯片级低功耗模式
 
 ## 已回填说明
 

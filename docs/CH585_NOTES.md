@@ -68,7 +68,7 @@
 - USB 配置通道继续使用 USBHS。
 - Vendor HID HS physical payload 以 512 bytes 为目标；FS fallback 为 64 bytes。
 - USB configured 时，项目电源策略保持 `Active`，不进入项目级 `Suspend` / `Sleep`。
-- USB bus suspend 是 USB 总线事件；是否驱动项目级低功耗由上层 policy 决定，不自动等价。
+- USB bus suspend 是 USB 总线事件；不自动等价于项目级 `Suspend`，也不是项目 `Suspend` 主语义的一部分。
 
 ## GPIO / EXTI capability
 
@@ -160,7 +160,7 @@ GPIOA service 在调用 Rust 前会先屏蔽触发的二态输入。Rust debounc
 | Project state | CH585 implementation note | 结论 |
 | --- | --- | --- |
 | `Active` | 全功能运行；可用 `LowPower_Idle()` 做短等待但状态仍为 Active | USB configured、配置会话、HID 活跃时保持 `Active` |
-| `Suspend` | 候选为 Halt 或浅 Sleep，同时保持 BLE/2.4G 连接和 IMU wake；具体 BLE/RF retention 需要栈约束 | `TBD`: 需要确认 BLE connected 下允许的最低功耗调用 |
+| `Suspend` | 候选为 Halt 或浅 Sleep，但前提是 **保持 BLE/2.4G 连接**；若某个低功耗入口会导致断链，则它不能直接映射为项目 `Suspend` | `TBD`: 需要确认 BLE connected 下允许的最低功耗调用，以及当前 BLE library 的保持契约 |
 | `Sleep` | 候选为 Sleep，关闭 RF/USB route，仅保留 GPIO/RTC/IMU wake 所需电源域 | USB detached 且无线断开后才允许进入 |
 | USB configured | USBHS active/configured | 保持 `Active`，不进入项目 `Suspend` / `Sleep` |
 
@@ -205,7 +205,7 @@ GPIOA service 在调用 Rust 前会先屏蔽触发的二态输入。Rust debounc
 | --- | --- | --- |
 | USBHS 物理 detach 判断 | 项目 v1 映射已定：不把 `BUS_RST`/suspend 当 detach；仅启动无 link-ready 或有明确 VBUS/link-lost/板级信号时上报 `Detached`。仍需后续实机验证是否有可靠 link-lost source | USB platform implementation notes |
 | USBHS remote wake 完整流程 | 找到 `R8_USB2_WAKE_CTRL` / `USBHS_UD_UD_REMOTE_WKUP` 和 remote-wakeup feature 处理，但没有完整项目化流程 | Power/USB platform notes |
-| BLE/RF connected 状态下最低可用 low-power API | 找到 `RB_PWR_EXTEND` 为 USB/BLE retention、BLE HAL RTC timebase，但未系统整理 BLE stack sleep contract | `POWER_STATE_MACHINE.md` 或 CH585 platform plan |
+| BLE/RF connected 状态下最低可用 low-power API | 只找到 `cfg.idleCB = CH58x_LowPower`、`RB_PWR_EXTEND` 为 USB/BLE retention、以及 BLE HAL RTC timebase；尚未找到“项目自定义 power path 可直接调用 `LowPower_Halt_WFE()` 且 connected 不断链”的明确 contract | `POWER_STATE_MACHINE.md` 或 CH585 platform plan |
 | 普通 GPIO IRQ both-edge 是否存在更底层寄存器原生模式 | StdPeriph API 未暴露；SFR 中只确认 wake 任意边沿 `RB_GPIO_EDGE_WAKE` | 若后续查到寄存器级 both-edge，可更新 FFI mapping |
 | DataFlash erase granularity 对 CH585 实物的最终限制 | `ISP585.h` 同时给出 256/4096 erase，但 inline 对某 chip id 强制 4096 | `CONFIG_SPEC.md` 的 slot/page 设计 |
 | RTC 在不同 `R16_POWER_PLAN` 组合下的保持条件 | RTC wake 示例存在；具体 power domain 保持矩阵需进一步从 datasheet/实测确认 | power platform notes |

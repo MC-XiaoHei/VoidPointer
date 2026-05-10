@@ -8,6 +8,7 @@
 #include "CH58x_common.h"  // IWYU pragma: keep
 #include <CH58xBLE_LIB.h>
 #include "CH58x_gpio.h"
+#include "CH58x_pwr.h"
 
 #include "main.h"
 #include "rust_api.h"
@@ -30,6 +31,83 @@ typedef struct {
 
 static vp_bool_t      debounce_timer_running = 0u;
 static vp_usb_state_t current_usb_state = VP_USB_STATE_DETACHED;
+static vp_wake_source_t enabled_wake_sources = 0u;
+
+static vp_status_t configure_input_wake_source(const vp_input_id_t  input_id,
+                                               const vp_exti_edge_t edge) {
+    const vp_status_t edge_status = c_vp_exti_set_edge(input_id, edge);
+    if (edge_status != VP_STATUS_OK) {
+        return edge_status;
+    }
+
+    const vp_status_t clear_status = c_vp_exti_clear_pending(input_id);
+    if (clear_status != VP_STATUS_OK) {
+        return clear_status;
+    }
+
+    return c_vp_exti_unmask(input_id);
+}
+
+static void sync_platform_wake_sources(void) {
+    const vp_bool_t gpio_wake_enabled =
+        (enabled_wake_sources &
+         (VP_WAKE_SOURCE_BUTTON | VP_WAKE_SOURCE_ENCODER | VP_WAKE_SOURCE_IMU)) != 0u;
+
+    PWR_PeriphWakeUpCfg(gpio_wake_enabled ? ENABLE : DISABLE,
+                        RB_SLP_GPIO_WAKE, Short_Delay);
+    // 当前 suspend 仍未进入真正 deep-sleep，先不打开全局 GPIO any-edge wake，
+    // 避免未来接 Halt 前无意放宽 button/IMU 的边沿语义。
+    PWR_PeriphWakeUpCfg(DISABLE, RB_GPIO_EDGE_WAKE, Short_Delay);
+
+    // USB configured 时项目语义必须保持 Active，
+    // 当前不把 USB 作为 Suspend wake-source 主线的一部分。
+    PWR_PeriphWakeUpCfg(DISABLE, RB_SLP_USB2_WAKE, Short_Delay);
+    R8_USB2_WAKE_CTRL = 0u;
+}
+
+static vp_status_t enable_button_wake_sources(void) {
+    for (vp_input_id_t input_id = VP_INPUT_LEFT; input_id <= VP_INPUT_ACTION;
+         input_id++) {
+        const vp_status_t status =
+            configure_input_wake_source(input_id, VP_EXTI_EDGE_FALLING);
+        if (status != VP_STATUS_OK) {
+            return status;
+        }
+    }
+
+    return VP_STATUS_OK;
+}
+
+static vp_status_t enable_encoder_wake_sources(void) {
+    const vp_input_id_t inputs[] = {VP_INPUT_ENCODER_A, VP_INPUT_ENCODER_B};
+    for (uint8_t i = 0u; i < (uint8_t)(sizeof(inputs) / sizeof(inputs[0])); i++) {
+        const vp_status_t status =
+            configure_input_wake_source(inputs[i], VP_EXTI_EDGE_BOTH);
+        if (status != VP_STATUS_OK) {
+            return status;
+        }
+    }
+
+    return VP_STATUS_OK;
+}
+
+static vp_status_t enable_imu_wake_sources(void) {
+    const vp_input_id_t inputs[] = {VP_INPUT_IMU_INT1, VP_INPUT_IMU_INT2};
+    for (uint8_t i = 0u; i < (uint8_t)(sizeof(inputs) / sizeof(inputs[0])); i++) {
+        BoardGpio gpio = {0};
+        if (!board_input_id_to_gpio(inputs[i], &gpio) || !board_gpio_is_valid(gpio)) {
+            continue;
+        }
+
+        const vp_status_t status =
+            configure_input_wake_source(inputs[i], VP_EXTI_EDGE_RISING);
+        if (status != VP_STATUS_OK) {
+            return status;
+        }
+    }
+
+    return VP_STATUS_OK;
+}
 
 static int8_t clamp_i8_to_hid_range(const int8_t v) {
     if (v == -128) {
@@ -409,23 +487,90 @@ vp_status_t c_vp_hid_route_reset(const vp_hid_route_t route) {
     }
 }
 
-vp_status_t c_vp_power_prepare_suspend(void) { return VP_STATUS_UNSUPPORTED; }
+vp_status_t c_vp_power_prepare_suspend(void) {
+    if (c_vp_gpio_write(VP_OUTPUT_LASER, 0u) != VP_STATUS_OK) {
+        VP_LOG_WARN("power", "laser force-off failed before suspend");
+    }
 
-vp_status_t c_vp_power_enter_suspend(void) { return VP_STATUS_UNSUPPORTED; }
+    if (c_vp_imu_config_suspend() != VP_STATUS_OK) {
+        VP_LOG_WARN("power", "suspend prepare failed;step=imu_profile");
+        return VP_STATUS_IO_ERROR;
+    }
 
-vp_status_t c_vp_power_prepare_sleep(void) { return VP_STATUS_UNSUPPORTED; }
+    return VP_STATUS_OK;
+}
 
-vp_status_t c_vp_power_enter_sleep(void) { return VP_STATUS_UNSUPPORTED; }
+vp_status_t c_vp_power_enter_suspend(void) {
+    // 当前保持项目级 Suspend：进入前已收敛恢复源与 profile，
+    // 这里暂不切到芯片 deep-sleep。
+    return VP_STATUS_OK;
+}
+
+vp_status_t c_vp_power_prepare_sleep(void) {
+    if (c_vp_gpio_write(VP_OUTPUT_LASER, 0u) != VP_STATUS_OK) {
+        VP_LOG_WARN("power", "laser force-off failed before sleep");
+    }
+
+    if (c_vp_imu_config_sleep() != VP_STATUS_OK) {
+        VP_LOG_WARN("power", "sleep prepare failed;step=imu_profile");
+        return VP_STATUS_IO_ERROR;
+    }
+
+    if (!BleHidApp_SetAdvertisingEnabled(FALSE)) {
+        VP_LOG_WARN("power", "sleep prepare failed;step=ble_advertising_off");
+        return VP_STATUS_IO_ERROR;
+    }
+
+    return VP_STATUS_OK;
+}
+
+vp_status_t c_vp_power_enter_sleep(void) {
+    // 当前仍保持项目级 Sleep：进入前先切 profile 并关闭 BLE advertising，
+    // 这里暂不直接切到 CH585 deep-sleep。
+    return VP_STATUS_OK;
+}
 
 vp_status_t c_vp_power_restore_from_sleep(void) {
-    return VP_STATUS_UNSUPPORTED;
+    if (current_usb_state == VP_USB_STATE_CONFIGURED) {
+        return VP_STATUS_OK;
+    }
+
+    if (!BleHidApp_SetAdvertisingEnabled(TRUE)) {
+        VP_LOG_WARN("power", "sleep restore failed;step=ble_advertising_on");
+        return VP_STATUS_IO_ERROR;
+    }
+
+    return VP_STATUS_OK;
 }
 
 vp_status_t c_vp_wake_source_enable(const vp_wake_source_t source,
                                     const vp_bool_t        enabled) {
-    (void)source;
-    (void)enabled;
-    return VP_STATUS_UNSUPPORTED;
+    if (enabled) {
+        vp_status_t status = VP_STATUS_OK;
+
+        if ((source & VP_WAKE_SOURCE_BUTTON) != 0u) {
+            status = enable_button_wake_sources();
+        }
+        if (status == VP_STATUS_OK && (source & VP_WAKE_SOURCE_ENCODER) != 0u) {
+            status = enable_encoder_wake_sources();
+        }
+        if (status == VP_STATUS_OK && (source & VP_WAKE_SOURCE_IMU) != 0u) {
+            status = enable_imu_wake_sources();
+        }
+        if (status != VP_STATUS_OK) {
+            return status;
+        }
+
+        enabled_wake_sources |= source;
+        sync_platform_wake_sources();
+        return VP_STATUS_OK;
+    }
+
+    // 当前活动态与 Suspend 共用同一套 EXTI 分发路径；
+    // disable 仅清理 bookkeeping，不主动 mask 这些输入，避免破坏活动态输入链路。
+    enabled_wake_sources &= ~source;
+    sync_platform_wake_sources();
+    return VP_STATUS_OK;
 }
 
 vp_status_t c_vp_flash_config_region(vp_flash_region_t* out_info) {
