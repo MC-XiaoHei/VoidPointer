@@ -15,3 +15,26 @@ pub fn ffi_bool(value: bindings::vp_bool_t) -> bool {
 pub fn to_ffi_bool(value: bool) -> bindings::vp_bool_t {
     if value { 1 } else { 0 }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ffi_bool_true() {
+        assert!(ffi_bool(1));
+        assert!(ffi_bool(2));
+    }
+
+    #[test]
+    fn ffi_bool_false() {
+        assert!(!ffi_bool(0));
+    }
+
+    #[test]
+    fn to_ffi_bool_works() {
+        assert_eq!(to_ffi_bool(true), 1);
+        assert_eq!(to_ffi_bool(false), 0);
+    }
+}
