@@ -3,7 +3,6 @@
 pub mod api;
 pub mod bindings;
 
-// 自动生成的 C 函数测试 stub，由 build.rs 从 c_api.h 生成
 #[cfg(test)]
 include!(concat!(env!("OUT_DIR"), "/test_stubs.rs"));
 

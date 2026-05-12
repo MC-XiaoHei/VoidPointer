@@ -17,6 +17,8 @@ fn main() {
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
+    println!("cargo::rustc-check-cfg=cfg(coverage)");
+
     println!("cargo:rerun-if-changed={}", c_api_path.display());
 
     let bindings = bindgen::builder()
