@@ -1,4 +1,6 @@
 #![no_std]
+// cargo llvm-cov 会自动设 cfg(coverage)，在此条件下启用 coverage(off) 属性
+#![cfg_attr(coverage, feature(coverage_attribute))]
 
 pub mod attitude;
 pub mod config;
