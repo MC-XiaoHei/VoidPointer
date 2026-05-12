@@ -1,576 +1,423 @@
-# VoidPointer 配置存储规格
+# VoidPointer 配置存储格式规范
 
-本文档定义 VoidPointer 固件配置系统的存储格式、配置分块、默认值策略与 DataFlash 保存流程。WebHID 命令协议暂不在本文档展开。
-
----
-
-## 1. 设计目标
-
-配置系统需要满足：
-
-- 配置跟随设备本体，不依赖主机驱动。
-- Rust 负责配置结构、校验、默认值、版本迁移和解释。
-- C 只提供 DataFlash read/erase/write 等块设备式 API，不解析配置内容。
-- 断电或写入失败时，设备仍能回退到上一份有效配置或默认配置。
-- 后续 WebHID 可读写配置，但配置持久化格式不依赖 WebHID 协议。
-- 配置格式可演进，支持版本号和迁移。
+本文档定义 VoidPointer 设备配置在 DataFlash 中的持久化格式。
 
 ---
 
-## 2. 职责分工
+## 1. 术语
 
-### 2.1 Rust 负责
+### 1.1 Config Region
 
-- 定义 `DeviceConfig`。
-- 提供默认配置。
-- 校验配置合法性。
-- 序列化/反序列化配置 payload。
-- 计算和校验 CRC。
-- 选择有效配置槽。
-- 执行版本迁移。
-- 决定何时保存配置。
-- 决定配置是否立即应用到 runtime。
+用于存放设备配置持久化数据的 DataFlash 区域。
 
-### 2.2 C 负责
+### 1.2 Slot
 
-- 提供 DataFlash 区域读写能力。
-- 提供 page erase。
-- 提供 aligned write。
-- 提供 config storage 起始地址、长度、page size。
-- 保证 flash 操作期间的底层互斥与中断安全。
+Config Region 中的一个配置副本存储单元。
 
-C 不负责：
+### 1.3 Active Slot
 
-- 解析配置字段。
-- 校验配置含义。
-- 计算业务默认值。
-- 决定配置迁移。
-- 判断 WebHID 命令是否合法。
+启动扫描后被判定为当前有效配置来源的 slot。
+
+### 1.4 Payload
+
+配置对象 `DeviceConfig` 经过编码后的字节序列。
+
+### 1.5 Storage Version
+
+外层 slot/header 协议版本。
+
+### 1.6 Config Version
+
+内层 `DeviceConfig` schema 版本。
 
 ---
 
-## 3. 存储布局
+## 2. 总体格式
 
-推荐使用双槽保存策略。
+配置存储采用双槽布局。
 
 ```text
 Config Region
 ├── Slot A
-│   ├── Header
+│   ├── SlotHeader
 │   └── Payload
 └── Slot B
-    ├── Header
+    ├── SlotHeader
     └── Payload
 ```
 
-### 3.1 双槽目标
+每个 slot 包含：
 
-- 保存新配置时不覆盖唯一有效配置。
-- 启动时选择 sequence 最大且 CRC 有效的槽。
-- 写入失败时仍可回退到旧槽。
-- 支持简单 wear leveling。
-
-### 3.2 Slot 大小
-
-Slot 大小由 C 通过 DataFlash API 暴露，Rust 根据：
-
-- config region size
-- page size
-- slot count
-
-计算每个 slot 可用容量。
-
-建议：
-
-- slot count 固定为 `2`。
-- 每个 slot 至少容纳 header + 当前 payload + 预留扩展空间。
-- payload 超过 slot 容量时拒绝保存。
-
-### 3.3 CH585 DataFlash 约束
-
-CH585 资料依据见 `CH585_NOTES.md`：
-
-- DataFlash 容量为 32KB，可容纳双槽配置和 metadata。
-- 官方 EEPROM/DataFlash API 支持 read / erase / write。
-- DataFlash page 为 256 bytes；写入最小可按 byte length，但 256-byte page 对齐更优。
-- `EEPROM_MIN_ER_SIZE` 为 256，`EEPROM_BLOCK_SIZE` 为 4096；同时 `EEPROM_ERASE` inline 对部分 chip id 要求 erase length 为 4096 的倍数。
-- 初版配置 slot 建议保守按 4KB erase block 对齐；实机确认 256-byte erase 可用后再放宽。
-- ISP/EEPROM API 要求 RAM buffer 4-byte aligned；C 平台层应在 FFI 边界保证或复制到 aligned buffer。
+- 一个固定布局的 `SlotHeader`
+- 一个变长 `Payload`
+- 若干未使用保留空间
 
 ---
 
-## 4. 配置 Header
+## 3. DataFlash 约束
 
-配置 header 建议使用固定 C ABI 友好的布局。
+本格式在 CH585 DataFlash / EEPROM 约束下定义。
 
-字段：
+### 3.1 已知平台参数
+
+- DataFlash 总容量：32KB
+- page size：256 bytes
+- `EEPROM_MIN_ER_SIZE`：256 bytes
+- `EEPROM_BLOCK_SIZE`：4096 bytes
+
+### 3.2 对格式的约束
+
+- Config Region 必须是平台可擦写区域。
+- Slot 必须落在平台允许的 erase / write 边界内。
+- Payload 不能超过 slot 可用容量。
+- 写入 buffer 必须满足平台 API 的 RAM 对齐要求。
+
+本规范不固定 Config Region 的绝对地址，由平台实现提供。
+
+---
+
+## 4. Slot 数量与布局
+
+### 4.1 Slot 数量
+
+固定为两个 slot：
+
+- Slot A
+- Slot B
+
+### 4.2 Slot 容量
+
+每个 slot 必须至少容纳：
+
+- 一个完整 `SlotHeader`
+- 一个完整 `Payload`
+
+若编码后的 payload 超过 slot 可用容量，则该 payload 不得写入。
+
+### 4.3 Slot 对齐
+
+Slot 的起始地址与大小必须满足平台擦写约束。
+
+---
+
+## 5. SlotHeader
+
+`SlotHeader` 是 slot 的固定前缀，用于描述 payload 的有效性、版本和选择顺序。
+
+### 5.1 字段定义
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `magic` | `u32` | 固定 magic，用于识别 VoidPointer 配置。 |
-| `header_version` | `u16` | header 格式版本。 |
-| `config_version` | `u16` | payload 配置结构版本。 |
-| `total_len` | `u32` | header + payload 总长度。 |
-| `payload_len` | `u32` | payload 长度。 |
-| `sequence` | `u32` | 单调递增保存序号。 |
-| `payload_crc32` | `u32` | payload CRC32。 |
-| `header_crc32` | `u32` | header 自身 CRC32，计算时该字段置 0。 |
+| `magic` | `u32` | 固定 magic，标识这是 VoidPointer 配置 slot |
+| `storage_version` | `u16` | 外层存储格式版本 |
+| `config_version` | `u16` | payload 配置 schema 版本 |
+| `payload_len` | `u32` | payload 长度，单位 byte |
+| `sequence` | `u32` | 保存序号，越新越大 |
+| `payload_crc32` | `u32` | payload 的 CRC32 |
+| `header_crc32` | `u32` | header 的 CRC32，计算时该字段视为 0 |
+| `flags` | `u32` | 预留标志位 |
 
-建议 magic：
+### 5.2 magic
 
-- ASCII 语义可取 `VPFG`。
-- 实际数值实现时固定为 little-endian `0x47465056`。
+`magic` 固定为：
 
-### 4.1 Header 校验顺序
+- ASCII 语义：`VCFG`
+- little-endian 数值：`0x47464356`
 
-启动扫描 slot 时按以下顺序：
+### 5.3 storage_version
 
-1. 校验 `magic`。
-2. 校验 `header_version` 是否支持。
-3. 校验 `total_len` 是否在 slot 容量内。
-4. 校验 `payload_len` 是否合理。
-5. 校验 `header_crc32`。
-6. 校验 `payload_crc32`。
-7. 校验 `config_version` 是否支持或可迁移。
-8. 反序列化 payload。
-9. 进行业务字段校验。
+`storage_version` 描述以下内容的版本：
 
----
+- `SlotHeader` 字段集合
+- `SlotHeader` 编码规则
+- slot 有效性判定规则
+- 与 payload 的装配规则
 
-## 5. Payload 编码
+### 5.4 config_version
 
-为了避免 Rust 结构体内存布局直接成为永久存储格式，payload 不建议直接 dump `DeviceConfig` 内存。
+`config_version` 描述 `DeviceConfig` schema 版本。
 
-推荐使用手写二进制 TLV 或固定小端字段编码。
+### 5.5 payload_len
 
-### 5.1 推荐方案：版本化固定字段编码
+- `payload_len` 是 payload 的实际长度。
+- `payload_len` 必须大于 0。
+- `payload_len` 必须不超过该 slot 的 payload 容量上限。
 
-当前版本可以采用固定字段顺序的小端二进制编码：
+### 5.6 sequence
 
-- 字段顺序由 `config_version` 固定。
-- 所有整数使用 little-endian。
-- 浮点参数可使用 `f32` little-endian。
-- bool 使用 `u8`，`0 = false`，`1 = true`。
-- enum 使用 `u8` 或 `u16`，必须保留 unknown 检查。
+- `sequence` 用于在多个有效 slot 中选择更新的一份。
+- `sequence` 必须在每次成功保存新配置后递增。
+- `sequence` 的回绕比较规则当前规范不定义；达到上限后的处理由实现定义。
 
-优点：
+### 5.7 payload_crc32
 
-- 实现简单。
-- `no_std` 下容易处理。
-- 不依赖 serde/heap。
-- CRC 结果稳定。
+- `payload_crc32` 覆盖整个 payload 字节序列。
+- CRC 算法为标准 CRC32。
 
-### 5.2 预留 TLV 方案
+### 5.8 header_crc32
 
-如果后续配置扩展频繁，可迁移到 TLV：
+- `header_crc32` 覆盖整个 `SlotHeader`。
+- 计算时 `header_crc32` 字段本身按 0 参与计算。
 
-| 字段 | 类型 |
-| --- | --- |
-| tag | `u16` |
-| len | `u16` |
-| value | `[u8; len]` |
+### 5.9 flags
 
-当前阶段不强制 TLV，避免复杂度过早上升。
+- `flags` 为预留字段。
+- 未定义标志位在当前版本中必须写 0。
+- 当前版本读取时必须忽略未知标志位。
 
 ---
 
-## 6. DeviceConfig 分块
+## 6. SlotHeader 编码
 
-`DeviceConfig` 逻辑上分为以下块。
+### 6.1 字节序
 
-```text
-DeviceConfig
-├── MotionConfig
-├── InputConfig
-├── HidConfig
-├── PowerConfig
-├── RouteConfig
-└── DiagnosticsConfig / Reserved
-```
+所有整数类型均使用 little-endian 编码。
 
----
+### 6.2 布局
 
-## 7. MotionConfig
+`SlotHeader` 使用固定字段顺序编码，顺序如下：
 
-### 7.1 字段
+1. `magic`
+2. `storage_version`
+3. `config_version`
+4. `payload_len`
+5. `sequence`
+6. `payload_crc32`
+7. `header_crc32`
+8. `flags`
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `deadzone_x_rad` | `f32` | X 轴死区，单位 rad。 |
-| `deadzone_y_rad` | `f32` | Y 轴死区，单位 rad。 |
-| `max_angle_rad` | `f32` | 达到最大速度的角度。 |
-| `sensitivity_x` | `f32` | X 轴速度系数。 |
-| `sensitivity_y` | `f32` | Y 轴速度系数。 |
-| `deadzone_speed` | `f32` | 小速度归零阈值。 |
-| `smoothing_alpha` | `f32` | 速度滤波系数。 |
-| `curve_kind` | `u8` | 非线性曲线类型。 |
-| `axis_x` | `u8` | X 光标映射的姿态轴。 |
-| `axis_y` | `u8` | Y 光标映射的姿态轴。 |
-| `invert_x` | `u8` | X 轴反向。 |
-| `invert_y` | `u8` | Y 轴反向。 |
-| `swap_xy` | `u8` | 是否交换 X/Y。 |
-| `max_speed_x` | `f32` | X 最大速度，可选。 |
-| `max_speed_y` | `f32` | Y 最大速度，可选。 |
+### 6.3 Header 大小
 
-### 7.2 curve_kind
-
-| 值 | 含义 |
-| --- | --- |
-| `0` | Linear |
-| `1` | Quadratic，默认 |
-| `2` | Cubic |
-| `3` | Exponential，预留 |
-| `4` | Piecewise，预留 |
-
-### 7.3 axis
-
-| 值 | 含义 |
-| --- | --- |
-| `0` | Roll |
-| `1` | Pitch |
-| `2` | Yaw |
-
-### 7.4 默认值建议
-
-初始可沿用当前 Rust 默认值：
-
-| 字段 | 默认值 |
-| --- | --- |
-| `deadzone_x_rad` | `0.05` |
-| `deadzone_y_rad` | `0.05` |
-| `deadzone_speed` | `0.1` |
-| `max_angle_rad` | `1.0` |
-| `sensitivity_x` | `12000.0` |
-| `sensitivity_y` | `12000.0` |
-| `invert_x` | `false` |
-| `invert_y` | `false` |
-| `swap_xy` | `false` |
-| `smoothing_alpha` | `0.2` |
-| `curve_kind` | `Quadratic` |
-
-后续通过实测调整。
-
-### 7.5 校验规则
-
-- `deadzone_x_rad >= 0`。
-- `deadzone_y_rad >= 0`。
-- `max_angle_rad > deadzone_x_rad` 且 `max_angle_rad > deadzone_y_rad`。
-- `smoothing_alpha` 范围 `[0.0, 1.0]`。
-- sensitivity 必须为有限正数。
-- enum 值必须在支持范围内。
-- f32 必须是 finite，不允许 NaN/Inf。
+`SlotHeader` 的编码大小是固定的，由上述字段唯一决定。
 
 ---
 
-## 8. InputConfig
+## 7. Payload 编码
 
-### 8.1 字段
+### 7.1 编码方式
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `button_debounce_samples` | `u8` | 普通按键连续稳定采样数。 |
-| `switch_settle_ms` | `u16` | mode switch 切换后的稳定窗口。 |
-| `switch_stable_samples` | `u8` | mode switch 连续稳定采样数。 |
-| `encoder_detent_steps` | `u8` | 一个滚轮刻度对应的微步数，默认 4。 |
-| `wheel_invert` | `u8` | wheel 方向反转。 |
-| `middle_motion_enable` | `u8` | 中键是否触发 motion。 |
-| `action_motion_enable` | `u8` | Action 是否触发 motion。 |
-| `laser_mode` | `u8` | Laser 行为。 |
+Payload 使用：
 
-### 8.2 laser_mode
+- `serde`
+- `postcard`
 
-| 值 | 含义 |
-| --- | --- |
-| `0` | 按住点亮，默认。 |
-| `1` | toggle，预留。 |
-| `2` | disabled。 |
-| `3` | remap to HID/vendor action，预留。 |
+对 `DeviceConfig` 进行编码。
 
-### 8.3 默认值建议
+### 7.2 编码边界
 
-| 字段 | 默认值 |
-| --- | --- |
-| `button_debounce_samples` | `8` |
-| `switch_settle_ms` | `20` |
-| `switch_stable_samples` | `8` |
-| `encoder_detent_steps` | `4` |
-| `wheel_invert` | `false` |
-| `middle_motion_enable` | `true` |
-| `action_motion_enable` | `true` |
-| `laser_mode` | `0` |
+Payload 只承载 `DeviceConfig`。
 
-### 8.4 校验规则
+Payload 不承载以下信息：
 
-- `button_debounce_samples` 范围建议 `[3, 32]`。
-- `switch_settle_ms` 范围建议 `[5, 200]`。
-- `switch_stable_samples` 范围建议 `[1, 32]`。
-- `encoder_detent_steps` 范围建议 `[1, 8]`，默认 4。
-- bool 字段只能是 `0` 或 `1`。
-- `laser_mode` 必须是支持值。
+- slot 有效性
+- payload 长度
+- payload CRC
+- sequence
+- storage version
+
+这些信息全部由外层 `SlotHeader` 承载。
+
+### 7.3 有效 payload
+
+只有同时满足以下条件时，payload 才能视为有效：
+
+- `payload_len` 合法
+- `payload_crc32` 校验通过
+- `config_version` 可被当前固件处理
+- `postcard` 反序列化成功
+- 反序列化结果通过业务校验
 
 ---
 
-## 9. HidConfig
+## 8. Slot 有效性判定
 
-### 9.1 字段
+扫描 slot 时，必须按以下顺序判定有效性：
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `report_hz` | `u16` | HID report 目标频率。 |
-| `usb_mouse_policy` | `u8` | USB 插入且 configured 时的 mouse report 策略。 |
-| `ble_name_index` | `u8` | BLE 名称配置索引或预留。 |
-| `send_zero_on_motion_stop` | `u8` | motion stop 后是否发送零移动同步帧。 |
-| `clamp_negative_128` | `u8` | 是否避免发送 HID delta -128。 |
+1. `magic` 匹配
+2. `storage_version` 被支持
+3. `payload_len` 合法
+4. `header_crc32` 校验通过
+5. `payload_crc32` 校验通过
+6. `config_version` 被支持或可迁移
+7. `postcard` 反序列化成功
+8. 配置业务校验成功
 
-### 9.2 usb_mouse_policy
+任一步失败，则该 slot 无效。
 
-| 值 | 名称 | 含义 |
-| --- | --- | --- |
-| `0` | `Disabled` | USB 插入时禁用全部 mouse report，包括 motion、按键、滚轮。 |
-| `1` | `MotionDisabled` | USB 插入时仅禁用 `dx/dy` 移动，保留 buttons/wheel。 |
-| `2` | `Enabled` | USB 插入时 mouse report 全部开启，并默认走 USB route。 |
-
-`wired_behavior` 废弃；新配置使用 `usb_mouse_policy`。项目尚未进入正式配置发布阶段，因此不需要考虑旧 `wired_behavior` 配置迁移。
-
-### 9.3 默认值建议
-
-| 字段 | 默认值 |
-| --- | --- |
-| `report_hz` | `1000` |
-| `usb_mouse_policy` | `Disabled` |
-| `send_zero_on_motion_stop` | `true` |
-| `clamp_negative_128` | `true` |
-
-### 9.4 校验规则
-
-- `report_hz` 范围建议 `[125, 1000]`。
-- `usb_mouse_policy` 必须是支持值。
-- bool 字段只能是 `0` 或 `1`。
+如果某个 slot 不能直接按当前 `config_version` 使用，但可通过受支持的 migration 路径转换为当前版本，则该 slot 在 Active Slot 选择时视为有效 slot。
 
 ---
 
-## 10. PowerConfig
+## 9. Active Slot 选择规则
 
-### 10.1 字段
+### 9.1 单槽有效
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `suspend_timeout_ms` | `u32` | 静置后进入 `Suspend` 的时间。 |
-| `disconnect_sleep_timeout_ms` | `u32` | 无连接后进入 `Sleep` 的门控时间。从断连时刻开始计算，不沿用进入 Suspend 前的 idle 时间。 |
-| `imu_active_profile` | `u8` | Active IMU profile id。 |
-| `imu_suspend_profile` | `u8` | Suspend IMU profile id。 |
-| `imu_sleep_profile` | `u8` | Sleep IMU profile id。 |
-| `allow_sleep_on_usb_detached_only` | `u8` | 是否仅 USB detached 时允许 Sleep。 |
+如果仅一个 slot 有效，则该 slot 为 Active Slot。
 
-### 10.2 默认值建议
+### 9.2 双槽有效
 
-| 字段 | 默认值 |
-| --- | --- |
-| `suspend_timeout_ms` | `30000` |
-| `disconnect_sleep_timeout_ms` | `60000` |
-| `imu_active_profile` | `0` |
-| `imu_suspend_profile` | `0` |
-| `imu_sleep_profile` | `0` |
-| `allow_sleep_on_usb_detached_only` | `true` |
+如果两个 slot 都有效，则选择 `sequence` 更大的 slot 作为 Active Slot。
 
-### 10.3 校验规则
+如果两个有效 slot 的 `sequence` 相等，则固定选择 `Slot A` 作为 Active Slot。
 
-- `suspend_timeout_ms` 与 `disconnect_sleep_timeout_ms` 是两个独立门控：`suspend_timeout_ms` 从最后活动时间计算；`disconnect_sleep_timeout_ms` 在无线断连后从断连时间计算。
-- `suspend_timeout_ms` 范围建议 `[1000, 3600000]`。
-- `disconnect_sleep_timeout_ms` 范围建议 `[5000, 86400000]`。
-- profile id 必须是固件支持的 profile。
-- bool 字段只能是 `0` 或 `1`。
+### 9.3 双槽无效
+
+如果两个 slot 都无效，则系统不得从 flash 应用配置，必须回退到默认配置。
 
 ---
 
-## 11. RouteConfig
+## 10. 保存目标选择规则
 
-### 11.1 字段
+保存时必须写入**当前 Active Slot 的另一槽**。
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `default_ble_advertise` | `u8` | BLE 模式下断开后是否在非 Sleep 阶段广播。Sleep 阶段不广播。 |
-| `default_dongle_pairing` | `u8` | 2.4G 模式下断开后是否在非 Sleep 阶段搜索/配对。Sleep 阶段不搜索。 |
-| `clear_motion_on_disconnect` | `u8` | route 断开时是否清 motion pending。 |
-| `sync_buttons_on_reconnect` | `u8` | route 恢复后是否同步当前 button state。 |
+即：
 
-### 11.2 默认值建议
+- 当前 Active Slot 为 A，则下次保存写入 B
+- 当前 Active Slot 为 B，则下次保存写入 A
 
-| 字段 | 默认值 |
-| --- | --- |
-| `default_ble_advertise` | `true` |
-| `default_dongle_pairing` | `true` |
-| `clear_motion_on_disconnect` | `true` |
-| `sync_buttons_on_reconnect` | `true` |
+保存成功后，新的目标槽成为新的 Active Slot。
 
-### 11.3 校验规则
-
-- bool 字段只能是 `0` 或 `1`。
+如果当前不存在 Active Slot，且系统正在使用默认配置作为内存配置，则首次保存固定写入 `Slot A`。
 
 ---
 
-## 12. Reserved / DiagnosticsConfig
+## 11. Payload Schema
 
-建议在 payload 末尾保留：
+Payload 承载的是版本化 `DeviceConfig` 对象。
 
-- `reserved_u8[16]` 或版本化 reserved 字段。
-- diagnostics config，例如是否启用 debug counters 暴露。
+本规范只要求：
 
-保留区必须在保存时写入确定值，建议全 0，避免 CRC 不稳定。
+- payload 对应一个 `DeviceConfig`
+- `DeviceConfig` 受 `config_version` 约束
+- payload 的业务字段集合、默认值、取值范围和运行时语义由独立的配置 schema 文档定义
 
----
-
-## 13. 启动加载流程
-
-启动时 Rust 执行：
-
-1. 通过 C API 查询 config storage region。
-2. 读取 Slot A header。
-3. 读取 Slot B header。
-4. 分别校验 header 和 payload CRC。
-5. 丢弃无效 slot。
-6. 如果两个 slot 都有效，选择 `sequence` 较大的 slot。
-7. 反序列化 payload。
-8. 如果 `config_version` 低于当前版本，执行 migration。
-9. 执行业务校验。
-10. 如果成功，应用配置。
-11. 如果失败，加载默认配置。
-12. 如果发生迁移，可标记 `config_save_pending`，由 `vp_core_poll()` 后续保存新版本。
-
-### 13.1 sequence 回绕
-
-`sequence` 是 `u32`。比较时应考虑回绕。
-
-推荐规则：
-
-- 如果两个 sequence 相差小于 `0x80000000`，较大者更新。
-- 如果差值超过该范围，按回绕规则判断。
-
-也可以简化为：设备保存次数远低于 `u32` 上限，初版直接比较大小，后续再增强。
+本规范不在此定义具体业务字段。
 
 ---
 
-## 14. 保存流程
+## 12. 默认配置
 
-保存配置必须在 `vp_core_poll()` 中执行，不在 ISR 中执行。
+默认配置是当以下情况发生时使用的内存配置：
 
-流程：
+- 两个 slot 都无效
+- `config_version` 不可处理
+- payload 无法反序列化
+- 业务校验失败
 
-1. Rust runtime config 被修改。
-2. 标记 `config_dirty = true`。
-3. WebHID 或内部逻辑请求保存。
-4. `vp_core_poll()` 检查当前是否允许写 flash。
-   - 不在 ISR。
-   - 没有正在进行的 flash 写。
-   - 电源状态保持 Active。
-   - 禁止进入 `Suspend`/`Sleep`。
-5. Rust 序列化 payload 到固定 buffer。
-6. Rust 计算 payload CRC。
-7. Rust 生成 header。
-8. 选择 inactive slot 或 sequence 较旧的 slot。
-9. 调 C erase slot 所在 page。
-10. 调 C write header + payload。
-11. 读回 header + payload 校验。
-12. 成功后更新 active slot metadata。
-13. 失败则保留旧 slot，报告错误计数。
+默认配置值由实现定义，但必须满足对应配置 schema 的全部约束。
 
 ---
 
-## 15. Runtime apply 规则
+## 13. 版本兼容性
 
-配置分为两类应用方式。
+### 13.1 storage_version
 
-### 15.1 可立即应用
+如果 `storage_version` 不被当前固件支持，则该 slot 无效。
 
-- motion sensitivity。
-- deadzone。
-- curve kind。
-- axis mapping。
-- debounce 参数。
-- wheel invert。
-- usb mouse policy。
-- power timeout。
+### 13.2 config_version
 
-### 15.2 需要延后或重启子系统
+如果 `config_version` 被当前固件支持，则直接按该 schema 解码。
 
-- BLE name。
-- HID descriptor 相关选项。
-- IMU profile register set。
-- 2.4G pairing 参数。
+如果 `config_version` 不被当前固件直接支持，但存在显式 migration 路径，则允许迁移后使用。
 
-对于需要延后的配置：
+migration 必须基于受支持的旧版本 schema 执行。旧版本 schema 可通过保留有限旧版本结构体或等价的旧版本解码类型实现。
 
-- Runtime 可先保存配置。
-- 标记 `restart_required` 或 `subsystem_restart_required`。
-- 通过 WebHID status 告知主机。
+如果 `config_version` 既不被支持也不可迁移，则该 slot 无效。
+
+### 13.3 migration 语义
+
+- migration 采用显式版本迁移。
+- migration 路径按相邻版本逐步执行，例如 `v3 -> v4 -> v5`。
+- 不要求存在任意旧版本直接迁移到当前版本的捷径。
+- migration 成功后，内存中的有效配置必须表现为当前 `config_version` 对应的 `DeviceConfig`。
 
 ---
 
-## 16. 错误处理
+## 14. 保存语义
 
-### 16.1 启动无有效配置
+### 14.1 写入单位
 
-- 使用默认配置。
-- 设置 diagnostics flag：`CONFIG_LOAD_DEFAULTED`。
-- 不立即写 flash，除非用户保存或迁移策略要求。
+每次保存写入一个完整 slot 副本。
 
-### 16.2 CRC 失败
+### 14.2 保存成功条件
 
-- 丢弃该 slot。
-- 如果另一个 slot 有效，使用另一个。
-- 如果都失败，使用默认配置。
+一次保存只有在以下条件全部满足时才算成功：
 
-### 16.3 保存失败
+- 目标 slot 擦除成功
+- `SlotHeader` 写入成功
+- payload 写入成功
+- 回读校验成功
 
-- 保留旧配置槽。
-- Runtime 继续使用当前内存配置。
-- 增加 flash write error counter。
-- WebHID status 可返回错误。
+### 14.3 保存失败语义
 
-### 16.4 配置字段非法
+如果目标 slot 写入失败，则原 Active Slot 仍保持有效，不得被此次失败写入破坏。
 
-- 拒绝该配置。
-- 不应用。
-- 不保存。
-- 返回 invalid config error。
+### 14.4 migration 后回写
 
----
+如果配置通过 migration 生成当前版本的 `DeviceConfig`，则实现必须在后续允许写 flash 的上下文中，将该配置按当前 `config_version` 回写为新的 slot 副本。
 
-## 17. 与电源状态的关系
+当前版本直接解码成功时，不要求自动重写 payload。
 
-- 配置写入期间禁止进入 `Suspend`/`Sleep`。
-- 配置 dirty 但未保存时，可以进入 `Suspend`，但禁止进入 `Sleep`；进入 `Sleep` 前必须先保存，保存完成后才允许。
-- 如果电池极低且配置保存未完成，应优先保证旧配置槽不被破坏。
-- WebHID 配置会话不作为特殊 power blocker；如果满足普通 idle 条件，可以按普通规则进入 `Suspend`。
+如果 migration 已成功生成当前版本的 `DeviceConfig`，但回写失败，则本次运行仍继续使用该当前版本配置；回写失败只影响持久化状态，不得回退为旧版本运行时配置对象。
 
 ---
 
-## 18. 与 WebHID 的关系
+## 15. 错误分类
 
-WebHID 只负责传输配置命令，不定义底层 flash 格式。
+本格式允许实现至少区分以下错误类别：
 
-推荐行为：
+- `StorageEmpty`
+- `InvalidMagic`
+- `UnsupportedStorageVersion`
+- `InvalidPayloadLength`
+- `HeaderCrcMismatch`
+- `PayloadCrcMismatch`
+- `UnsupportedConfigVersion`
+- `DeserializeFailed`
+- `ValidationFailed`
+- `PayloadTooLarge`
+- `FlashEraseFailed`
+- `FlashWriteFailed`
+- `ReadbackVerifyFailed`
+- `MigrationFailed`
 
-- `set runtime config`：只修改内存配置，立即应用可热更新字段。
-- `save config`：触发本文档定义的保存流程。
-- `reset config`：恢复默认配置，可选择只 runtime apply 或同时保存。
-- `get config`：返回当前 runtime config，而不直接 dump flash slot。
-- `get config storage status`：返回 active slot、sequence、CRC 状态、dirty 状态。
-
-WebHID 协议包格式后续单独设计。
+具体错误类型名可由实现定义，但语义不得弱于上述集合。
 
 ---
 
-## 19. 初版实现建议
+## 16. 读取语义
 
-初版可以按以下最小集合实现：
+### 16.1 启动扫描
 
-1. 双槽 header + payload。
-2. 固定字段小端 payload。
-3. CRC32。
-4. 默认配置 fallback。
-5. 无 migration 或只支持当前版本。
-6. `set runtime config` 与 `save config` 分离。
-7. 配置写入只在 `vp_core_poll()` 中进行。
+启动时必须至少扫描两个 slot 的 header，并根据本文档的有效性规则选择 Active Slot。
 
-这样已经可以满足项目当前需求，并为后续 WebHID 和配置版本演进留出空间。
+### 16.2 无有效 slot
+
+若无有效 slot，则不得从 flash 应用配置，必须回退到默认配置。
+
+### 16.3 迁移后的运行时结果
+
+如果 slot 通过 migration 成功加载，则系统在运行时必须只暴露当前版本的 `DeviceConfig`，不得继续以旧版本结构作为运行时配置对象。
+
+---
+
+## 17. 未定义与保留行为
+
+- 未定义的 `flags` 位在当前版本中保留。
+- 未定义的 enum 值必须由对应 schema 文档定义其处理方式；若未定义，则视为无效配置值。
+- 超出 schema 支持范围的数值必须视为校验失败或经显式 sanitize 后再应用。
+
+---
+
+## 18. 规范结论
+
+VoidPointer 配置持久化格式的规范结论如下：
+
+- 使用双槽存储配置副本
+- 使用固定布局 `SlotHeader`
+- 使用 little-endian 整数编码
+- 使用 `CRC32` 校验 header 与 payload
+- 使用 `serde + postcard` 编码 `DeviceConfig`
+- 使用 `sequence` 在多个有效 slot 中选择更新副本
+- 使用默认配置处理双槽都无效的情况
+- 使用 `storage_version` 与 `config_version` 管理兼容性
