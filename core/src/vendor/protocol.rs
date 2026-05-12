@@ -1,4 +1,4 @@
-use crate::config::ConfigManager;
+use crate::config::{ConfigManager, SaveOutcome};
 use crate::hid::types::{CUSTOM_REPORT_PAYLOAD_CAPACITY, CustomReport};
 use crate::power::{PowerManager, PowerState};
 use crate::route::{HidRoute, HidRouter, UsbState};
@@ -30,6 +30,13 @@ pub const CUSTOM_CMD_PING: u16 = 0x0000;
 pub const CUSTOM_CMD_GET_PROTOCOL_INFO: u16 = 0x0001;
 pub const CUSTOM_CMD_GET_DEVICE_INFO: u16 = 0x0002;
 pub const CUSTOM_CMD_GET_CONFIG_INFO: u16 = 0x0100;
+pub const CUSTOM_CMD_READ_CONFIG: u16 = 0x0101;
+pub const CUSTOM_CMD_WRITE_CONFIG_BEGIN: u16 = 0x0102;
+pub const CUSTOM_CMD_WRITE_CONFIG_CHUNK: u16 = 0x0103;
+pub const CUSTOM_CMD_WRITE_CONFIG_COMMIT: u16 = 0x0104;
+pub const CUSTOM_CMD_WRITE_CONFIG_ABORT: u16 = 0x0105;
+pub const CUSTOM_CMD_SAVE_CONFIG: u16 = 0x0106;
+pub const CUSTOM_CMD_RESTORE_DEFAULTS: u16 = 0x0107;
 pub const CUSTOM_CMD_GET_ROUTE_STATE: u16 = 0x0201;
 pub const CUSTOM_CMD_GET_POWER_STATE: u16 = 0x0202;
 pub const CUSTOM_CMD_GET_DIAGNOSTICS: u16 = 0x0300;
@@ -217,10 +224,54 @@ pub fn build_config_info_payload(config: &ConfigManager) -> [u8; 12] {
     let mut payload = [0u8; 12];
     payload[0..2].copy_from_slice(&config.current_config_version().to_le_bytes());
     payload[2] = config.is_dirty() as u8;
-    payload[3] = 0;
+    payload[3] = config.write_in_progress() as u8;
     payload[4..8].copy_from_slice(&config.current_payload_len().to_le_bytes());
     payload[8..12].copy_from_slice(&config.current_payload_crc32().to_le_bytes());
     payload
+}
+
+fn parse_write_begin_payload(payload: &[u8]) -> Result<(u32, u32), u16> {
+    if payload.len() != 8 {
+        return Err(CUSTOM_STATUS_BAD_LENGTH);
+    }
+
+    let total_len = u32::from_le_bytes([payload[0], payload[1], payload[2], payload[3]]);
+    let crc32 = u32::from_le_bytes([payload[4], payload[5], payload[6], payload[7]]);
+    Ok((total_len, crc32))
+}
+
+fn parse_write_chunk_payload(payload: &[u8]) -> Result<(u32, &[u8]), u16> {
+    if payload.len() < 4 {
+        return Err(CUSTOM_STATUS_BAD_LENGTH);
+    }
+
+    let offset = u32::from_le_bytes([payload[0], payload[1], payload[2], payload[3]]);
+    Ok((offset, &payload[4..]))
+}
+
+fn map_config_error_to_status(err: crate::config::ConfigError) -> u16 {
+    match err {
+        crate::config::ConfigError::WriteSessionBusy => CUSTOM_STATUS_BUSY,
+        crate::config::ConfigError::WriteSessionNotActive
+        | crate::config::ConfigError::WriteSequenceMismatch => CUSTOM_STATUS_BAD_SEQUENCE,
+        crate::config::ConfigError::PayloadCrcMismatch => CUSTOM_STATUS_CRC_MISMATCH,
+        crate::config::ConfigError::InvalidPayloadLength => CUSTOM_STATUS_BAD_LENGTH,
+        crate::config::ConfigError::ValidationFailed => CUSTOM_STATUS_INVALID_ARGUMENT,
+        crate::config::ConfigError::StorageUnavailable
+        | crate::config::ConfigError::StorageEmpty
+        | crate::config::ConfigError::InvalidFlashRegion
+        | crate::config::ConfigError::FlashEraseFailed
+        | crate::config::ConfigError::FlashWriteFailed
+        | crate::config::ConfigError::ReadbackVerifyFailed => CUSTOM_STATUS_STORAGE_ERROR,
+        crate::config::ConfigError::EncodeFailed
+        | crate::config::ConfigError::PayloadTooLarge
+        | crate::config::ConfigError::DeserializeFailed
+        | crate::config::ConfigError::HeaderCrcMismatch
+        | crate::config::ConfigError::InvalidMagic
+        | crate::config::ConfigError::UnsupportedStorageVersion
+        | crate::config::ConfigError::UnsupportedConfigVersion
+        | crate::config::ConfigError::MigrationFailed => CUSTOM_STATUS_INTERNAL_ERROR,
+    }
 }
 
 pub fn build_power_state_payload(
@@ -329,6 +380,89 @@ pub fn handle_request(
             )
             .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
         }
+        CUSTOM_CMD_READ_CONFIG => encode_response(
+            frame.command,
+            frame.sequence,
+            CUSTOM_STATUS_OK,
+            config.current_payload(),
+            out,
+        )
+        .map_err(|err| match err {
+            ParseError::PayloadTooLarge => CUSTOM_STATUS_BAD_LENGTH,
+            _ => CUSTOM_STATUS_INTERNAL_ERROR,
+        }),
+        CUSTOM_CMD_WRITE_CONFIG_BEGIN => {
+            let (total_len, crc32) = parse_write_begin_payload(frame.payload)?;
+            match config.begin_write(total_len, crc32) {
+                Ok(()) => {
+                    encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
+                        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+                }
+                Err(err) => encode_error_response(
+                    frame.command,
+                    frame.sequence,
+                    map_config_error_to_status(err),
+                    out,
+                )
+                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+            }
+        }
+        CUSTOM_CMD_WRITE_CONFIG_CHUNK => {
+            let (offset, chunk) = parse_write_chunk_payload(frame.payload)?;
+            match config.write_chunk(offset, chunk) {
+                Ok(()) => {
+                    encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
+                        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+                }
+                Err(err) => encode_error_response(
+                    frame.command,
+                    frame.sequence,
+                    map_config_error_to_status(err),
+                    out,
+                )
+                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+            }
+        }
+        CUSTOM_CMD_WRITE_CONFIG_COMMIT => match config.commit_write() {
+            Ok(()) => encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
+                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+            Err(err) => encode_error_response(
+                frame.command,
+                frame.sequence,
+                map_config_error_to_status(err),
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+        },
+        CUSTOM_CMD_WRITE_CONFIG_ABORT => {
+            config.abort_write();
+            encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
+                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+        }
+        CUSTOM_CMD_SAVE_CONFIG => match config.save() {
+            Ok(SaveOutcome::Noop) | Ok(SaveOutcome::Saved) => {
+                encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
+                    .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+            }
+            Err(_) => encode_error_response(
+                frame.command,
+                frame.sequence,
+                CUSTOM_STATUS_STORAGE_ERROR,
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+        },
+        CUSTOM_CMD_RESTORE_DEFAULTS => match config.restore_defaults() {
+            Ok(()) => encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
+                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+            Err(_) => encode_error_response(
+                frame.command,
+                frame.sequence,
+                CUSTOM_STATUS_INTERNAL_ERROR,
+                out,
+            )
+            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+        },
         CUSTOM_CMD_GET_ROUTE_STATE => {
             let payload = build_route_state_payload(router);
             encode_response(

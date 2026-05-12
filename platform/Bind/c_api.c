@@ -29,6 +29,19 @@ typedef struct {
     int8_t  wheel;
 } mouse_report_t;
 
+#define VP_CONFIG_REGION_SIZE_BYTES (EEPROM_BLOCK_SIZE * 2u)
+#define VP_CONFIG_REGION_END_ADDR   ((uint32_t)BLE_SNV_ADDR)
+#define VP_CONFIG_REGION_BASE_ADDR  (VP_CONFIG_REGION_END_ADDR - VP_CONFIG_REGION_SIZE_BYTES)
+
+static vp_bool_t flash_config_range_valid(const uint32_t offset,
+                                          const uint32_t len) {
+    if (offset > VP_CONFIG_REGION_SIZE_BYTES) {
+        return 0u;
+    }
+
+    return len <= (VP_CONFIG_REGION_SIZE_BYTES - offset) ? 1u : 0u;
+}
+
 static vp_bool_t      debounce_timer_running = 0u;
 static vp_usb_state_t current_usb_state = VP_USB_STATE_DETACHED;
 static vp_wake_source_t enabled_wake_sources = 0u;
@@ -574,30 +587,68 @@ vp_status_t c_vp_wake_source_enable(const vp_wake_source_t source,
 }
 
 vp_status_t c_vp_flash_config_region(vp_flash_region_t* out_info) {
-    (void)out_info;
-    return VP_STATUS_UNSUPPORTED;
+    if (out_info == NULL) {
+        return VP_STATUS_INVALID_ARG;
+    }
+
+    out_info->offset = 0u;
+    out_info->length = VP_CONFIG_REGION_SIZE_BYTES;
+    out_info->page_size = EEPROM_MIN_ER_SIZE;
+    out_info->write_alignment = 4u;
+    return VP_STATUS_OK;
 }
 
 vp_status_t c_vp_flash_read(const uint32_t offset, uint8_t* ptr,
                             const uint32_t len) {
-    (void)offset;
-    (void)ptr;
-    (void)len;
-    return VP_STATUS_UNSUPPORTED;
+    if (ptr == NULL && len != 0u) {
+        return VP_STATUS_INVALID_ARG;
+    }
+
+    if (!flash_config_range_valid(offset, len)) {
+        return VP_STATUS_INVALID_ARG;
+    }
+
+    if (len == 0u) {
+        return VP_STATUS_OK;
+    }
+
+    EEPROM_READ(VP_CONFIG_REGION_BASE_ADDR + offset, ptr, len);
+    return VP_STATUS_OK;
 }
 
 vp_status_t c_vp_flash_erase(const uint32_t offset, const uint32_t len) {
-    (void)offset;
-    (void)len;
-    return VP_STATUS_UNSUPPORTED;
+    if (len == 0u) {
+        return VP_STATUS_OK;
+    }
+
+    if (!flash_config_range_valid(offset, len)) {
+        return VP_STATUS_INVALID_ARG;
+    }
+
+    if ((offset % EEPROM_BLOCK_SIZE) != 0u || (len % EEPROM_BLOCK_SIZE) != 0u) {
+        return VP_STATUS_INVALID_ARG;
+    }
+
+    EEPROM_ERASE(VP_CONFIG_REGION_BASE_ADDR + offset, len);
+    return VP_STATUS_OK;
 }
 
 vp_status_t c_vp_flash_write(const uint32_t offset, const uint8_t* ptr,
                              const uint32_t len) {
-    (void)offset;
-    (void)ptr;
-    (void)len;
-    return VP_STATUS_UNSUPPORTED;
+    if (ptr == NULL && len != 0u) {
+        return VP_STATUS_INVALID_ARG;
+    }
+
+    if (!flash_config_range_valid(offset, len)) {
+        return VP_STATUS_INVALID_ARG;
+    }
+
+    if (len == 0u) {
+        return VP_STATUS_OK;
+    }
+
+    EEPROM_WRITE(VP_CONFIG_REGION_BASE_ADDR + offset, (void*)ptr, len);
+    return VP_STATUS_OK;
 }
 
 void c_vp_debug_print(const char* ptr, const uint16_t len) {

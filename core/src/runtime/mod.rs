@@ -448,7 +448,7 @@ impl Runtime {
         self.pending.power_recheck = false;
         self.dirty.clear_power();
 
-        let config_dirty = self.pending.config_save || self.dirty.config;
+        let config_dirty = self.pending.config_save || self.dirty.config || self.config.is_dirty();
         let effective_config_dirty = config_dirty || !ENABLE_SLEEP_POWER_STATE;
         let previous_state = self.power.state();
 
@@ -494,6 +494,7 @@ impl Runtime {
             || self.pending.vendor_rx
             || self.vendor.has_pending_tx()
             || self.pending.config_save
+            || self.config.is_dirty()
             || self.dirty.input
             || self.dirty.report
             || self.motion_capture_active

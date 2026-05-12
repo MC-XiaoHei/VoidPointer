@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
+bench = false
 crate-type = ["rlib", "staticlib"]
 doctest = false
 test = false
-bench = false
 
 [dependencies]
 fugit = "0.3"
@@ -15,20 +15,22 @@ half = { version = "2.7", default-features = false }
 heapless = { version = "0.9", default-features = false }
 libm = "0.2"
 log = { version = "0.4", default-features = false }
+postcard = { version = "1", default-features = false }
+serde = { version = "1", default-features = false, features = ["derive"] }
 
 [build-dependencies]
-cbindgen = "0.29"
 bindgen = "0.72"
+cbindgen = "0.29"
 
 [profile.dev]
-panic = "abort"
 opt-level = 0
 debug = 2
 lto = false
+panic = "abort"
 
 [profile.release]
-panic = "abort"
 opt-level = "s"
 debug = 1
 lto = false
+panic = "abort"
 codegen-units = 1
