@@ -608,6 +608,24 @@ def serial_monitor(_: argparse.Namespace) -> None:
         raise SystemExit(f"Serial monitor failed: {exc}") from exc
 
 
+def run_cargo(args: list[str]) -> None:
+    print("+ cargo " + " ".join(shlex.quote(arg) for arg in args), flush=True)
+    completed = subprocess.run(
+        ["cargo", *args],
+        cwd=ROOT / "core",
+    )
+    if completed.returncode != 0:
+        raise SystemExit(completed.returncode)
+
+
+def test_config(_: argparse.Namespace) -> None:
+    run_cargo(["test", "--lib", "--target", "x86_64-pc-windows-msvc"])
+
+
+def coverage(_: argparse.Namespace) -> None:
+    run_cargo(["+nightly", "llvm-cov", "--target", "x86_64-pc-windows-msvc"])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -620,6 +638,8 @@ def main() -> None:
             "download",
             "download-only",
             "serial",
+            "test",
+            "coverage",
         ],
     )
     parser.add_argument(
@@ -638,6 +658,8 @@ def main() -> None:
         "download": download,
         "download-only": download_only,
         "serial": serial_monitor,
+        "test": test_config,
+        "coverage": coverage,
     }
     commands[args.command](args)
 
