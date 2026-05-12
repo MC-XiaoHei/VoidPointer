@@ -160,3 +160,134 @@ impl Default for HidRouter {
         Self::new()
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    // ---- HidRoute conversions ----
+
+    #[test]
+    fn hid_route_as_ffi() {
+        assert_eq!(HidRoute::None.as_ffi(), 0);
+        assert_eq!(HidRoute::Ble.as_ffi(), 1);
+        assert_eq!(HidRoute::Dongle2G4.as_ffi(), 2);
+        assert_eq!(HidRoute::Usb.as_ffi(), 3);
+    }
+
+    #[test]
+    fn hid_route_from_ffi() {
+        assert_eq!(HidRoute::from(0), HidRoute::None);
+        assert_eq!(HidRoute::from(1), HidRoute::Ble);
+        assert_eq!(HidRoute::from(2), HidRoute::Dongle2G4);
+        assert_eq!(HidRoute::from(3), HidRoute::Usb);
+        assert_eq!(HidRoute::from(99), HidRoute::None);
+    }
+
+    // ---- UsbState conversions ----
+
+    #[test]
+    fn usb_state_from_ffi() {
+        assert_eq!(UsbState::from(0), UsbState::Detached);
+        assert_eq!(UsbState::from(1), UsbState::Attached);
+        assert_eq!(UsbState::from(2), UsbState::Configured);
+        assert_eq!(UsbState::from(3), UsbState::Suspended);
+        assert_eq!(UsbState::from(4), UsbState::Error);
+        assert_eq!(UsbState::from(99), UsbState::Detached);
+    }
+
+    // ---- HidRouter state machine ----
+
+    #[test]
+    fn router_default_state() {
+        let r = HidRouter::new();
+        assert!(!r.is_ble_connected());
+        assert!(!r.is_ble_input_ready());
+        assert_eq!(r.usb_state(), UsbState::Detached);
+        assert!(!r.is_usb_configured());
+        assert_eq!(r.preferred_mouse_route(), HidRoute::None);
+    }
+
+    #[test]
+    fn usb_configured_preferred_over_ble() {
+        let mut r = HidRouter::new();
+        r.set_ble_connected(true);
+        r.set_ble_input_ready(true);
+        r.set_usb_state(UsbState::Configured);
+        assert_eq!(r.preferred_mouse_route(), HidRoute::Usb);
+        assert_eq!(r.preferred_custom_route(), HidRoute::Usb);
+        assert!(r.is_usb_configured());
+    }
+
+    #[test]
+    fn ble_ready_when_no_usb() {
+        let mut r = HidRouter::new();
+        r.set_ble_connected(true);
+        r.set_ble_input_ready(true);
+        assert_eq!(r.preferred_mouse_route(), HidRoute::Ble);
+        assert!(r.has_mouse_route());
+        assert!(r.has_wireless_connection());
+    }
+
+    #[test]
+    fn ble_connected_not_ready() {
+        let mut r = HidRouter::new();
+        r.set_ble_connected(true);
+        // input_ready 未设
+        assert_eq!(r.preferred_mouse_route(), HidRoute::None);
+        assert!(!r.has_mouse_route());
+    }
+
+    #[test]
+    fn ble_disconnect_resets_input_ready() {
+        let mut r = HidRouter::new();
+        r.set_ble_connected(true);
+        r.set_ble_input_ready(true);
+        assert!(r.is_ble_input_ready());
+        r.set_ble_connected(false);
+        assert!(!r.is_ble_connected());
+        assert!(!r.is_ble_input_ready());
+    }
+
+    #[test]
+    fn set_ble_input_ready_ignored_when_disconnected() {
+        let mut r = HidRouter::new();
+        r.set_ble_input_ready(true);
+        assert!(!r.is_ble_input_ready());
+    }
+
+    #[test]
+    fn dongle_connected() {
+        let mut r = HidRouter::new();
+        assert!(!r.is_ble_connected());
+        r.set_dongle_connected(true);
+        // dongle 当前不影响 preferred_mouse_route（TODO 阶段）
+        assert_eq!(r.preferred_mouse_route(), HidRoute::None);
+    }
+
+    #[test]
+    fn has_custom_route_when_usb() {
+        let mut r = HidRouter::new();
+        assert!(!r.has_custom_route());
+        r.set_usb_state(UsbState::Configured);
+        assert!(r.has_custom_route());
+    }
+
+    #[test]
+    fn has_wireless_connection_when_ble_ready() {
+        let mut r = HidRouter::new();
+        assert!(!r.has_wireless_connection());
+        r.set_ble_connected(true);
+        r.set_ble_input_ready(true);
+        assert!(r.has_wireless_connection());
+    }
+
+    #[test]
+    fn default_equals_new() {
+        assert_eq!(
+            HidRouter::default().usb_state(),
+            HidRouter::new().usb_state()
+        );
+    }
+}
