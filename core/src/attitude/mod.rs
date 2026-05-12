@@ -52,3 +52,40 @@ pub fn update_current_attitude_from_raw(raw: SflpGameRotationRaw) -> AttitudeDat
 pub fn clear_current_attitude() {
     ATTITUDE_CACHE.clear();
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_returns_none_initially() {
+        clear_current_attitude();
+        assert!(get_current_attitude().is_none());
+    }
+
+    #[test]
+    fn update_then_get() {
+        clear_current_attitude();
+        let raw = SflpGameRotationRaw { x: 0, y: 0, z: 0 };
+        let result = update_current_attitude_from_raw(raw);
+        assert!((result.w - 1.0).abs() < 1e-6);
+        let cached = get_current_attitude();
+        assert!(cached.is_some());
+        assert!((cached.unwrap().w - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn clear_after_update() {
+        clear_current_attitude();
+        let raw = SflpGameRotationRaw {
+            x: 0x3C00,
+            y: 0,
+            z: 0,
+        }; // f16 1.0
+        update_current_attitude_from_raw(raw);
+        assert!(get_current_attitude().is_some());
+        clear_current_attitude();
+        assert!(get_current_attitude().is_none());
+    }
+}
