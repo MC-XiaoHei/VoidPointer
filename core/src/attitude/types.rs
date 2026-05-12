@@ -69,7 +69,6 @@ mod tests {
     fn identity_rotation() {
         let raw = SflpGameRotationRaw { x: 0, y: 0, z: 0 };
         let attitude = AttitudeData::from(raw);
-        // 单位四元数: w=1 → roll/pitch/yaw 均为 0
         assert!((attitude.roll).abs() < 1e-6);
         assert!((attitude.pitch).abs() < 1e-6);
         assert!((attitude.yaw).abs() < 1e-6);
@@ -78,7 +77,6 @@ mod tests {
 
     #[test]
     fn x_axis_rotation() {
-        // x=1 表示绕 x 轴旋转 180 度
         let raw = SflpGameRotationRaw {
             x: f16::from_f32(1.0).to_bits(),
             y: 0,
@@ -90,7 +88,6 @@ mod tests {
 
     #[test]
     fn zero_quaternion_produces_zero_w() {
-        // 所有分量为 0 导致 w_squared = 1 → w=1
         let raw = SflpGameRotationRaw { x: 0, y: 0, z: 0 };
         let a = AttitudeData::from(raw);
         assert!((a.w - 1.0).abs() < 1e-6);
@@ -98,7 +95,6 @@ mod tests {
 
     #[test]
     fn over_unit_quaternion_clamps_w() {
-        // x^2 + y^2 + z^2 > 1 触发 w_squared <= 0 分支
         let raw = SflpGameRotationRaw {
             x: f16::from_f32(1.0).to_bits(),
             y: f16::from_f32(0.5).to_bits(),
@@ -110,7 +106,6 @@ mod tests {
 
     #[test]
     fn sin_pitch_overflow_clamps() {
-        // w=0, sin_pitch = -2*z*x, 取 x=1.0, z=-1.0 → sin_pitch = 2 >= 1 → clamp
         let raw = SflpGameRotationRaw {
             x: f16::from_f32(1.0).to_bits(),
             y: 0,
@@ -122,7 +117,6 @@ mod tests {
 
     #[test]
     fn sin_pitch_underflow_clamps() {
-        // w=0, sin_pitch = -2*z*x, 取 x=-1.0, z=-1.0 → sin_pitch = -2 <= -1 → clamp
         let raw = SflpGameRotationRaw {
             x: f16::from_f32(-1.0).to_bits(),
             y: 0,

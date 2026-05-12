@@ -166,7 +166,6 @@ impl Default for HidRouter {
 mod tests {
     use super::*;
 
-    // ---- HidRoute conversions ----
 
     #[test]
     fn hid_route_as_ffi() {
@@ -185,7 +184,6 @@ mod tests {
         assert_eq!(HidRoute::from(99), HidRoute::None);
     }
 
-    // ---- UsbState conversions ----
 
     #[test]
     fn usb_state_from_ffi() {
@@ -197,7 +195,6 @@ mod tests {
         assert_eq!(UsbState::from(99), UsbState::Detached);
     }
 
-    // ---- HidRouter state machine ----
 
     #[test]
     fn router_default_state() {
@@ -234,7 +231,6 @@ mod tests {
     fn ble_connected_not_ready() {
         let mut r = HidRouter::new();
         r.set_ble_connected(true);
-        // input_ready 未设
         assert_eq!(r.preferred_mouse_route(), HidRoute::None);
         assert!(!r.has_mouse_route());
     }
@@ -262,7 +258,6 @@ mod tests {
         let mut r = HidRouter::new();
         assert!(!r.is_ble_connected());
         r.set_dongle_connected(true);
-        // dongle 当前不影响 preferred_mouse_route（TODO 阶段）
         assert_eq!(r.preferred_mouse_route(), HidRoute::None);
     }
 

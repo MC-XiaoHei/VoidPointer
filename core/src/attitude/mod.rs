@@ -79,10 +79,10 @@ mod tests {
     fn clear_after_update() {
         clear_current_attitude();
         let raw = SflpGameRotationRaw {
-            x: 0x3C00,
+            x: half::f16::from_f32(1.0).to_bits(),
             y: 0,
             z: 0,
-        }; // f16 1.0
+        };
         update_current_attitude_from_raw(raw);
         assert!(get_current_attitude().is_some());
         clear_current_attitude();

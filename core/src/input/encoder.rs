@@ -106,7 +106,6 @@ mod tests {
     #[test]
     fn two_full_steps_forward() {
         let mut e = RotaryEncoder::new();
-        // 4 次更新完成一格，再 4 次完成第二格
         for _ in 0..2 {
             assert_eq!(e.update(true, false), 0);
             assert_eq!(e.update(true, true), 0);

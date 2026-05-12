@@ -147,14 +147,12 @@ mod tests {
     fn ingest_accumulates() {
         let mut r = ReportState::new(cfg());
         r.ingest_motion(motion(500.0, 300.0));
-        // 500 / 1000 = 0.5, 累加后不够 1 → pending=0
         assert!(!r.has_pending());
     }
 
     #[test]
     fn ingest_triggers_report() {
         let mut r = ReportState::new(cfg());
-        // 1500 / 1000 = 1.5 → 截断得 1
         r.ingest_motion(motion(1500.0, 0.0));
         let report = r.peek_report().unwrap();
         assert_eq!(report.dx, 1);
@@ -177,14 +175,12 @@ mod tests {
         let mut r = ReportState::new(cfg());
         r.ingest_motion(motion(1500.0, 0.0));
         assert!(r.peek_report().is_some());
-        // 无效 motion 会清零分数累积
         r.ingest_motion(MotionState {
             vx: 0.0,
             vy: 0.0,
             valid: false,
         });
         r.commit_sent(ReportDelta { dx: 1, dy: 0 });
-        // 后续 motion 重新累积
         r.ingest_motion(motion(1500.0, 0.0));
         assert!(r.peek_report().is_some());
     }
@@ -192,13 +188,10 @@ mod tests {
     #[test]
     fn zero_motion_resets_fractional() {
         let mut r = ReportState::new(ReportConfig { report_hz: 4.0 });
-        // 积累 0.75，但零 motion 会清零
         r.ingest_motion(motion(3.0, 3.0));
         r.ingest_motion(motion(0.0, 0.0));
         r.ingest_motion(motion(3.0, 0.0));
-        // 零 motion 已清零分数，此处只有 0.75，不够 1
         assert_eq!(r.peek_report(), None);
-        // 再补一次 0.75 才够 1
         r.ingest_motion(motion(3.0, 0.0));
         assert_eq!(r.peek_report().unwrap().dx, 1);
     }
@@ -241,7 +234,6 @@ mod tests {
         let report = r.peek_report().unwrap();
         assert_eq!(report.dx, 3);
         assert_eq!(report.dy, 1);
-        // 只提交部分
         r.commit_sent(ReportDelta { dx: 1, dy: 1 });
         assert_eq!(r.pending(), (2, 0));
     }
@@ -264,7 +256,6 @@ mod tests {
         let mut r = ReportState::new(cfg());
         r.ingest_motion(motion(300_000.0, -200_000.0));
         let report = r.peek_report().unwrap();
-        // 300 >= i8::MAX → 127, -200 <= i8::MIN → -128
         assert_eq!(report.dx, 127);
         assert_eq!(report.dy, -128);
     }

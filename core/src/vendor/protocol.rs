@@ -530,7 +530,7 @@ mod tests {
     #[test]
     fn parse_frame_bad_magic() {
         let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN];
-        buf[0] = 0x00; // 不是 0xA5
+        buf[0] = 0x00;
         buf[1] = CUSTOM_PROTOCOL_VERSION;
         assert_eq!(parse_frame(&buf), Err(ParseError::BadMagic));
     }
@@ -548,7 +548,6 @@ mod tests {
         let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN];
         buf[0] = CUSTOM_PROTOCOL_MAGIC;
         buf[1] = CUSTOM_PROTOCOL_VERSION;
-        // total_len = 0, payload_len = 0 -> 空 payload
         let result = parse_frame(&buf);
         assert!(result.is_ok());
         let frame = result.unwrap();
@@ -722,7 +721,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(out.data[0], CUSTOM_PROTOCOL_MAGIC);
         assert_eq!(out.data[1], CUSTOM_PROTOCOL_VERSION);
-        assert_eq!(out.data[3], 5); // seq
+        assert_eq!(out.data[3], 5);
     }
 
     #[test]
@@ -733,8 +732,7 @@ mod tests {
         };
         let result = encode_error_response(0x0100, 3, CUSTOM_STATUS_INVALID_COMMAND, &mut out);
         assert!(result.is_ok());
-        assert_eq!(out.data[3], 3); // seq
-        // status 是 u16 LE: CUSTOM_STATUS_INVALID_COMMAND 的低字节
+        assert_eq!(out.data[3], 3);
         assert_eq!(
             u16::from_le_bytes([out.data[6], out.data[7]]),
             CUSTOM_STATUS_INVALID_COMMAND

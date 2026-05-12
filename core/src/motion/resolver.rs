@@ -145,14 +145,12 @@ mod tests {
     #[test]
     fn normalize_axis_quadratic_mid() {
         let r = normalize_axis(0.5, 0.0, 1.0);
-        // t = (0.5 - 0) / (1 - 0) = 0.5, sign * 0.5^2 = 0.25
         assert!((r - 0.25).abs() < 1e-6);
 
         let r = normalize_axis(-0.5, 0.0, 1.0);
         assert!((r - (-0.25)).abs() < 1e-6);
     }
 
-    // ---- TiltMotionSolver ----
 
     fn attitude(roll: f32, pitch: f32, yaw: f32) -> AttitudeData {
         AttitudeData {
@@ -187,7 +185,6 @@ mod tests {
     fn solver_calibrate_sets_center() {
         let mut s = TiltMotionSolver::new(MotionConfig::default());
         s.calibrate(attitude(0.5, -0.3, 0.0));
-        // HW_MAP_X = Yaw inverted, HW_MAP_Y = Pitch normal
         assert!((s.center_x_rad - (-0.0)).abs() < 1e-6); // yaw=0 inverted = 0
         assert!((s.center_y_rad - (-0.3)).abs() < 1e-6); // pitch=-0.3
     }
@@ -198,8 +195,6 @@ mod tests {
         s.calibrate(attitude(0.0, 0.0, 0.0));
         let result = s.update(attitude(0.1, 0.2, 0.0));
         assert!(result.valid);
-        // smoothing_alpha=0.2, target = offset * sensitivity
-        // 首次更新: filtered = 0 + 0.2 * (target - 0)
         assert!(result.vx.abs() > 0.0 || result.vy.abs() > 0.0);
     }
 
@@ -207,11 +202,9 @@ mod tests {
     fn solver_update_smoothing() {
         let mut s = TiltMotionSolver::new(MotionConfig::default());
         s.calibrate(attitude(0.0, 0.0, 0.0));
-        // 多次同一方向更新，filtered 应趋近 target
         for _ in 0..10 {
             s.update(attitude(0.5, 0.0, 0.0));
         }
-        // y 是 pitch normal，pitch=0 → vy≈0
         assert!(libm::fabsf(s.filtered_vy) < 1.0);
     }
 
@@ -221,9 +214,6 @@ mod tests {
         cfg.invert_x = true;
         let mut s = TiltMotionSolver::new(cfg);
         s.calibrate(attitude(0.0, 0.0, 0.0));
-        // HW_MAP_X = Yaw (inverted), 中心=0
-        // yaw=0.5 → raw_x = normalize(-0.5 - 0) = -0.5
-        // invert_x = true → x = -(-0.5) = 0.5
         let result = s.update(attitude(0.0, 0.0, 0.5));
         assert!(result.vx > 0.0);
     }
@@ -232,7 +222,6 @@ mod tests {
     fn solver_deadzone_suppresses() {
         let mut s = TiltMotionSolver::new(MotionConfig::default());
         s.calibrate(attitude(0.0, 0.0, 0.0));
-        // 小偏移应被 deadzone 抑制
         let result = s.update(attitude(0.01, 0.01, 0.01));
         assert_eq!(result.vx, 0.0);
         assert_eq!(result.vy, 0.0);

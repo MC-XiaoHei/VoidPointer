@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn reject_commit_validation_fail() {
-        // 合法 postcard 编码但配置校验不通过（report_hz = 0）
+        
         let mut invalid = DeviceConfig::default();
         invalid.report.report_hz = 0.0;
         let mut tmp = [0u8; 256];
@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn reject_commit_deserialize_fail() {
-        // CRC 正确但 payload 不是合法 postcard 编码
+        
         let garbage = [0xDE, 0xAD, 0xBE, 0xEF];
         let crc = crate::config::storage::crc32(&garbage);
         let mut buf = [0u8; MAX_PAYLOAD_SIZE];

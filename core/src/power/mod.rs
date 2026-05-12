@@ -195,7 +195,6 @@ mod tests {
         let mut router = crate::route::HidRouter::new();
         router.set_usb_state(crate::route::UsbState::Configured);
         let result = pm.poll(100, 0, false, &router);
-        // USB configured → stay active
         assert!(result.is_none());
         assert_eq!(pm.state(), PowerState::Active);
     }
@@ -204,7 +203,6 @@ mod tests {
     fn pm_poll_sleep_after_disconnect() {
         let mut pm = PowerManager::new();
         let router = crate::route::HidRouter::new();
-        // USB detached, 无无线连接, 无 dirty, idle 超过 disconnect_sleep_timeout_ms
         let result = pm.poll(120000, 0, false, &router);
         assert_eq!(
             result,
@@ -219,7 +217,6 @@ mod tests {
         let mut pm = PowerManager::new();
         let router = crate::route::HidRouter::new();
         let result = pm.poll(120000, 0, true, &router);
-        // config_dirty 阻止 Sleep，也不满足 Suspend（无无线），所以 Active
         assert!(result.is_none());
         assert_eq!(pm.state(), PowerState::Active);
     }
@@ -228,7 +225,6 @@ mod tests {
     fn pm_poll_noop_when_already_active() {
         let mut pm = PowerManager::new();
         let router = crate::route::HidRouter::new();
-        // idle 很短，不应触发任何迁移
         let result = pm.poll(100, 50, false, &router);
         assert!(result.is_none());
     }
@@ -247,10 +243,8 @@ mod tests {
                 target: PowerState::Suspend
             })
         );
-        // poll 不改变状态，发起方需调用 apply_request_result
         pm.apply_request_result(PowerState::Suspend, true);
 
-        // 重新 poll，状态已变更 → 无新请求
         let result2 = pm.poll(11000, 0, false, &router);
         assert_eq!(result2, None);
     }
