@@ -7,7 +7,6 @@ edition = "2024"
 bench = false
 crate-type = ["rlib", "staticlib"]
 doctest = false
-test = false
 
 [dependencies]
 fugit = "0.3"

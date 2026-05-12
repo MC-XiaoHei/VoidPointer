@@ -13,6 +13,7 @@ pub mod runtime;
 pub mod utils;
 pub mod vendor;
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     log::error!("panic;info={info}");
