@@ -143,6 +143,130 @@ fn remaining_delay_ms(timeout_ms: u32, elapsed_ms: u32) -> u32 {
     timeout_ms.saturating_sub(elapsed_ms).max(1)
 }
 
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remaining_not_expired() {
+        assert_eq!(remaining_delay_ms(100, 30), 70);
+    }
+
+    #[test]
+    fn remaining_exactly_expired() {
+        assert_eq!(remaining_delay_ms(100, 100), 1);
+    }
+
+    #[test]
+    fn remaining_over_expired() {
+        assert_eq!(remaining_delay_ms(100, 200), 1);
+    }
+
+    #[test]
+    fn remaining_zero_timeout() {
+        assert_eq!(remaining_delay_ms(0, 0), 1);
+    }
+
+    #[test]
+    fn pm_new_state_is_active() {
+        let pm = PowerManager::new();
+        assert_eq!(pm.state(), PowerState::Active);
+        assert_eq!(pm.config(), PowerConfig::default());
+    }
+
+    #[test]
+    fn pm_apply_request_accepted() {
+        let mut pm = PowerManager::new();
+        pm.apply_request_result(PowerState::Suspend, true);
+        assert_eq!(pm.state(), PowerState::Suspend);
+    }
+
+    #[test]
+    fn pm_apply_request_rejected() {
+        let mut pm = PowerManager::new();
+        pm.apply_request_result(PowerState::Sleep, false);
+        assert_eq!(pm.state(), PowerState::Active);
+    }
+
+    #[test]
+    fn pm_poll_usb_configured_keeps_active() {
+        let mut pm = PowerManager::new();
+        let mut router = crate::route::HidRouter::new();
+        router.set_usb_state(crate::route::UsbState::Configured);
+        let result = pm.poll(100, 0, false, &router);
+        // USB configured → stay active
+        assert!(result.is_none());
+        assert_eq!(pm.state(), PowerState::Active);
+    }
+
+    #[test]
+    fn pm_poll_sleep_after_disconnect() {
+        let mut pm = PowerManager::new();
+        let router = crate::route::HidRouter::new();
+        // USB detached, 无无线连接, 无 dirty, idle 超过 disconnect_sleep_timeout_ms
+        let result = pm.poll(120000, 0, false, &router);
+        assert_eq!(
+            result,
+            Some(PowerRequest {
+                target: PowerState::Sleep
+            })
+        );
+    }
+
+    #[test]
+    fn pm_poll_config_dirty_blocks_sleep() {
+        let mut pm = PowerManager::new();
+        let router = crate::route::HidRouter::new();
+        let result = pm.poll(120000, 0, true, &router);
+        // config_dirty 阻止 Sleep，也不满足 Suspend（无无线），所以 Active
+        assert!(result.is_none());
+        assert_eq!(pm.state(), PowerState::Active);
+    }
+
+    #[test]
+    fn pm_poll_noop_when_already_active() {
+        let mut pm = PowerManager::new();
+        let router = crate::route::HidRouter::new();
+        // idle 很短，不应触发任何迁移
+        let result = pm.poll(100, 50, false, &router);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn pm_poll_suspend_after_timeout() {
+        let mut pm = PowerManager::new();
+        let mut router = crate::route::HidRouter::new();
+        router.set_ble_connected(true);
+        router.set_ble_input_ready(true);
+
+        let result = pm.poll(10000, 0, false, &router);
+        assert_eq!(
+            result,
+            Some(PowerRequest {
+                target: PowerState::Suspend
+            })
+        );
+        // poll 不改变状态，发起方需调用 apply_request_result
+        pm.apply_request_result(PowerState::Suspend, true);
+
+        // 重新 poll，状态已变更 → 无新请求
+        let result2 = pm.poll(11000, 0, false, &router);
+        assert_eq!(result2, None);
+    }
+
+    #[test]
+    fn pm_next_recheck_delay() {
+        let pm = PowerManager::new();
+        let mut router = crate::route::HidRouter::new();
+        router.set_ble_connected(true);
+        router.set_ble_input_ready(true);
+        let delay = pm.next_recheck_delay_ms(100, 0, false, &router);
+        assert!(delay.is_some());
+        assert!(delay.unwrap() <= 5000);
+    }
+}
+
 impl Default for PowerManager {
     fn default() -> Self {
         Self::new()
