@@ -99,3 +99,142 @@ fn normalize_axis(value: f32, deadzone: f32, max_angle: f32) -> f32 {
         sign * (t * t)
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_angle_wraps_above_pi() {
+        let result = normalize_angle(core::f32::consts::PI + 1.0);
+        assert!((result - (-core::f32::consts::PI + 1.0)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn normalize_angle_wraps_below_neg_pi() {
+        let result = normalize_angle(-core::f32::consts::PI - 1.0);
+        assert!((result - (core::f32::consts::PI - 1.0)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn normalize_angle_stays_in_range() {
+        assert!((normalize_angle(0.5) - 0.5).abs() < 1e-6);
+        assert!((normalize_angle(-0.5) - (-0.5)).abs() < 1e-6);
+        assert!((normalize_angle(core::f32::consts::PI) - core::f32::consts::PI).abs() < 1e-6);
+    }
+
+    #[test]
+    fn normalize_axis_zero_at_deadzone() {
+        assert_eq!(normalize_axis(0.04, 0.05, 1.0), 0.0);
+        assert_eq!(normalize_axis(-0.04, 0.05, 1.0), 0.0);
+    }
+
+    #[test]
+    fn normalize_axis_sign_at_max() {
+        assert_eq!(normalize_axis(1.5, 0.05, 1.0), 1.0);
+        assert_eq!(normalize_axis(-1.5, 0.05, 1.0), -1.0);
+    }
+
+    #[test]
+    fn normalize_axis_zero_when_max_le_deadzone() {
+        assert_eq!(normalize_axis(0.5, 0.5, 0.5), 0.0);
+        assert_eq!(normalize_axis(0.5, 0.6, 0.5), 0.0);
+    }
+
+    #[test]
+    fn normalize_axis_quadratic_mid() {
+        let r = normalize_axis(0.5, 0.0, 1.0);
+        // t = (0.5 - 0) / (1 - 0) = 0.5, sign * 0.5^2 = 0.25
+        assert!((r - 0.25).abs() < 1e-6);
+
+        let r = normalize_axis(-0.5, 0.0, 1.0);
+        assert!((r - (-0.25)).abs() < 1e-6);
+    }
+
+    // ---- TiltMotionSolver ----
+
+    fn attitude(roll: f32, pitch: f32, yaw: f32) -> AttitudeData {
+        AttitudeData {
+            roll,
+            pitch,
+            yaw,
+            w: 1.0,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    }
+
+    #[test]
+    fn solver_new_no_calibration() {
+        let s = TiltMotionSolver::new(MotionConfig::default());
+        assert_eq!(s.center_x_rad, 0.0);
+        assert_eq!(s.center_y_rad, 0.0);
+    }
+
+    #[test]
+    fn solver_new_with_cached_attitude() {
+        let raw = crate::attitude::types::SflpGameRotationRaw { x: 0, y: 0, z: 0 };
+        crate::attitude::update_current_attitude_from_raw(raw);
+        let s = TiltMotionSolver::new(MotionConfig::default());
+        crate::attitude::clear_current_attitude();
+        assert!((s.center_x_rad).abs() < 1e-6);
+        assert!((s.center_y_rad).abs() < 1e-6);
+    }
+
+    #[test]
+    fn solver_calibrate_sets_center() {
+        let mut s = TiltMotionSolver::new(MotionConfig::default());
+        s.calibrate(attitude(0.5, -0.3, 0.0));
+        // HW_MAP_X = Yaw inverted, HW_MAP_Y = Pitch normal
+        assert!((s.center_x_rad - (-0.0)).abs() < 1e-6); // yaw=0 inverted = 0
+        assert!((s.center_y_rad - (-0.3)).abs() < 1e-6); // pitch=-0.3
+    }
+
+    #[test]
+    fn solver_update_after_calibrate() {
+        let mut s = TiltMotionSolver::new(MotionConfig::default());
+        s.calibrate(attitude(0.0, 0.0, 0.0));
+        let result = s.update(attitude(0.1, 0.2, 0.0));
+        assert!(result.valid);
+        // smoothing_alpha=0.2, target = offset * sensitivity
+        // 首次更新: filtered = 0 + 0.2 * (target - 0)
+        assert!(result.vx.abs() > 0.0 || result.vy.abs() > 0.0);
+    }
+
+    #[test]
+    fn solver_update_smoothing() {
+        let mut s = TiltMotionSolver::new(MotionConfig::default());
+        s.calibrate(attitude(0.0, 0.0, 0.0));
+        // 多次同一方向更新，filtered 应趋近 target
+        for _ in 0..10 {
+            s.update(attitude(0.5, 0.0, 0.0));
+        }
+        // y 是 pitch normal，pitch=0 → vy≈0
+        assert!(libm::fabsf(s.filtered_vy) < 1.0);
+    }
+
+    #[test]
+    fn solver_invert_x() {
+        let mut cfg = MotionConfig::default();
+        cfg.invert_x = true;
+        let mut s = TiltMotionSolver::new(cfg);
+        s.calibrate(attitude(0.0, 0.0, 0.0));
+        // HW_MAP_X = Yaw (inverted), 中心=0
+        // yaw=0.5 → raw_x = normalize(-0.5 - 0) = -0.5
+        // invert_x = true → x = -(-0.5) = 0.5
+        let result = s.update(attitude(0.0, 0.0, 0.5));
+        assert!(result.vx > 0.0);
+    }
+
+    #[test]
+    fn solver_deadzone_suppresses() {
+        let mut s = TiltMotionSolver::new(MotionConfig::default());
+        s.calibrate(attitude(0.0, 0.0, 0.0));
+        // 小偏移应被 deadzone 抑制
+        let result = s.update(attitude(0.01, 0.01, 0.01));
+        assert_eq!(result.vx, 0.0);
+        assert_eq!(result.vy, 0.0);
+    }
+}
