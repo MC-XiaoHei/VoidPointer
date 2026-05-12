@@ -515,3 +515,256 @@ pub fn preferred_response_route(router: &HidRouter, request_route: u8) -> HidRou
         router.preferred_custom_route()
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_frame_too_short() {
+        let result = parse_frame(&[0xA5]);
+        assert_eq!(result, Err(ParseError::TooShort));
+    }
+
+    #[test]
+    fn parse_frame_bad_magic() {
+        let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN];
+        buf[0] = 0x00; // 不是 0xA5
+        buf[1] = CUSTOM_PROTOCOL_VERSION;
+        assert_eq!(parse_frame(&buf), Err(ParseError::BadMagic));
+    }
+
+    #[test]
+    fn parse_frame_unsupported_version() {
+        let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN + 4];
+        buf[0] = CUSTOM_PROTOCOL_MAGIC;
+        buf[1] = 99;
+        assert_eq!(parse_frame(&buf), Err(ParseError::UnsupportedVersion));
+    }
+
+    #[test]
+    fn parse_frame_valid_empty_payload() {
+        let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN];
+        buf[0] = CUSTOM_PROTOCOL_MAGIC;
+        buf[1] = CUSTOM_PROTOCOL_VERSION;
+        // total_len = 0, payload_len = 0 -> 空 payload
+        let result = parse_frame(&buf);
+        assert!(result.is_ok());
+        let frame = result.unwrap();
+        assert_eq!(frame.total_len, 0);
+        assert!(frame.payload.is_empty());
+    }
+
+    #[test]
+    fn encode_frame_payload_too_large() {
+        let header = CustomFrameHeader {
+            flags: CUSTOM_FLAG_RESPONSE,
+            sequence: 0,
+            command: 0,
+            status: CUSTOM_STATUS_OK,
+            offset: 0,
+            total_len: 9999,
+        };
+        let huge = [0u8; CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN + 1];
+        let mut out = CustomReport {
+            data: [0u8; 64],
+            len: 0,
+        };
+        let result = encode_frame(header, &huge, &mut out);
+        assert_eq!(result, Err(ParseError::PayloadTooLarge));
+    }
+
+    #[test]
+    fn build_protocol_info() {
+        let payload = build_protocol_info_payload();
+        assert_eq!(payload[0], CUSTOM_PROTOCOL_VERSION);
+        assert_eq!(payload[1], CUSTOM_PROTOCOL_HEADER_LEN as u8);
+    }
+
+    #[test]
+    fn preferred_response_route_respects_request() {
+        let router = crate::route::HidRouter::new();
+        assert_eq!(preferred_response_route(&router, 3), HidRoute::Usb);
+    }
+
+    #[test]
+    fn preferred_response_route_falls_back() {
+        let router = crate::route::HidRouter::new();
+        assert_eq!(preferred_response_route(&router, 0), HidRoute::None);
+    }
+
+    #[test]
+    fn parse_write_begin_ok() {
+        let payload = [0x10, 0x00, 0x00, 0x00, 0xEF, 0xBE, 0xAD, 0xDE];
+        let (len, crc) = parse_write_begin_payload(&payload).unwrap();
+        assert_eq!(len, 16);
+        assert_eq!(crc, 0xDEAD_BEEF);
+    }
+
+    #[test]
+    fn parse_write_begin_bad_length() {
+        assert_eq!(
+            parse_write_begin_payload(&[0; 4]),
+            Err(CUSTOM_STATUS_BAD_LENGTH)
+        );
+    }
+
+    #[test]
+    fn parse_write_chunk_ok() {
+        let payload = [0x05, 0x00, 0x00, 0x00, 0xAA, 0xBB];
+        let (offset, data) = parse_write_chunk_payload(&payload).unwrap();
+        assert_eq!(offset, 5);
+        assert_eq!(data, &[0xAA, 0xBB]);
+    }
+
+    #[test]
+    fn parse_write_chunk_bad_length() {
+        assert_eq!(
+            parse_write_chunk_payload(&[0; 2]),
+            Err(CUSTOM_STATUS_BAD_LENGTH)
+        );
+    }
+
+    #[test]
+    fn map_config_error_categories() {
+        use crate::config::ConfigError;
+        assert_eq!(
+            map_config_error_to_status(ConfigError::WriteSessionBusy),
+            CUSTOM_STATUS_BUSY
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::WriteSessionNotActive),
+            CUSTOM_STATUS_BAD_SEQUENCE
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::WriteSequenceMismatch),
+            CUSTOM_STATUS_BAD_SEQUENCE
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::PayloadCrcMismatch),
+            CUSTOM_STATUS_CRC_MISMATCH
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::InvalidPayloadLength),
+            CUSTOM_STATUS_BAD_LENGTH
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::ValidationFailed),
+            CUSTOM_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::StorageUnavailable),
+            CUSTOM_STATUS_STORAGE_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::StorageEmpty),
+            CUSTOM_STATUS_STORAGE_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::InvalidFlashRegion),
+            CUSTOM_STATUS_STORAGE_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::FlashEraseFailed),
+            CUSTOM_STATUS_STORAGE_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::FlashWriteFailed),
+            CUSTOM_STATUS_STORAGE_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::ReadbackVerifyFailed),
+            CUSTOM_STATUS_STORAGE_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::EncodeFailed),
+            CUSTOM_STATUS_INTERNAL_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::PayloadTooLarge),
+            CUSTOM_STATUS_INTERNAL_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::DeserializeFailed),
+            CUSTOM_STATUS_INTERNAL_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::HeaderCrcMismatch),
+            CUSTOM_STATUS_INTERNAL_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::InvalidMagic),
+            CUSTOM_STATUS_INTERNAL_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::UnsupportedStorageVersion),
+            CUSTOM_STATUS_INTERNAL_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::UnsupportedConfigVersion),
+            CUSTOM_STATUS_INTERNAL_ERROR
+        );
+        assert_eq!(
+            map_config_error_to_status(ConfigError::MigrationFailed),
+            CUSTOM_STATUS_INTERNAL_ERROR
+        );
+    }
+
+    #[test]
+    fn encode_response_success() {
+        let payload = [0x01, 0x02];
+        let mut out = CustomReport {
+            data: [0u8; 64],
+            len: 0,
+        };
+        let result = encode_response(0x0100, 5, CUSTOM_STATUS_OK, &payload, &mut out);
+        assert!(result.is_ok());
+        assert_eq!(out.data[0], CUSTOM_PROTOCOL_MAGIC);
+        assert_eq!(out.data[1], CUSTOM_PROTOCOL_VERSION);
+        assert_eq!(out.data[3], 5); // seq
+    }
+
+    #[test]
+    fn encode_error_response_success() {
+        let mut out = CustomReport {
+            data: [0u8; 64],
+            len: 0,
+        };
+        let result = encode_error_response(0x0100, 3, CUSTOM_STATUS_INVALID_COMMAND, &mut out);
+        assert!(result.is_ok());
+        assert_eq!(out.data[3], 3); // seq
+        // status 是 u16 LE: CUSTOM_STATUS_INVALID_COMMAND 的低字节
+        assert_eq!(
+            u16::from_le_bytes([out.data[6], out.data[7]]),
+            CUSTOM_STATUS_INVALID_COMMAND
+        );
+    }
+
+    #[test]
+    fn build_route_state_payload_works() {
+        let router = crate::route::HidRouter::new();
+        let payload = build_route_state_payload(&router);
+        assert_eq!(payload.len(), 5);
+    }
+
+    #[test]
+    fn build_diagnostics_payload_works() {
+        let stats = ProtocolStats {
+            rx_ok: 1,
+            rx_invalid: 2,
+            rx_unsupported: 3,
+            tx_generated: 4,
+            tx_dropped_no_route: 5,
+        };
+        let rx_stats = VendorRxStats {
+            dropped: 10,
+            too_large: 20,
+        };
+        let ev_stats = EventQueueStats { dropped: 100 };
+        let payload = build_diagnostics_payload(stats, rx_stats, ev_stats);
+        assert_eq!(payload.len(), 16);
+        assert_eq!(payload[0], 1);
+        assert_eq!(payload[2], 2);
+    }
+}
