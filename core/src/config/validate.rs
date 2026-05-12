@@ -40,6 +40,7 @@ pub fn validate_config(config: &DeviceConfig) -> Result<(), ConfigError> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
 
@@ -71,5 +72,65 @@ mod tests {
         let mut c = valid();
         c.power.suspend_timeout_ms = 0;
         assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn reject_negative_deadzone() {
+        let mut c = valid();
+        c.motion.deadzone_x_rad = -0.1;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn reject_zero_max_angle() {
+        let mut c = valid();
+        c.motion.max_angle_rad = 0.0;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn reject_zero_sensitivity() {
+        let mut c = valid();
+        c.motion.sensitivity_x = 0.0;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn reject_negative_report_hz() {
+        let mut c = valid();
+        c.report.report_hz = -1.0;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn reject_infinite_report_hz() {
+        let mut c = valid();
+        c.report.report_hz = f32::INFINITY;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn accept_smoothing_alpha_boundaries() {
+        let mut c = valid();
+        c.motion.smoothing_alpha = 0.0;
+        assert!(validate_config(&c).is_ok());
+
+        c.motion.smoothing_alpha = 1.0;
+        assert!(validate_config(&c).is_ok());
+    }
+
+    #[test]
+    fn reject_infinite_sensitivity() {
+        let mut c = valid();
+        c.motion.sensitivity_x = f32::INFINITY;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn invert_does_not_affect_validity() {
+        let mut c = valid();
+        c.motion.invert_x = true;
+        c.motion.invert_y = true;
+        assert!(validate_config(&c).is_ok());
     }
 }

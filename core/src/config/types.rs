@@ -81,6 +81,7 @@ pub enum SaveOutcome {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
 
@@ -103,5 +104,24 @@ mod tests {
         let encoded = postcard::to_slice(&c, &mut buf).unwrap();
         let decoded: DeviceConfig = postcard::from_bytes(encoded).unwrap();
         assert_eq!(c, decoded);
+    }
+
+    #[test]
+    fn serde_non_default() {
+        let mut c = DeviceConfig::default();
+        c.motion.sensitivity_x = 24000.0;
+        c.motion.invert_y = true;
+        c.power.suspend_timeout_ms = 30000;
+
+        let mut buf = [0u8; 256];
+        let encoded = postcard::to_slice(&c, &mut buf).unwrap();
+        let decoded: DeviceConfig = postcard::from_bytes(encoded).unwrap();
+        assert_eq!(c, decoded);
+    }
+
+    #[test]
+    fn max_payload_size_positive() {
+        assert!(MAX_PAYLOAD_SIZE > 0);
+        assert!(MAX_PAYLOAD_SIZE >= SLOT_BUF_SIZE - SlotHeader::ENCODED_LEN);
     }
 }

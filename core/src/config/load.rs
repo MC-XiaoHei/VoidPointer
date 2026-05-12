@@ -148,6 +148,7 @@ fn pick_active_slot(slot_a: Option<ValidSlot>, slot_b: Option<ValidSlot>) -> Opt
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
 
@@ -186,6 +187,21 @@ mod tests {
         let a = make_slot(0, 10);
         let b = make_slot(1, 20);
         assert_eq!(pick_active_slot(Some(a), Some(b)).unwrap().index, 1);
+    }
+
+    #[test]
+    fn pick_a_wins_by_higher_sequence() {
+        let a = make_slot(0, 30);
+        let b = make_slot(1, 20);
+        assert_eq!(pick_active_slot(Some(a), Some(b)).unwrap().index, 0);
+    }
+
+    #[test]
+    fn pick_only_b() {
+        assert_eq!(
+            pick_active_slot(None, Some(make_slot(1, 5))).unwrap().index,
+            1
+        );
     }
 
     #[test]
@@ -244,6 +260,42 @@ mod tests {
         assert_eq!(
             validate_slot_header(h, 4096),
             Err(ConfigError::InvalidPayloadLength)
+        );
+    }
+
+    #[test]
+    fn validate_header_oversize_payload() {
+        let h = SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: 5000,
+            sequence: 1,
+            payload_crc32: 0,
+            header_crc32: 0,
+            flags: 0,
+        };
+        assert_eq!(
+            validate_slot_header(h, 4096),
+            Err(ConfigError::InvalidPayloadLength)
+        );
+    }
+
+    #[test]
+    fn validate_header_unsupported_storage_version() {
+        let h = SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: 99,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: 10,
+            sequence: 1,
+            payload_crc32: 0,
+            header_crc32: 0,
+            flags: 0,
+        };
+        assert_eq!(
+            validate_slot_header(h, 4096),
+            Err(ConfigError::UnsupportedStorageVersion)
         );
     }
 }

@@ -57,6 +57,7 @@ pub fn crc32(bytes: &[u8]) -> u32 {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
 
@@ -68,6 +69,45 @@ mod tests {
     #[test]
     fn crc32_empty_input() {
         assert_eq!(crc32(b""), 0x0000_0000);
+    }
+
+    #[test]
+    fn crc32_single_byte() {
+        assert_eq!(crc32(&[0x00]), 0xD202_EF8D);
+    }
+
+    #[test]
+    fn header_encode_decode_zeros() {
+        let h = SlotHeader {
+            magic: 0,
+            storage_version: 0,
+            config_version: 0,
+            payload_len: 0,
+            sequence: 0,
+            payload_crc32: 0,
+            header_crc32: 0,
+            flags: 0,
+        };
+        let mut buf = [0u8; SlotHeader::ENCODED_LEN];
+        slot_header_encode(h, &mut buf);
+        assert_eq!(slot_header_decode(&buf), h);
+    }
+
+    #[test]
+    fn header_encode_decode_max() {
+        let h = SlotHeader {
+            magic: u32::MAX,
+            storage_version: u16::MAX,
+            config_version: u16::MAX,
+            payload_len: u32::MAX,
+            sequence: u32::MAX,
+            payload_crc32: u32::MAX,
+            header_crc32: u32::MAX,
+            flags: u32::MAX,
+        };
+        let mut buf = [0u8; SlotHeader::ENCODED_LEN];
+        slot_header_encode(h, &mut buf);
+        assert_eq!(slot_header_decode(&buf), h);
     }
 
     #[test]
