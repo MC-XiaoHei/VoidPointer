@@ -55,3 +55,51 @@ pub fn crc32(bytes: &[u8]) -> u32 {
 
     !crc
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crc32_known_vector() {
+        assert_eq!(crc32(b"hello"), 0x3610a686);
+    }
+
+    #[test]
+    fn crc32_empty_input() {
+        assert_eq!(crc32(b""), 0x0000_0000);
+    }
+
+    #[test]
+    fn header_encode_decode_roundtrip() {
+        let h = SlotHeader {
+            magic: crate::config::SLOT_MAGIC,
+            storage_version: 1,
+            config_version: 2,
+            payload_len: 100,
+            sequence: 42,
+            payload_crc32: 0x1234_5678,
+            header_crc32: 0x8765_4321,
+            flags: 0xFF,
+        };
+        let mut buf = [0u8; SlotHeader::ENCODED_LEN];
+        slot_header_encode(h, &mut buf);
+        assert_eq!(slot_header_decode(&buf), h);
+    }
+
+    #[test]
+    fn seal_self_consistent() {
+        let h = SlotHeader {
+            magic: crate::config::SLOT_MAGIC,
+            storage_version: 1,
+            config_version: 1,
+            payload_len: 50,
+            sequence: 1,
+            payload_crc32: 0xDEAD_BEEF,
+            header_crc32: 0,
+            flags: 0,
+        };
+        let sealed = seal_header(h);
+        assert_eq!(compute_header_crc32(sealed), sealed.header_crc32);
+    }
+}

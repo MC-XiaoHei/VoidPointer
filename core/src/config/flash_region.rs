@@ -11,7 +11,6 @@ pub(crate) struct FlashRegionInfo {
 }
 
 impl FlashRegionInfo {
-    /// 计算指定 slot 在 flash 中的偏移
     pub(crate) fn slot_offset(
         &self,
         slot_size: u32,

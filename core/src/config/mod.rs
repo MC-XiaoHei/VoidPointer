@@ -1,8 +1,8 @@
 mod flash_region;
-mod manager;
-mod store;
 mod load;
+mod manager;
 pub mod storage;
+mod store;
 pub mod types;
 pub mod validate;
 pub mod write_session;

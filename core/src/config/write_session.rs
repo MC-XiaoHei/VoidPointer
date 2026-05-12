@@ -89,3 +89,55 @@ impl WriteSession {
         self.active
     }
 }
+
+#[cfg(test)]
+extern crate alloc;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::storage::crc32;
+    use alloc::vec::Vec;
+
+    fn valid_payload() -> (Vec<u8>, u32) {
+        let c = DeviceConfig::default();
+        let mut buf = [0u8; 256];
+        let encoded = postcard::to_slice(&c, &mut buf).unwrap();
+        (encoded.to_vec(), crc32(encoded))
+    }
+
+    #[test]
+    fn happy_path() {
+        let (payload, crc) = valid_payload();
+        let mut buf = [0u8; MAX_PAYLOAD_SIZE];
+        let mut s = WriteSession::default();
+
+        s.begin(&mut buf, payload.len() as u32, crc).unwrap();
+        s.write_chunk(&mut buf, 0, &payload).unwrap();
+        let cfg = s.commit(&buf).unwrap();
+        assert_eq!(cfg, DeviceConfig::default());
+        assert!(!s.is_active());
+    }
+
+    #[test]
+    fn abort_resets() {
+        let (payload, crc) = valid_payload();
+        let mut buf = [0u8; MAX_PAYLOAD_SIZE];
+        let mut s = WriteSession::default();
+
+        s.begin(&mut buf, payload.len() as u32, crc).unwrap();
+        assert!(s.is_active());
+        s.abort();
+        assert!(!s.is_active());
+    }
+
+    #[test]
+    fn reject_zero_len() {
+        let mut buf = [0u8; MAX_PAYLOAD_SIZE];
+        let mut s = WriteSession::default();
+        assert_eq!(
+            s.begin(&mut buf, 0, 0),
+            Err(ConfigError::InvalidPayloadLength)
+        );
+    }
+}

@@ -79,3 +79,29 @@ pub enum SaveOutcome {
     Noop,
     Saved,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn slot_header_encoded_len() {
+        assert_eq!(SlotHeader::ENCODED_LEN, 28);
+    }
+
+    #[test]
+    fn default_device_config_fields() {
+        let c = DeviceConfig::default();
+        assert!(c.report.report_hz > 0.0);
+        assert!(c.power.suspend_timeout_ms > 0);
+    }
+
+    #[test]
+    fn serde_roundtrip() {
+        let c = DeviceConfig::default();
+        let mut buf = [0u8; 256];
+        let encoded = postcard::to_slice(&c, &mut buf).unwrap();
+        let decoded: DeviceConfig = postcard::from_bytes(encoded).unwrap();
+        assert_eq!(c, decoded);
+    }
+}

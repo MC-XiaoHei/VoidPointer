@@ -38,3 +38,38 @@ pub fn validate_config(config: &DeviceConfig) -> Result<(), ConfigError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid() -> DeviceConfig {
+        DeviceConfig::default()
+    }
+
+    #[test]
+    fn default_is_ok() {
+        assert!(validate_config(&valid()).is_ok());
+    }
+
+    #[test]
+    fn reject_zero_report_hz() {
+        let mut c = valid();
+        c.report.report_hz = 0.0;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn reject_nan_deadzone() {
+        let mut c = valid();
+        c.motion.deadzone_x_rad = f32::NAN;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+
+    #[test]
+    fn reject_zero_power_timeout() {
+        let mut c = valid();
+        c.power.suspend_timeout_ms = 0;
+        assert_eq!(validate_config(&c), Err(ConfigError::ValidationFailed));
+    }
+}

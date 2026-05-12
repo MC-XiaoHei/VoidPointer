@@ -111,7 +111,6 @@ fn read_and_validate_slot(
 }
 
 /// 校验 SlotHeader 中的元信息字段（magic / version / payload_len / header_crc32）
-/// 不涉及 payload 内容，验证顺序按 CONFIG_SPEC.md §8 前三步
 fn validate_slot_header(header: SlotHeader, slot_size: u32) -> Result<(), ConfigError> {
     if header.magic != SLOT_MAGIC {
         return Err(ConfigError::InvalidMagic);
@@ -145,5 +144,106 @@ fn pick_active_slot(slot_a: Option<ValidSlot>, slot_b: Option<ValidSlot>) -> Opt
         (Some(a), None) => Some(a),
         (None, Some(b)) => Some(b),
         (None, None) => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_slot(index: usize, sequence: u32) -> ValidSlot {
+        ValidSlot {
+            index,
+            header: SlotHeader {
+                magic: SLOT_MAGIC,
+                storage_version: CURRENT_STORAGE_VERSION,
+                config_version: CURRENT_CONFIG_VERSION,
+                payload_len: 10,
+                sequence,
+                payload_crc32: 0,
+                header_crc32: 0,
+                flags: 0,
+            },
+            config: DeviceConfig::default(),
+        }
+    }
+
+    #[test]
+    fn pick_both_none() {
+        assert!(pick_active_slot(None, None).is_none());
+    }
+
+    #[test]
+    fn pick_only_a() {
+        assert_eq!(
+            pick_active_slot(Some(make_slot(0, 1)), None).unwrap().index,
+            0
+        );
+    }
+
+    #[test]
+    fn pick_b_wins_by_higher_sequence() {
+        let a = make_slot(0, 10);
+        let b = make_slot(1, 20);
+        assert_eq!(pick_active_slot(Some(a), Some(b)).unwrap().index, 1);
+    }
+
+    #[test]
+    fn pick_equal_sequence_prefers_a() {
+        let a = make_slot(0, 42);
+        let b = make_slot(1, 42);
+        assert_eq!(pick_active_slot(Some(a), Some(b)).unwrap().index, 0);
+    }
+
+    #[test]
+    fn validate_header_seal_passes() {
+        let h = SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: 30,
+            sequence: 5,
+            payload_crc32: 0,
+            header_crc32: 0,
+            flags: 0,
+        };
+        let sealed = crate::config::storage::seal_header(h);
+        assert!(validate_slot_header(sealed, 4096).is_ok());
+    }
+
+    #[test]
+    fn validate_header_bad_magic() {
+        let h = SlotHeader {
+            magic: 0xDEAD_BEEF,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: 10,
+            sequence: 1,
+            payload_crc32: 0,
+            header_crc32: 0,
+            flags: 0,
+        };
+        assert_eq!(
+            validate_slot_header(h, 4096),
+            Err(ConfigError::InvalidMagic)
+        );
+    }
+
+    #[test]
+    fn validate_header_zero_len() {
+        let h = SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: 0,
+            sequence: 1,
+            payload_crc32: 0,
+            header_crc32: 0,
+            flags: 0,
+        };
+        assert_eq!(
+            validate_slot_header(h, 4096),
+            Err(ConfigError::InvalidPayloadLength)
+        );
     }
 }
