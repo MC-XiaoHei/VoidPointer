@@ -16,8 +16,8 @@
 | HID / Report | Partial | BLE/USB mouse report 已接入，wheel/buttons/motion 已能出报告；USB vendor 收发已接通；mouse 发送条件已收敛为 motion/wheel/button/retry/dirty 五类触发，并已抽出最小 `MouseReportRuntime`；统一 `ReportRuntime` 结构和无线 vendor backend 仍待补齐；当前 route 不可用时会丢弃未发送的 motion/wheel 暂存，并重置 button sync 基线，避免恢复后回放旧输入或沿用过期按钮发送状态。 |
 | Route | Partial | 当前策略为“USB configured 优先且独占，否则无线固定 BLE”；2.4G 仍为 stub。 |
 | Power | Partial | Rust `PowerManager` 已接通，Suspend 最小闭环已进入实现；button/encoder/IMU 的 Suspend wake source 已接通最小实现，并可在 wake 后恢复 Active IMU profile；`Sleep` 的 `prepare/enter/restore` 已补成项目级最小闭环，但尚未映射到真实 deep low-power；当前 `Sleep restore` 已避免在 `USB configured` 时误重新打开 BLE advertising，并且 runtime 已把 requeue 中的 vendor 待发包视为低功耗 blocker；恢复回 `Active` 时还会清掉旧 attitude / IMU sample / motion cache，重置 report 累积状态，并清理旧 wheel 暂存 / button sync 基线，避免 wake 后误用陈旧姿态、残余累计量或过期 mouse transport 状态；待确认重点仍是 **BLE connected 下能否映射到真实平台浅低功耗且不断链**，以及更完整的 deep low-power enter/restore。 |
-| Config | Not started | 仅有 `ConfigManager` dirty flag 骨架；配置结构、序列化、双槽、CRC、migration 均未完成。 |
-| Vendor / WebHID | Partial | 单包 RX queue、协议解析、基础查询命令已接通；多包分片、配置读写会话和完整 transport backend 未完成。 |
+| Config | Done | 双槽 DataFlash 持久化、SlotHeader + CRC32 + postcard 序列化、全链路校验、写入状态机、WebHID 配置命令、主机测试框架与 100% 纯逻辑覆盖率。 |
+| Vendor / WebHID | Partial | 单包 RX queue、协议解析、基础查询命令、配置读写会话已接通；多包分片和完整 transport backend 未完成。 |
 | 2.4G | Not started | 目前仅保留 route / HID stub。 |
 
 ---
@@ -53,11 +53,14 @@
 - [ ] 将更完整的 power profile / RF / route 恢复真正连上。
   - 当前已补齐五条确定性收口：`Sleep restore` 不会在 `USB configured` 时误开 BLE advertising；requeue 中的 vendor 待发包会阻止进入低功耗；恢复回 `Active` 时会清掉旧 attitude / IMU sample / motion cache；同时会重置 report 累积状态，避免 wake 后误用陈旧姿态或残余累计量；并会清理旧 wheel 暂存 / button sync 基线，避免 wake 或 route 恢复后回放过期 mouse transport 状态。其余恢复联动继续按审计推进。
 
-### P4：启动 Config 最小闭环
-- [ ] 定义最小 `DeviceConfig`。
-- [ ] 定义默认配置和基础校验。
-- [ ] 提供 DataFlash read / erase / aligned write API。
-- [ ] 落地最小配置保存流程（哪怕先不做完整 migration）。
+### P4：Config 持久化
+- [x] 定义 `DeviceConfig`。
+- [x] 定义默认配置和基础校验。
+- [x] 提供 DataFlash read / erase / aligned write API。
+- [x] 实现双槽保存流程。
+- [x] postcard 序列化 + CRC32 校验。
+- [x] WebHID 配置命令：GetConfigInfo / ReadConfig / WriteConfig / SaveConfig / RestoreDefaults。
+- [x] 主机测试框架，纯逻辑 100% 覆盖率。
 
 ---
 
@@ -201,15 +204,19 @@
 ## 4.7 Config / Storage
 
 ### 已完成
-- [x] `ConfigManager` dirty flag 骨架。
+- [x] `DeviceConfig` 结构（power / motion / report 子配置）。
+- [x] 默认配置与业务校验。
+- [x] 双槽 DataFlash 存储（SlotHeader + payload + CRC32）。
+- [x] postcard 序列化 + serde。
+- [x] 全链路有效性验证（magic → version → CRC → 反序列化 → 业务校验）。
+- [x] 写入状态机（begin / chunk / commit / abort）。
+- [x] WebHID 配置命令：GetConfigInfo / ReadConfig / WriteConfig / SaveConfig / RestoreDefaults。
+- [x] 自动生成 C 函数 stubs 的测试框架。
+- [x] 纯逻辑模块 100% 覆盖率。
 
 ### 未完成
-- [ ] `DeviceConfig` 结构。
-- [ ] 默认配置。
-- [ ] 配置校验。
-- [ ] 版本迁移预留。
-- [ ] DataFlash API：read / erase / aligned write。
-- [ ] 双槽或 sequence-based 保存策略。
+- [ ] 版本迁移（migration）。
+- [ ] 配置写入运行时 apply（apply_to runtime 子系统）。
 
 ## 4.8 Vendor / WebHID
 
@@ -217,12 +224,12 @@
 - [x] `VendorRuntime` RX queue。
 - [x] 单包协议解析骨架。
 - [x] 基础命令：`Ping` / `GetProtocolInfo` / `GetDeviceInfo` / `GetConfigInfo` / `GetRouteState` / `GetPowerState` / `GetDiagnostics`。
+- [x] 配置读写命令：`ReadConfig` / `WriteConfigBegin` / `WriteConfigChunk` / `WriteConfigCommit` / `WriteConfigAbort` / `SaveConfig` / `RestoreDefaults`。
+- [x] 配置写会话状态机。
 - [x] C 层仅收发 raw vendor report。
 
 ### 未完成
 - [ ] 多包分片。
-- [ ] 配置读写命令。
-- [ ] 配置写会话状态机。
 - [ ] BLE Custom GATT / USB Custom HID transport backend 的进一步完善。
 
 ---

@@ -53,30 +53,11 @@ CRC16 策略：只在多包分片时启用。单包命令依赖 transport 校验
 
 分片顺序策略：v1 不支持乱序分片；多包 payload 必须按 `offset = 0, previous_offset + previous_payload_len, ...` 顺序发送。设备收到非预期 `offset` 时返回 `BadSequence`。`offset` 仍使用 byte offset，而不是 chunk index，以便后续版本支持乱序或重传时无需修改 header 语义。
 
-### 4.1 当前代码实现状态
+### 4.1 实现状态
 
-当前 Rust runtime 已实现 **单包子集**：
+当前实现状态见 `dev/PROTOCOL_IMPL_STATUS.md`。
 
-- 已按完整 header 解析 `magic/version/flags/seq/cmd/status/offset/total_len/payload_len`。
-- 当前仅接受：
-  - `fragment` 标志未置位
-  - `offset == 0`
-  - `total_len == payload_len`
-  - 单包总长度不超过当前 `CustomReport` 容量
-- 当前已接入的命令：
-  - `Ping` (`0x0000`)
-  - `GetProtocolInfo` (`0x0001`)
-  - `GetDeviceInfo` (`0x0002`)
-  - `GetConfigInfo` (`0x0100`)
-  - `GetRouteState` (`0x0201`)
-  - `GetPowerState` (`0x0202`)
-  - `GetDiagnostics` (`0x0300`)
-- 当前 runtime 已能在 `vp_core_poll()` 中完成：
-  - vendor RX 入队后解析
-  - 统一协议响应生成
-  - 通过 route-aware `SendVendor` 命令回发响应
-
-这意味着协议层已经从 transport 中抽离；后续 USB Custom HID、BLE Custom GATT、2.4G custom channel 只需要承载同一份 frame。
+协议层已从 transport 中抽离；后续 USB Custom HID、BLE Custom GATT、2.4G custom channel 只需要承载同一份 frame。
 
 ## 5. Command id allocation
 
@@ -148,7 +129,6 @@ Vendor/WebHID 使用独立 response status，不复用底层 `vp_status_t`。原
 ## 9. Open questions
 
 - BLE/2.4G 的最大单包 payload 待 route 实现确认。
-- 多包分片重组、`crc16`、配置写会话状态机仍待实现。
+- 多包分片重组、`crc16` 仍待实现。
 - `GetDeviceInfo` 的返回结构当前还是临时占位，后续应改为固定字段布局。
-- `GetConfigInfo` 当前已返回 config version / dirty flag / payload size / CRC 占位字段；待真实 `DeviceConfig` 与序列化/CRC 接入后再填充真实长度与 CRC。
 - `GetDiagnostics` 当前覆盖 protocol/vendor queue/event queue 的基础计数，后续可继续扩展 IMU / HID / config 错误统计。
