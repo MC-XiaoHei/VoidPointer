@@ -117,3 +117,155 @@ fn trunc_toward_zero(v: f32) -> i32 {
         libm::ceilf(v) as i32
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+    use crate::motion::state::MotionState;
+
+    fn cfg() -> ReportConfig {
+        ReportConfig { report_hz: 1000.0 }
+    }
+
+    fn motion(vx: f32, vy: f32) -> MotionState {
+        MotionState {
+            vx,
+            vy,
+            valid: true,
+        }
+    }
+
+    #[test]
+    fn new_has_no_pending() {
+        let r = ReportState::new(cfg());
+        assert!(!r.has_pending());
+        assert_eq!(r.pending(), (0, 0));
+    }
+
+    #[test]
+    fn ingest_accumulates() {
+        let mut r = ReportState::new(cfg());
+        r.ingest_motion(motion(500.0, 300.0));
+        // 500 / 1000 = 0.5, 累加后不够 1 → pending=0
+        assert!(!r.has_pending());
+    }
+
+    #[test]
+    fn ingest_triggers_report() {
+        let mut r = ReportState::new(cfg());
+        // 1500 / 1000 = 1.5 → 截断得 1
+        r.ingest_motion(motion(1500.0, 0.0));
+        let report = r.peek_report().unwrap();
+        assert_eq!(report.dx, 1);
+        assert_eq!(report.dy, 0);
+    }
+
+    #[test]
+    fn commit_sent_reduces_pending() {
+        let mut r = ReportState::new(cfg());
+        r.ingest_motion(motion(2500.0, 1500.0));
+        let report = r.peek_report().unwrap();
+        assert_eq!(report.dx, 2);
+        assert_eq!(report.dy, 1);
+        r.commit_sent(report);
+        assert!(!r.has_pending());
+    }
+
+    #[test]
+    fn invalid_motion_resets_accum() {
+        let mut r = ReportState::new(cfg());
+        r.ingest_motion(motion(1500.0, 0.0));
+        assert!(r.peek_report().is_some());
+        // 无效 motion 会清零分数累积
+        r.ingest_motion(MotionState {
+            vx: 0.0,
+            vy: 0.0,
+            valid: false,
+        });
+        r.commit_sent(ReportDelta { dx: 1, dy: 0 });
+        // 后续 motion 重新累积
+        r.ingest_motion(motion(1500.0, 0.0));
+        assert!(r.peek_report().is_some());
+    }
+
+    #[test]
+    fn zero_motion_resets_fractional() {
+        let mut r = ReportState::new(ReportConfig { report_hz: 4.0 });
+        // 积累 0.75，但零 motion 会清零
+        r.ingest_motion(motion(3.0, 3.0));
+        r.ingest_motion(motion(0.0, 0.0));
+        r.ingest_motion(motion(3.0, 0.0));
+        // 零 motion 已清零分数，此处只有 0.75，不够 1
+        assert_eq!(r.peek_report(), None);
+        // 再补一次 0.75 才够 1
+        r.ingest_motion(motion(3.0, 0.0));
+        assert_eq!(r.peek_report().unwrap().dx, 1);
+    }
+
+    #[test]
+    fn reset_all_clears_everything() {
+        let mut r = ReportState::new(cfg());
+        r.ingest_motion(motion(1500.0, 1500.0));
+        r.reset_all();
+        assert!(!r.has_pending());
+        assert_eq!(r.peek_report(), None);
+    }
+
+    #[test]
+    fn config_returns_initial() {
+        let r = ReportState::new(ReportConfig { report_hz: 123.0 });
+        assert_eq!(r.config().report_hz, 123.0);
+    }
+
+    #[test]
+    fn clear_pending_removes_pending() {
+        let mut r = ReportState::new(cfg());
+        r.ingest_motion(motion(1500.0, 0.0));
+        assert!(r.has_pending());
+        r.clear_pending();
+        assert!(!r.has_pending());
+    }
+
+    #[test]
+    fn zero_report_hz_resets_fractional() {
+        let mut r = ReportState::new(ReportConfig { report_hz: 0.0 });
+        r.ingest_motion(motion(1500.0, 0.0));
+        assert_eq!(r.peek_report(), None);
+    }
+
+    #[test]
+    fn partial_commit_leaves_remaining() {
+        let mut r = ReportState::new(cfg());
+        r.ingest_motion(motion(3500.0, 1000.0));
+        let report = r.peek_report().unwrap();
+        assert_eq!(report.dx, 3);
+        assert_eq!(report.dy, 1);
+        // 只提交部分
+        r.commit_sent(ReportDelta { dx: 1, dy: 1 });
+        assert_eq!(r.pending(), (2, 0));
+    }
+
+    #[test]
+    fn trunc_toward_zero_positive() {
+        assert_eq!(trunc_toward_zero(3.7), 3);
+        assert_eq!(trunc_toward_zero(0.5), 0);
+        assert_eq!(trunc_toward_zero(0.0), 0);
+    }
+
+    #[test]
+    fn trunc_toward_zero_negative() {
+        assert_eq!(trunc_toward_zero(-3.7), -3);
+        assert_eq!(trunc_toward_zero(-0.5), 0);
+    }
+
+    #[test]
+    fn peek_report_clamps_to_i8() {
+        let mut r = ReportState::new(cfg());
+        r.ingest_motion(motion(300_000.0, -200_000.0));
+        let report = r.peek_report().unwrap();
+        // 300 >= i8::MAX → 127, -200 <= i8::MIN → -128
+        assert_eq!(report.dx, 127);
+        assert_eq!(report.dy, -128);
+    }
+}

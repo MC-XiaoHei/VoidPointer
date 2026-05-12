@@ -13,7 +13,6 @@ impl RotaryEncoder {
     }
 
     pub fn sync(&mut self, enc_a: bool, enc_b: bool) {
-        // 启动或重同步时直接对齐相位，避免把历史毛刺累计成滚轮步进
         self.prev_state = ((enc_a as u8) << 1) | (enc_b as u8);
         self.accum = 0;
     }
@@ -31,7 +30,6 @@ impl RotaryEncoder {
         self.prev_state = current_state;
         self.accum += delta;
 
-        // 一格机械步进通常会经过 4 个合法相位变化，这里只在累计满一格后上报
         if self.accum >= 4 {
             self.accum -= 4;
             1
@@ -41,5 +39,91 @@ impl RotaryEncoder {
         } else {
             0
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_is_default() {
+        let e = RotaryEncoder::new();
+        assert_eq!(e.accum, 0);
+    }
+
+    #[test]
+    fn sync_resets_accum() {
+        let mut e = RotaryEncoder::new();
+        e.update(true, false);
+        e.sync(false, false);
+        assert_eq!(e.accum, 0);
+    }
+
+    #[test]
+    fn full_step_forward() {
+        let mut e = RotaryEncoder::new();
+        // 00 → 10 → 11 → 01 → 00
+        assert_eq!(e.update(false, false), 0);
+        assert_eq!(e.update(true, false), 0);
+        assert_eq!(e.update(true, true), 0);
+        assert_eq!(e.update(false, true), 0);
+        assert_eq!(e.update(false, false), 1);
+    }
+
+    #[test]
+    fn full_step_backward() {
+        let mut e = RotaryEncoder::new();
+        // 00 → 01 → 11 → 10 → 00
+        assert_eq!(e.update(false, false), 0);
+        assert_eq!(e.update(false, true), 0);
+        assert_eq!(e.update(true, true), 0);
+        assert_eq!(e.update(true, false), 0);
+        assert_eq!(e.update(false, false), -1);
+    }
+
+    #[test]
+    fn partial_then_reverse() {
+        let mut e = RotaryEncoder::new();
+        e.update(false, true);
+        e.update(true, true);
+        e.update(true, false);
+        e.update(true, true);
+        let result = e.update(false, true);
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn sync_clears_partial() {
+        let mut e = RotaryEncoder::new();
+        e.update(false, true);
+        e.update(true, true);
+        e.sync(false, false);
+        assert_eq!(e.update(false, true), 0);
+    }
+
+    #[test]
+    fn two_full_steps_forward() {
+        let mut e = RotaryEncoder::new();
+        // 4 次更新完成一格，再 4 次完成第二格
+        for _ in 0..2 {
+            assert_eq!(e.update(true, false), 0);
+            assert_eq!(e.update(true, true), 0);
+            assert_eq!(e.update(false, true), 0);
+            assert_eq!(e.update(false, false), 1);
+        }
+    }
+
+    #[test]
+    fn bounce_on_one_phase() {
+        let mut e = RotaryEncoder::new();
+        e.update(true, false);
+        e.update(true, true);
+        e.update(true, false);
+        e.update(true, true);
+        e.update(true, false);
+        let r = e.update(true, true);
+        assert_eq!(r, 0);
     }
 }
