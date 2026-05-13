@@ -1,6 +1,9 @@
 use core::cell::UnsafeCell;
+use core::sync::atomic::Ordering;
+use core::sync::atomic::compiler_fence;
 
 const EVENT_QUEUE_CAPACITY: usize = 16;
+const EVENT_QUEUE_MASK: u32 = (EVENT_QUEUE_CAPACITY - 1) as u32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RuntimeEvent {
@@ -68,92 +71,82 @@ pub enum RuntimeEvent {
     },
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct EventQueueStats {
-    pub dropped: u16,
-}
-
 struct EventQueueInner {
-    buf: [Option<RuntimeEvent>; EVENT_QUEUE_CAPACITY],
-    head: usize,
-    tail: usize,
-    len: usize,
-    dropped: u16,
-}
-
-impl EventQueueInner {
-    const fn new() -> Self {
-        Self {
-            buf: [None; EVENT_QUEUE_CAPACITY],
-            head: 0,
-            tail: 0,
-            len: 0,
-            dropped: 0,
-        }
-    }
-
-    fn push(&mut self, event: RuntimeEvent) -> bool {
-        if self.len == EVENT_QUEUE_CAPACITY {
-            self.dropped = self.dropped.saturating_add(1);
-            return false;
-        }
-
-        self.buf[self.tail] = Some(event);
-        self.tail = (self.tail + 1) % EVENT_QUEUE_CAPACITY;
-        self.len += 1;
-        true
-    }
-
-    fn pop(&mut self) -> Option<RuntimeEvent> {
-        if self.len == 0 {
-            return None;
-        }
-
-        let event = self.buf[self.head].take();
-        self.head = (self.head + 1) % EVENT_QUEUE_CAPACITY;
-        self.len -= 1;
-        event
-    }
-
-    fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    fn stats(&self) -> EventQueueStats {
-        EventQueueStats {
-            dropped: self.dropped,
-        }
-    }
+    buf: [RuntimeEvent; EVENT_QUEUE_CAPACITY],
+    /// 仅 ISR 写入
+    head: u32,
+    /// 仅主循环写入
+    tail: u32,
+    /// 仅 ISR 写入
+    dropped: u32,
 }
 
 pub struct EventQueue {
     inner: UnsafeCell<EventQueueInner>,
 }
 
-// SAFETY: 队列访问依赖 CH585 单核与当前执行模型的串行化约束
 unsafe impl Sync for EventQueue {}
 
 impl EventQueue {
     pub const fn new() -> Self {
         Self {
-            inner: UnsafeCell::new(EventQueueInner::new()),
+            inner: UnsafeCell::new(EventQueueInner {
+                buf: [RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                }; EVENT_QUEUE_CAPACITY],
+                head: 0,
+                tail: 0,
+                dropped: 0,
+            }),
         }
     }
 
+    /// 只能在 ISR 上下文调用
     pub fn push(&self, event: RuntimeEvent) -> bool {
-        // ISR 里不能做重活，这里只允许短入队
-        unsafe { (&mut *self.inner.get()).push(event) }
+        let inner = unsafe { &mut *self.inner.get() };
+        let next_head = (inner.head + 1) & EVENT_QUEUE_MASK;
+
+        if next_head == inner.tail {
+            inner.dropped += 1;
+            return false;
+        }
+
+        inner.buf[inner.head as usize] = event;
+        compiler_fence(Ordering::Release);
+        inner.head = next_head;
+        true
     }
 
+    /// 只能在主循环上下文调用
     pub fn pop(&self) -> Option<RuntimeEvent> {
-        unsafe { (&mut *self.inner.get()).pop() }
+        let inner = unsafe { &mut *self.inner.get() };
+
+        if inner.head == inner.tail {
+            return None;
+        }
+
+        let event = inner.buf[inner.tail as usize];
+        compiler_fence(Ordering::Acquire);
+        inner.tail = (inner.tail + 1) & EVENT_QUEUE_MASK;
+        Some(event)
     }
 
     pub fn is_empty(&self) -> bool {
-        unsafe { (&*self.inner.get()).is_empty() }
+        let inner = unsafe { &*self.inner.get() };
+        inner.head == inner.tail
     }
 
     pub fn stats(&self) -> EventQueueStats {
-        unsafe { (&*self.inner.get()).stats() }
+        let inner = unsafe { &*self.inner.get() };
+        EventQueueStats {
+            dropped: inner.dropped,
+        }
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EventQueueStats {
+    pub dropped: u32,
 }

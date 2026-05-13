@@ -2,7 +2,6 @@ use crate::config::{ConfigManager, SaveOutcome};
 use crate::hid::types::{CUSTOM_REPORT_PAYLOAD_CAPACITY, CustomReport};
 use crate::power::{PowerManager, PowerState};
 use crate::route::{HidRoute, HidRouter, UsbState};
-use crate::runtime::events::EventQueueStats;
 use crate::vendor::VendorRxStats;
 
 pub const CUSTOM_PROTOCOL_MAGIC: u8 = 0xA5;
@@ -114,7 +113,7 @@ pub fn parse_frame(buf: &[u8]) -> Result<CustomFrameView<'_>, ParseError> {
     }
 
     let expected_len = CUSTOM_PROTOCOL_HEADER_LEN + payload_len;
-    if buf.len() != expected_len {
+    if buf.len() < expected_len {
         return Err(ParseError::LengthMismatch);
     }
 
@@ -163,11 +162,12 @@ pub fn encode_frame(
             .copy_from_slice(payload);
     }
 
-    let total_len = CUSTOM_PROTOCOL_HEADER_LEN + payload.len();
-    for b in &mut out.data[total_len..] {
+    // 填充到 64 字节，匹配 USB report descriptor 定义的 Input report 大小
+    let frame_len = CUSTOM_PROTOCOL_HEADER_LEN + payload.len();
+    for b in &mut out.data[frame_len..] {
         *b = 0;
     }
-    out.len = total_len as u16;
+    out.len = CUSTOM_REPORT_PAYLOAD_CAPACITY as u16;
     Ok(())
 }
 
@@ -304,9 +304,8 @@ pub fn build_power_state_payload(
 pub fn build_diagnostics_payload(
     protocol_stats: ProtocolStats,
     vendor_rx_stats: VendorRxStats,
-    event_queue_stats: EventQueueStats,
-) -> [u8; 16] {
-    let mut payload = [0u8; 16];
+) -> [u8; 14] {
+    let mut payload = [0u8; 14];
     payload[0..2].copy_from_slice(&protocol_stats.rx_ok.to_le_bytes());
     payload[2..4].copy_from_slice(&protocol_stats.rx_invalid.to_le_bytes());
     payload[4..6].copy_from_slice(&protocol_stats.rx_unsupported.to_le_bytes());
@@ -314,7 +313,6 @@ pub fn build_diagnostics_payload(
     payload[8..10].copy_from_slice(&protocol_stats.tx_dropped_no_route.to_le_bytes());
     payload[10..12].copy_from_slice(&vendor_rx_stats.dropped.to_le_bytes());
     payload[12..14].copy_from_slice(&vendor_rx_stats.too_large.to_le_bytes());
-    payload[14..16].copy_from_slice(&event_queue_stats.dropped.to_le_bytes());
     payload
 }
 
@@ -325,7 +323,6 @@ pub fn handle_request(
     power: &PowerManager,
     protocol_stats: ProtocolStats,
     vendor_rx_stats: VendorRxStats,
-    event_queue_stats: EventQueueStats,
     out: &mut CustomReport,
 ) -> Result<(), u16> {
     if (frame.flags & CUSTOM_FLAG_REQUEST) == 0 || (frame.flags & CUSTOM_FLAG_RESPONSE) != 0 {
@@ -486,8 +483,7 @@ pub fn handle_request(
             .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
         }
         CUSTOM_CMD_GET_DIAGNOSTICS => {
-            let payload =
-                build_diagnostics_payload(protocol_stats, vendor_rx_stats, event_queue_stats);
+            let payload = build_diagnostics_payload(protocol_stats, vendor_rx_stats);
             encode_response(
                 frame.command,
                 frame.sequence,
@@ -551,6 +547,26 @@ mod tests {
         let result = parse_frame(&buf);
         assert!(result.is_ok());
         let frame = result.unwrap();
+        assert_eq!(frame.total_len, 0);
+        assert!(frame.payload.is_empty());
+    }
+
+    #[test]
+    fn parse_frame_larger_buffer_ok() {
+        // USB 总是传完整的 endpoint 大小（如 64 字节），
+        // 但 frame 可能只有 16 字节（header + 空 payload）
+        let mut buf = [0u8; 64];
+        buf[0] = CUSTOM_PROTOCOL_MAGIC;
+        buf[1] = CUSTOM_PROTOCOL_VERSION;
+        buf[2] = CUSTOM_FLAG_REQUEST;
+        buf[3] = 1;
+        // cmd = Ping (0x0000), status=0, offset=0, total_len=0, payload_len=0
+        // 这些字段已经在 buf 中初始化为 0
+        let result = parse_frame(&buf);
+        assert!(result.is_ok());
+        let frame = result.unwrap();
+        assert_eq!(frame.sequence, 1);
+        assert_eq!(frame.command, CUSTOM_CMD_PING);
         assert_eq!(frame.total_len, 0);
         assert!(frame.payload.is_empty());
     }
@@ -759,9 +775,8 @@ mod tests {
             dropped: 10,
             too_large: 20,
         };
-        let ev_stats = EventQueueStats { dropped: 100 };
-        let payload = build_diagnostics_payload(stats, rx_stats, ev_stats);
-        assert_eq!(payload.len(), 16);
+        let payload = build_diagnostics_payload(stats, rx_stats);
+        assert_eq!(payload.len(), 14);
         assert_eq!(payload[0], 1);
         assert_eq!(payload[2], 2);
     }

@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>VoidPointer WebHID 测试</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: -apple-system, "Segoe UI", sans-serif;
+                background: #f5f5f5;
+                padding: 20px;
+                color: #333;
+            }
+            h1 {
+                font-size: 1.4rem;
+                margin-bottom: 16px;
+            }
+            section {
+                background: #fff;
+                border-radius: 8px;
+                padding: 16px;
+                margin-bottom: 16px;
+                box-shadow: 0 1px 3px #0002;
+            }
+            h2 {
+                font-size: 1rem;
+                margin-bottom: 10px;
+                color: #555;
+            }
+            button {
+                padding: 6px 14px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.85rem;
+            }
+            button:active {
+                opacity: 0.7;
+            }
+            .btn-primary {
+                background: #4a90d9;
+                color: #fff;
+            }
+            .btn-primary:hover {
+                background: #357abd;
+            }
+            .btn-success {
+                background: #27ae60;
+                color: #fff;
+            }
+            .btn-success:hover {
+                background: #1e8449;
+            }
+            .btn-danger {
+                background: #e74c3c;
+                color: #fff;
+            }
+            .btn-danger:hover {
+                background: #c0392b;
+            }
+            .btn-secondary {
+                background: #95a5a6;
+                color: #fff;
+            }
+            .btn-secondary:hover {
+                background: #7f8c8d;
+            }
+            .btn-warning {
+                background: #f39c12;
+                color: #fff;
+            }
+            .btn-warning:hover {
+                background: #d68910;
+            }
+            .btn-sm {
+                font-size: 0.8rem;
+                padding: 4px 10px;
+            }
+            #status {
+                margin-top: 8px;
+                font-size: 0.85rem;
+                padding: 8px;
+                border-radius: 4px;
+            }
+            .connected {
+                background: #d4edda;
+                color: #155724;
+            }
+            .disconnected {
+                background: #f8d7da;
+                color: #721c24;
+            }
+            .cmd-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-bottom: 8px;
+            }
+            .cmd-grid button {
+                min-width: 80px;
+            }
+            #log {
+                font-family:
+                    "Cascadia Code", "Fira Code", "Consolas", monospace;
+                font-size: 0.8rem;
+                background: #1e1e2e;
+                color: #cdd6f4;
+                border-radius: 4px;
+                padding: 8px;
+                max-height: 400px;
+                overflow-y: auto;
+                white-space: pre-wrap;
+                word-break: break-all;
+            }
+            .log-request {
+                color: #89b4fa;
+            }
+            .log-response {
+                color: #a6e3a1;
+            }
+            .log-error {
+                color: #f38ba8;
+            }
+            .log-info {
+                color: #f9e2af;
+            }
+            .hex {
+                color: #94e2d5;
+                font-size: 0.75rem;
+            }
+            .field-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 6px;
+                flex-wrap: wrap;
+            }
+            .field-row label {
+                min-width: 80px;
+                font-size: 0.85rem;
+            }
+            .field-row input,
+            .field-row select {
+                padding: 4px 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 0.85rem;
+            }
+            .field-row input[type="number"] {
+                width: 100px;
+            }
+            #custom-frame {
+                width: 100%;
+                font-family: monospace;
+                font-size: 0.8rem;
+                padding: 6px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                resize: vertical;
+                min-height: 60px;
+            }
+            .badge {
+                display: inline-block;
+                padding: 1px 6px;
+                border-radius: 3px;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+            .badge-ok {
+                background: #27ae60;
+                color: #fff;
+            }
+            .badge-err {
+                background: #e74c3c;
+                color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>🔌 VoidPointer WebHID 测试</h1>
+
+        <!-- 连接 -->
+        <section>
+            <h2>连接</h2>
+            <button id="btn-connect" class="btn-primary">连接设备</button>
+            <button id="btn-disconnect" class="btn-danger" disabled>
+                断开
+            </button>
+            <div id="status" class="disconnected">未连接</div>
+        </section>
+
+        <!-- 基础命令 -->
+        <section>
+            <h2>基础查询</h2>
+            <div class="cmd-grid">
+                <button class="cmd-btn btn-success" data-cmd="ping">
+                    Ping
+                </button>
+                <button
+                    class="cmd-btn btn-success"
+                    data-cmd="get-protocol-info"
+                >
+                    协议信息
+                </button>
+                <button class="cmd-btn btn-success" data-cmd="get-device-info">
+                    设备信息
+                </button>
+                <button class="cmd-btn btn-success" data-cmd="get-route-state">
+                    路由状态
+                </button>
+                <button class="cmd-btn btn-success" data-cmd="get-power-state">
+                    电源状态
+                </button>
+                <button class="cmd-btn btn-success" data-cmd="get-diagnostics">
+                    诊断计数
+                </button>
+            </div>
+        </section>
+
+        <!-- 配置读取 -->
+        <section>
+            <h2>配置读取</h2>
+            <div class="cmd-grid">
+                <button class="cmd-btn btn-primary" data-cmd="get-config-info">
+                    配置信息
+                </button>
+                <button class="cmd-btn btn-primary" data-cmd="read-config">
+                    读取配置
+                </button>
+            </div>
+            <div
+                id="config-display"
+                style="margin-top: 8px; font-size: 0.85rem; display: none"
+            >
+                <div class="field-row">
+                    <label>suspend_timeout_ms</label
+                    ><span id="cfg-suspend-ms">—</span>
+                </div>
+                <div class="field-row">
+                    <label>disconnect_sleep_ms</label
+                    ><span id="cfg-sleep-ms">—</span>
+                </div>
+                <div class="field-row">
+                    <label>report_hz</label><span id="cfg-report-hz">—</span>
+                </div>
+                <div class="field-row">
+                    <label>sensitivity_x</label><span id="cfg-sens-x">—</span>
+                </div>
+                <div class="field-row">
+                    <label>sensitivity_y</label><span id="cfg-sens-y">—</span>
+                </div>
+                <div class="field-row">
+                    <label>deadzone_x_rad</label><span id="cfg-dz-x">—</span>
+                </div>
+                <div class="field-row">
+                    <label>deadzone_y_rad</label><span id="cfg-dz-y">—</span>
+                </div>
+                <div class="field-row">
+                    <label>max_angle_rad</label
+                    ><span id="cfg-max-angle">—</span>
+                </div>
+                <div class="field-row">
+                    <label>smoothing_alpha</label><span id="cfg-smooth">—</span>
+                </div>
+                <div class="field-row">
+                    <label>invert_x</label><span id="cfg-inv-x">—</span>
+                </div>
+                <div class="field-row">
+                    <label>invert_y</label><span id="cfg-inv-y">—</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 配置写入 -->
+        <section>
+            <h2>配置写入</h2>
+            <p style="font-size: 0.8rem; color: #888; margin-bottom: 8px">
+                修改参数后点「写入配置」→「提交」→「保存到Flash」（需要使用
+                Debug 构建的值）
+            </p>
+            <div class="field-row">
+                <label>suspend_timeout_ms</label
+                ><input type="number" id="w-suspend-ms" value="5000" />
+            </div>
+            <div class="field-row">
+                <label>disconnect_sleep_ms</label
+                ><input type="number" id="w-sleep-ms" value="60000" />
+            </div>
+            <div class="field-row">
+                <label>report_hz</label
+                ><input
+                    type="number"
+                    id="w-report-hz"
+                    value="1000"
+                    step="any"
+                />
+            </div>
+            <div class="field-row">
+                <label>sensitivity_x</label
+                ><input type="number" id="w-sens-x" value="8000" step="any" />
+            </div>
+            <div class="field-row">
+                <label>sensitivity_y</label
+                ><input type="number" id="w-sens-y" value="8000" step="any" />
+            </div>
+            <div class="field-row">
+                <label>deadzone_x_rad</label
+                ><input type="number" id="w-dz-x" value="0.02" step="any" />
+            </div>
+            <div class="field-row">
+                <label>deadzone_y_rad</label
+                ><input type="number" id="w-dz-y" value="0.02" step="any" />
+            </div>
+            <div class="field-row">
+                <label>max_angle_rad</label
+                ><input type="number" id="w-max-angle" value="1.0" step="any" />
+            </div>
+            <div class="field-row">
+                <label>smoothing_alpha</label
+                ><input type="number" id="w-smooth" value="0.3" step="any" />
+            </div>
+            <div class="field-row">
+                <label><input type="checkbox" id="w-inv-x" /> invert_x</label>
+                <label><input type="checkbox" id="w-inv-y" /> invert_y</label>
+            </div>
+            <div class="cmd-grid" style="margin-top: 10px">
+                <button id="btn-write-begin" class="btn-warning">
+                    写入配置 (Begin)
+                </button>
+                <button id="btn-write-commit" class="btn-warning" disabled>
+                    提交 (Commit)
+                </button>
+                <button id="btn-write-abort" class="btn-secondary">
+                    放弃 (Abort)
+                </button>
+                <button id="btn-save-config" class="btn-danger">
+                    保存到 Flash
+                </button>
+                <button id="btn-restore-defaults" class="btn-secondary">
+                    恢复默认
+                </button>
+            </div>
+        </section>
+
+        <!-- 自定义帧 -->
+        <section>
+            <h2>自定义帧</h2>
+            <div class="field-row">
+                <label>命令 ID (hex)</label
+                ><input
+                    type="text"
+                    id="custom-cmd"
+                    value="0000"
+                    style="width: 60px; font-family: monospace"
+                />
+                <label>Payload (hex)</label
+                ><input
+                    type="text"
+                    id="custom-payload"
+                    value=""
+                    style="width: 300px; font-family: monospace; flex: 1"
+                />
+                <button id="btn-send-custom" class="btn-secondary btn-sm">
+                    发送
+                </button>
+            </div>
+        </section>
+
+        <!-- 日志 -->
+        <section>
+            <h2>通信日志</h2>
+            <div id="log">[信息] 请连接设备后操作</div>
+        </section>
+
+        <script>
+            // ─── 协议常量 ───────────────────────────────────
+            const MAGIC = 0xa5;
+            const VERSION = 0x01;
+            const HEADER_LEN = 16;
+            const REPORT_LEN = 64;
+
+            const FLAG_REQUEST = 0x01;
+            const FLAG_RESPONSE = 0x02;
+
+            const STATUS_OK = 0x0000;
+            const STATUS_INVALID_COMMAND = 0x0001;
+            const STATUS_INVALID_ARGUMENT = 0x0002;
+            const STATUS_BAD_LENGTH = 0x0003;
+            const STATUS_BAD_SEQUENCE = 0x0004;
+            const STATUS_CRC_MISMATCH = 0x0005;
+            const STATUS_BUSY = 0x0006;
+            const STATUS_NOT_READY = 0x0007;
+            const STATUS_STORAGE_ERROR = 0x0008;
+            const STATUS_INTERNAL_ERROR = 0x0009;
+
+            const CMD_PING = 0x0000;
+            const CMD_GET_PROTOCOL_INFO = 0x0001;
+            const CMD_GET_DEVICE_INFO = 0x0002;
+            const CMD_GET_CONFIG_INFO = 0x0100;
+            const CMD_READ_CONFIG = 0x0101;
+            const CMD_WRITE_CONFIG_BEGIN = 0x0102;
+            const CMD_WRITE_CONFIG_CHUNK = 0x0103;
+            const CMD_WRITE_CONFIG_COMMIT = 0x0104;
+            const CMD_WRITE_CONFIG_ABORT = 0x0105;
+            const CMD_SAVE_CONFIG = 0x0106;
+            const CMD_RESTORE_DEFAULTS = 0x0107;
+            const CMD_GET_ROUTE_STATE = 0x0201;
+            const CMD_GET_POWER_STATE = 0x0202;
+            const CMD_GET_DIAGNOSTICS = 0x0300;
+
+            const STATUS_NAMES = {
+                [STATUS_OK]: "OK",
+                [STATUS_INVALID_COMMAND]: "InvalidCommand",
+                [STATUS_INVALID_ARGUMENT]: "InvalidArgument",
+                [STATUS_BAD_LENGTH]: "BadLength",
+                [STATUS_BAD_SEQUENCE]: "BadSequence",
+                [STATUS_CRC_MISMATCH]: "CrcMismatch",
+                [STATUS_BUSY]: "Busy",
+                [STATUS_NOT_READY]: "NotReady",
+                [STATUS_STORAGE_ERROR]: "StorageError",
+                [STATUS_INTERNAL_ERROR]: "InternalError",
+            };
+
+            const CMD_NAMES = {
+                [CMD_PING]: "Ping",
+                [CMD_GET_PROTOCOL_INFO]: "GetProtocolInfo",
+                [CMD_GET_DEVICE_INFO]: "GetDeviceInfo",
+                [CMD_GET_CONFIG_INFO]: "GetConfigInfo",
+                [CMD_READ_CONFIG]: "ReadConfig",
+                [CMD_WRITE_CONFIG_BEGIN]: "WriteConfigBegin",
+                [CMD_WRITE_CONFIG_CHUNK]: "WriteConfigChunk",
+                [CMD_WRITE_CONFIG_COMMIT]: "WriteConfigCommit",
+                [CMD_WRITE_CONFIG_ABORT]: "WriteConfigAbort",
+                [CMD_SAVE_CONFIG]: "SaveConfig",
+                [CMD_RESTORE_DEFAULTS]: "RestoreDefaults",
+                [CMD_GET_ROUTE_STATE]: "GetRouteState",
+                [CMD_GET_POWER_STATE]: "GetPowerState",
+                [CMD_GET_DIAGNOSTICS]: "GetDiagnostics",
+            };
+
+            const ROUTE_NAMES = { 0: "None", 1: "BLE", 2: "2.4G", 3: "USB" };
+            const USB_STATE_NAMES = {
+                0: "Detached",
+                1: "Attached",
+                2: "Configured",
+                3: "Suspended",
+                4: "Error",
+            };
+            const POWER_STATE_NAMES = { 0: "Active", 1: "Suspend", 2: "Sleep" };
+
+            // ─── 设备状态 ───────────────────────────────────
+            let device = null;
+            let seq = 0;
+
+            // ─── DOM ────────────────────────────────────────
+            const $log = document.getElementById("log");
+            const $status = document.getElementById("status");
+            const $btnConn = document.getElementById("btn-connect");
+            const $btnDisc = document.getElementById("btn-disconnect");
+            const $cfgDisplay = document.getElementById("config-display");
+
+            function $id(id) {
+                return document.getElementById(id);
+            }
+
+            // ─── 日志 ───────────────────────────────────────
+            function log(msg, cls = "") {
+                const line = document.createElement("div");
+                line.className = cls;
+                line.textContent = msg;
+                $log.appendChild(line);
+                $log.scrollTop = $log.scrollHeight;
+            }
+
+            function hex(buf) {
+                return Array.from(new Uint8Array(buf))
+                    .map((b) => b.toString(16).padStart(2, "0"))
+                    .join(" ");
+            }
+
+            function hexRaw(buf) {
+                return Array.from(new Uint8Array(buf))
+                    .map((b) => b.toString(16).padStart(2, "0"))
+                    .join("");
+            }
+
+            // ─── 帧构造 ─────────────────────────────────────
+            function buildFrame(cmd, payload) {
+                const buf = new ArrayBuffer(REPORT_LEN);
+                const dv = new DataView(buf);
+                const pl = new Uint8Array(payload || []);
+
+                dv.setUint8(0, MAGIC);
+                dv.setUint8(1, VERSION);
+                dv.setUint8(2, FLAG_REQUEST);
+                dv.setUint8(3, ++seq & 0xff);
+                dv.setUint16(4, cmd, true);
+                dv.setUint16(6, 0, true);
+                dv.setUint16(8, 0, true);
+                dv.setUint32(10, pl.length, true);
+                dv.setUint16(14, pl.length, true);
+
+                if (pl.length > 0) {
+                    new Uint8Array(buf, HEADER_LEN, pl.length).set(pl);
+                }
+                return buf;
+            }
+
+            function parseResponse(buf) {
+                const dv = new DataView(buf);
+                if (dv.byteLength < HEADER_LEN) return null;
+                if (dv.getUint8(0) !== MAGIC) return null;
+                return {
+                    magic: dv.getUint8(0),
+                    version: dv.getUint8(1),
+                    flags: dv.getUint8(2),
+                    seq: dv.getUint8(3),
+                    command: dv.getUint16(4, true),
+                    status: dv.getUint16(6, true),
+                    offset: dv.getUint16(8, true),
+                    total_len: dv.getUint32(10, true),
+                    payload_len: dv.getUint16(14, true),
+                    payload: new Uint8Array(
+                        buf,
+                        HEADER_LEN,
+                        dv.getUint16(14, true),
+                    ),
+                };
+            }
+
+            // ─── 发送与接收 ─────────────────────────────────
+            let pendingResolve = null;
+            let pendingTimeout = null;
+
+            async function sendCmd(cmd, payload, label) {
+                if (!device) {
+                    log("[错误] 未连接", "log-error");
+                    return null;
+                }
+
+                const frame = buildFrame(cmd, payload);
+                const labelStr =
+                    label ||
+                    CMD_NAMES[cmd] ||
+                    `0x${cmd.toString(16).padStart(4, "0")}`;
+                log(`→ ${labelStr}  [${hex(frame)}]`, "log-request");
+
+                try {
+                    await device.sendReport(0, frame);
+                } catch (e) {
+                    log(`[发送失败] ${e.message}`, "log-error");
+                    return null;
+                }
+
+                return new Promise((resolve) => {
+                    pendingResolve = resolve;
+                    pendingTimeout = setTimeout(() => {
+                        pendingResolve = null;
+                        log("[超时] 设备未回复", "log-error");
+                        resolve(null);
+                    }, 2000);
+                });
+            }
+
+            function onInputReport(event) {
+                if (pendingTimeout) {
+                    clearTimeout(pendingTimeout);
+                    pendingTimeout = null;
+                }
+
+                const resp = parseResponse(event.data.buffer);
+                if (!resp) {
+                    log(`← [无法解析] ${hex(event.data)}`, "log-error");
+                    if (pendingResolve) {
+                        pendingResolve(null);
+                        pendingResolve = null;
+                    }
+                    return;
+                }
+
+                const cmdName =
+                    CMD_NAMES[resp.command] ||
+                    `0x${resp.command.toString(16).padStart(4, "0")}`;
+                const statusName =
+                    STATUS_NAMES[resp.status] ||
+                    `0x${resp.status.toString(16).padStart(4, "0")}`;
+                const statusBadge =
+                    resp.status === STATUS_OK ? "badge-ok" : "badge-err";
+                const plHex =
+                    resp.payload.length > 0
+                        ? " [" + hex(resp.payload) + "]"
+                        : "";
+
+                log(
+                    `← ${cmdName}  status=${resp.status} (${statusName})${plHex}`,
+                    "log-response",
+                );
+
+                if (pendingResolve) {
+                    pendingResolve(resp);
+                    pendingResolve = null;
+                }
+            }
+
+            // ─── 连接 ───────────────────────────────────────
+            async function connect() {
+                try {
+                    const devs = await navigator.hid.requestDevice({
+                        filters: [{ usagePage: 0xff00 }],
+                    });
+                    if (devs.length === 0) return;
+                    device = devs[0];
+                    await device.open();
+                    device.oninputreport = onInputReport;
+
+                    $status.className = "connected";
+                    $status.textContent = `已连接: ${device.productName} (${device.vendorId.toString(16)}:${device.productId.toString(16)})`;
+                    $btnConn.disabled = true;
+                    $btnDisc.disabled = false;
+                    log(`[信息] 已连接 ${device.productName}`, "log-info");
+                } catch (e) {
+                    log(`[连接失败] ${e.message}`, "log-error");
+                }
+            }
+
+            function disconnect() {
+                if (device) {
+                    device.close();
+                    device = null;
+                }
+                $status.className = "disconnected";
+                $status.textContent = "未连接";
+                $btnConn.disabled = false;
+                $btnDisc.disabled = true;
+                log("[信息] 已断开", "log-info");
+            }
+
+            // ─── 解码 GetConfigInfo 响应 ──────────────────
+            function showConfigInfo(resp) {
+                if (!resp || resp.payload.length < 12) return;
+                const dv = new DataView(
+                    resp.payload.buffer,
+                    resp.payload.byteOffset,
+                );
+                const cfgVer = dv.getUint16(0, true);
+                const dirty = resp.payload[2];
+                const writing = resp.payload[3];
+                const len = dv.getUint32(4, true);
+                const crc = dv.getUint32(8, true);
+
+                log(
+                    `  → config_version=${cfgVer}, dirty=${dirty}, writing=${writing}, payload_len=${len}, crc32=0x${crc.toString(16).padStart(8, "0")}`,
+                    "log-info",
+                );
+            }
+
+            // ─── 解码 ReadConfig 响应 ──────────────────────
+            function showConfigPayload(resp) {
+                if (!resp || resp.payload.length < 8) return;
+                const pl = resp.payload;
+                $cfgDisplay.style.display = "block";
+
+                // 尝试解码 postcard 序列化的 DeviceConfig
+                // 结构: PowerConfig + MotionConfig + ReportConfig
+                // PowerConfig: suspend_timeout_ms(u32) + disconnect_sleep_timeout_ms(u32)
+                // ReportConfig: report_hz(f32)
+                // MotionConfig: sensitivity_x(f32) + sensitivity_y(f32) + deadzone_x_rad(f32) +
+                //   deadzone_y_rad(f32) + max_angle_rad(f32) + smoothing_alpha(f32) + invert_x(u8) + invert_y(u8) + deadzone_speed(f32)
+                try {
+                    const dv = new DataView(pl.buffer, pl.byteOffset);
+                    let off = 0;
+
+                    // PowerConfig: 两个 u32 (varint in postcard, but small values are 1 byte each)
+                    // postcard 中 u32 采用 varint 编码。小于 128 的值用 1 字节
+                    function readVarint32() {
+                        let val = 0,
+                            shift = 0;
+                        while (true) {
+                            const byte = pl[off++];
+                            val |= (byte & 0x7f) << shift;
+                            if ((byte & 0x80) === 0) break;
+                            shift += 7;
+                        }
+                        return val >>> 0;
+                    }
+
+                    function readF32() {
+                        const val = dv.getFloat32(off, true);
+                        off += 4;
+                        return val;
+                    }
+
+                    const suspend_ms = readVarint32();
+                    const sleep_ms = readVarint32();
+                    $id("cfg-suspend-ms").textContent = suspend_ms;
+                    $id("cfg-sleep-ms").textContent = sleep_ms;
+
+                    const sens_x = readF32();
+                    const sens_y = readF32();
+                    const dz_x = readF32();
+                    const dz_y = readF32();
+                    const max_angle = readF32();
+                    const smooth = readF32();
+                    const inv_x = pl[off++];
+                    const inv_y = pl[off++];
+                    const dz_speed = readF32();
+
+                    $id("cfg-sens-x").textContent = sens_x.toFixed(1);
+                    $id("cfg-sens-y").textContent = sens_y.toFixed(1);
+                    $id("cfg-dz-x").textContent = dz_x.toFixed(4);
+                    $id("cfg-dz-y").textContent = dz_y.toFixed(4);
+                    $id("cfg-max-angle").textContent = max_angle.toFixed(4);
+                    $id("cfg-smooth").textContent = smooth.toFixed(4);
+                    $id("cfg-inv-x").textContent = inv_x;
+                    $id("cfg-inv-y").textContent = inv_y;
+
+                    // ReportConfig: report_hz f32
+                    const report_hz = readF32();
+                    $id("cfg-report-hz").textContent = report_hz.toFixed(1);
+
+                    log(
+                        `  → 解码成功: suspend=${suspend_ms}ms, sensitivity=(${sens_x.toFixed(1)},${sens_y.toFixed(1)}), report=${report_hz.toFixed(1)}Hz`,
+                        "log-info",
+                    );
+                } catch (e) {
+                    log(`  → 解码失败: ${e.message}`, "log-error");
+                }
+            }
+
+            // ─── 解码 GetRouteState ──────────────────────
+            function showRouteState(resp) {
+                if (!resp || resp.payload.length < 5) return;
+                const mouse = ROUTE_NAMES[resp.payload[0]] || resp.payload[0];
+                const custom = ROUTE_NAMES[resp.payload[1]] || resp.payload[1];
+                const bleConn = resp.payload[2];
+                const usbCfg = resp.payload[3];
+                const wireless = resp.payload[4];
+                log(
+                    `  → mouse_route=${mouse}, custom_route=${custom}, ble=${bleConn}, usb_configured=${usbCfg}, wireless=${wireless}`,
+                    "log-info",
+                );
+            }
+
+            // ─── 解码 GetPowerState ──────────────────────
+            function showPowerState(resp) {
+                if (!resp || resp.payload.length < 12) return;
+                const pwr =
+                    POWER_STATE_NAMES[resp.payload[0]] || resp.payload[0];
+                const usb = USB_STATE_NAMES[resp.payload[1]] || resp.payload[1];
+                const wireless = resp.payload[2];
+                const dirty = resp.payload[3];
+                const dv = new DataView(
+                    resp.payload.buffer,
+                    resp.payload.byteOffset,
+                );
+                const suspend_ms = dv.getUint32(4, true);
+                const sleep_ms = dv.getUint32(8, true);
+                log(
+                    `  → power=${pwr}, usb=${usb}, wireless=${wireless}, dirty=${dirty}, suspend_timeout=${suspend_ms}ms, disconnect_sleep=${sleep_ms}ms`,
+                    "log-info",
+                );
+            }
+
+            // ─── 解码 GetDiagnostics ─────────────────────
+            function showDiagnostics(resp) {
+                if (!resp || resp.payload.length < 16) return;
+                const dv = new DataView(
+                    resp.payload.buffer,
+                    resp.payload.byteOffset,
+                );
+                log(
+                    `  → rx_ok=${dv.getUint16(0, true)} rx_invalid=${dv.getUint16(2, true)} rx_unsupported=${dv.getUint16(4, true)} tx_gen=${dv.getUint16(6, true)} tx_drop=${dv.getUint16(8, true)} vendor_drop=${dv.getUint16(10, true)} vendor_large=${dv.getUint16(12, true)} ev_drop=${dv.getUint16(14, true)}`,
+                    "log-info",
+                );
+            }
+
+            // ─── 构造 DeviceConfig 的 postcard 编码 ──────
+            function encodeDeviceConfig(fields) {
+                // postcard varint u32
+                function varint32(val) {
+                    const bytes = [];
+                    val = val >>> 0;
+                    while (val >= 0x80) {
+                        bytes.push((val & 0x7f) | 0x80);
+                        val >>>= 7;
+                    }
+                    bytes.push(val & 0x7f);
+                    return bytes;
+                }
+
+                function f32le(val) {
+                    const buf = new ArrayBuffer(4);
+                    new DataView(buf).setFloat32(0, val, true);
+                    return new Uint8Array(buf);
+                }
+
+                let bytes = [];
+                // PowerConfig
+                bytes.push(...varint32(fields.suspend_timeout_ms));
+                bytes.push(...varint32(fields.disconnect_sleep_timeout_ms));
+                // MotionConfig: sensitivity_x, sensitivity_y, deadzone_x_rad, deadzone_y_rad,
+                //   max_angle_rad, smoothing_alpha, invert_x, invert_y, deadzone_speed
+                bytes.push(...f32le(fields.sensitivity_x));
+                bytes.push(...f32le(fields.sensitivity_y));
+                bytes.push(...f32le(fields.deadzone_x_rad));
+                bytes.push(...f32le(fields.deadzone_y_rad));
+                bytes.push(...f32le(fields.max_angle_rad));
+                bytes.push(...f32le(fields.smoothing_alpha));
+                bytes.push(fields.invert_x ? 1 : 0);
+                bytes.push(fields.invert_y ? 1 : 0);
+                bytes.push(...f32le(fields.deadzone_speed));
+                // ReportConfig: report_hz
+                bytes.push(...f32le(fields.report_hz));
+
+                return new Uint8Array(bytes);
+            }
+
+            function crc32(bytes) {
+                let crc = 0xffffffff;
+                for (let i = 0; i < bytes.length; i++) {
+                    crc ^= bytes[i];
+                    for (let j = 0; j < 8; j++) {
+                        crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+                    }
+                }
+                return (crc ^ 0xffffffff) >>> 0;
+            }
+
+            // ─── 读取配置表单 ─────────────────────────────
+            function readWriteFields() {
+                return {
+                    suspend_timeout_ms:
+                        parseInt($id("w-suspend-ms").value) || 5000,
+                    disconnect_sleep_timeout_ms:
+                        parseInt($id("w-sleep-ms").value) || 60000,
+                    report_hz: parseFloat($id("w-report-hz").value) || 1000,
+                    sensitivity_x: parseFloat($id("w-sens-x").value) || 8000,
+                    sensitivity_y: parseFloat($id("w-sens-y").value) || 8000,
+                    deadzone_x_rad: parseFloat($id("w-dz-x").value) || 0.02,
+                    deadzone_y_rad: parseFloat($id("w-dz-y").value) || 0.02,
+                    max_angle_rad: parseFloat($id("w-max-angle").value) || 1.0,
+                    smoothing_alpha: parseFloat($id("w-smooth").value) || 0.3,
+                    invert_x: $id("w-inv-x").checked,
+                    invert_y: $id("w-inv-y").checked,
+                    deadzone_speed: 0.001,
+                };
+            }
+
+            // ─── 事件绑定 ──────────────────────────────────
+            $btnConn.addEventListener("click", connect);
+            $btnDisc.addEventListener("click", disconnect);
+
+            // 基础命令按钮
+            document.querySelectorAll(".cmd-btn").forEach((btn) => {
+                btn.addEventListener("click", async () => {
+                    const cmd = btn.dataset.cmd;
+                    switch (cmd) {
+                        case "ping":
+                            await sendCmd(CMD_PING, []);
+                            break;
+                        case "get-protocol-info": {
+                            const r = await sendCmd(CMD_GET_PROTOCOL_INFO, []);
+                            if (r)
+                                log(
+                                    `  → version=${r.payload[0]}, header_len=${r.payload[1]}, max_payload=${r.payload[2]}`,
+                                    "log-info",
+                                );
+                            break;
+                        }
+                        case "get-device-info": {
+                            const r = await sendCmd(CMD_GET_DEVICE_INFO, []);
+                            if (r) {
+                                const text = new TextDecoder().decode(
+                                    r.payload,
+                                );
+                                log(`  → "${text}"`, "log-info");
+                            }
+                            break;
+                        }
+                        case "get-config-info": {
+                            const r = await sendCmd(CMD_GET_CONFIG_INFO, []);
+                            showConfigInfo(r);
+                            break;
+                        }
+                        case "read-config": {
+                            const r = await sendCmd(CMD_READ_CONFIG, []);
+                            showConfigPayload(r);
+                            break;
+                        }
+                        case "get-route-state": {
+                            const r = await sendCmd(CMD_GET_ROUTE_STATE, []);
+                            showRouteState(r);
+                            break;
+                        }
+                        case "get-power-state": {
+                            const r = await sendCmd(CMD_GET_POWER_STATE, []);
+                            showPowerState(r);
+                            break;
+                        }
+                        case "get-diagnostics": {
+                            const r = await sendCmd(CMD_GET_DIAGNOSTICS, []);
+                            showDiagnostics(r);
+                            break;
+                        }
+                    }
+                });
+            });
+
+            // 写入配置按钮
+            $id("btn-write-begin").addEventListener("click", async () => {
+                const fields = readWriteFields();
+                const payload = encodeDeviceConfig(fields);
+                const crc = crc32(payload);
+
+                const beginPayload = new Uint8Array(8);
+                new DataView(beginPayload.buffer).setUint32(
+                    0,
+                    payload.length,
+                    true,
+                );
+                new DataView(beginPayload.buffer).setUint32(4, crc, true);
+
+                const r = await sendCmd(
+                    CMD_WRITE_CONFIG_BEGIN,
+                    beginPayload,
+                    "WriteConfigBegin",
+                );
+                if (r && r.status === STATUS_OK) {
+                    // 发送 chunk
+                    const chunkPayload = new Uint8Array(4 + payload.length);
+                    new DataView(chunkPayload.buffer).setUint32(0, 0, true); // offset=0
+                    chunkPayload.set(payload, 4);
+
+                    const r2 = await sendCmd(
+                        CMD_WRITE_CONFIG_CHUNK,
+                        chunkPayload,
+                        "WriteConfigChunk",
+                    );
+                    if (r2 && r2.status === STATUS_OK) {
+                        log(
+                            "[信息] Chunk 发送成功，可点击「提交」",
+                            "log-info",
+                        );
+                        $id("btn-write-commit").disabled = false;
+                    }
+                }
+            });
+
+            $id("btn-write-commit").addEventListener("click", async () => {
+                const r = await sendCmd(
+                    CMD_WRITE_CONFIG_COMMIT,
+                    [],
+                    "WriteConfigCommit",
+                );
+                if (r && r.status === STATUS_OK) {
+                    $id("btn-write-commit").disabled = true;
+                    log("[信息] 配置已提交，读取验证中...", "log-info");
+                    // 自动读回验证
+                    const readback = await sendCmd(CMD_READ_CONFIG, []);
+                    showConfigPayload(readback);
+                }
+            });
+
+            $id("btn-write-abort").addEventListener("click", async () => {
+                await sendCmd(CMD_WRITE_CONFIG_ABORT, [], "WriteConfigAbort");
+                $id("btn-write-commit").disabled = true;
+            });
+
+            $id("btn-save-config").addEventListener("click", async () => {
+                const r = await sendCmd(CMD_SAVE_CONFIG, [], "SaveConfig");
+                if (r)
+                    log(
+                        r.status === STATUS_OK
+                            ? "[信息] 已保存到 Flash"
+                            : "[错误] 保存失败",
+                        r.status === STATUS_OK ? "log-info" : "log-error",
+                    );
+            });
+
+            $id("btn-restore-defaults").addEventListener("click", async () => {
+                const r = await sendCmd(
+                    CMD_RESTORE_DEFAULTS,
+                    [],
+                    "RestoreDefaults",
+                );
+                if (r && r.status === STATUS_OK) {
+                    log("[信息] 已恢复默认配置", "log-info");
+                    const readback = await sendCmd(CMD_READ_CONFIG, []);
+                    showConfigPayload(readback);
+                }
+            });
+
+            // 自定义帧
+            $id("btn-send-custom").addEventListener("click", async () => {
+                const cmdHex = $id("custom-cmd").value.trim();
+                const plHex = $id("custom-payload")
+                    .value.trim()
+                    .replace(/\s+/g, "");
+                if (!/^[0-9a-fA-F]{1,4}$/.test(cmdHex)) {
+                    log("[错误] 命令 ID 格式: 1~4 位 hex", "log-error");
+                    return;
+                }
+                const cmd = parseInt(cmdHex, 16);
+                let payload = [];
+                if (plHex) {
+                    if (
+                        !/^[0-9a-fA-F]*$/.test(plHex) ||
+                        plHex.length % 2 !== 0
+                    ) {
+                        log("[错误] Payload 格式: 偶数位 hex", "log-error");
+                        return;
+                    }
+                    for (let i = 0; i < plHex.length; i += 2)
+                        payload.push(parseInt(plHex.substring(i, i + 2), 16));
+                }
+                await sendCmd(
+                    cmd,
+                    new Uint8Array(payload),
+                    `Custom 0x${cmd.toString(16).padStart(4, "0")}`,
+                );
+            });
+
+            log(
+                "[信息] 页面已加载。点击「连接设备」后在设备列表中选择 VoidPointer",
+                "log-info",
+            );
+        </script>
+    </body>
+</html>
