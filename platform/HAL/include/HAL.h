@@ -6,7 +6,7 @@
  * Description        :
  *********************************************************************************
  * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * Attention: This software (modified or not) and binary are used for 
+ * Attention: This software (modified or not) and binary are used for
  * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 
@@ -21,8 +21,6 @@ extern "C" {
 #include "CONFIG.h"
 #include "RTC.h"
 #include "SLEEP.h"
-#include "LED.h"
-#include "KEY.h"
 
 /* hal task Event */
 #define LED_BLINK_EVENT    0x0001
