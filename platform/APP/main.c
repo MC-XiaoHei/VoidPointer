@@ -23,6 +23,8 @@
 #include "board_gpio.h"
 #include "board_input.h"
 #include "imu_platform.h"
+#include "led_platform.h"
+#include "pwm_platform.h"
 
 #include <math.h>
 
@@ -207,6 +209,8 @@ int main() {
     BleHidApp_Init();
 
     USBHS_HidDevice_Init();
+    LedPlatform_Init();
+    PwmPlatform_Init();
 
     vp_core_init();
     RuntimeTask_Init();

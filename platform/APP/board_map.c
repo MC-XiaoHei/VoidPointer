@@ -75,3 +75,13 @@ const BoardGpio board_debug_rx = {
     .group = BOARD_GPIO_GROUP_A,
     .pin = GPIO_Pin_15,
 };
+
+const BoardGpio board_led_status = {
+    .group = BOARD_GPIO_GROUP_A,
+    .pin = GPIO_Pin_2,
+};
+
+const BoardGpio board_pwm_laser = {
+    .group = BOARD_GPIO_GROUP_B,
+    .pin = GPIO_Pin_4,
+};

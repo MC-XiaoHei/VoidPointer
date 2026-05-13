@@ -12,6 +12,8 @@
 
 #include "main.h"
 #include "rust_api.h"
+#include "led_platform.h"
+#include "pwm_platform.h"
 #include <hiddev.h>
 #include <hidmouseservice.h>
 #include <stdio.h>
@@ -666,4 +668,17 @@ vp_status_t c_vp_platform_reset(const uint32_t reason) {
     (void)reason;
     SYS_ResetExecute();
     return VP_STATUS_OK;
+}
+
+void c_vp_led_play(const vp_led_id_t led_id, const uint32_t* ptr, const uint16_t len,
+                   const vp_bool_t is_loop) {
+    LedPlatform_Play((uint8_t)led_id, (const uint8_t*)ptr, (uint16_t)(len * 4u), is_loop);
+}
+
+void c_vp_led_stop(void) {
+    LedPlatform_Stop();
+}
+
+void c_vp_pwm_set_duty(const uint8_t pwm_id, const uint8_t duty) {
+    PwmPlatform_SetDuty(pwm_id, duty);
 }

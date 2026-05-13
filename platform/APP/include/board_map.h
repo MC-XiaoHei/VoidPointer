@@ -32,6 +32,8 @@ extern const BoardGpio board_i2c_sda;
 extern const BoardGpio board_i2c_scl;
 extern const BoardGpio board_debug_tx;
 extern const BoardGpio board_debug_rx;
+extern const BoardGpio board_led_status;
+extern const BoardGpio board_pwm_laser;
 
 #ifdef __cplusplus
 }
