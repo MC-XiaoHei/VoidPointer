@@ -1,9 +1,6 @@
-use core::cell::UnsafeCell;
-use core::sync::atomic::Ordering;
-use core::sync::atomic::compiler_fence;
+use crate::sync::spsc::SpscQueue;
 
 const EVENT_QUEUE_CAPACITY: usize = 16;
-const EVENT_QUEUE_MASK: u32 = (EVENT_QUEUE_CAPACITY - 1) as u32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RuntimeEvent {
@@ -71,77 +68,113 @@ pub enum RuntimeEvent {
     },
 }
 
-struct EventQueueInner {
-    buf: [RuntimeEvent; EVENT_QUEUE_CAPACITY],
-    /// 仅 ISR 写入
-    head: u32,
-    /// 仅主循环写入
-    tail: u32,
-    /// 仅 ISR 写入
-    dropped: u32,
-}
-
 pub struct EventQueue {
-    inner: UnsafeCell<EventQueueInner>,
+    inner: SpscQueue<RuntimeEvent, EVENT_QUEUE_CAPACITY>,
 }
-
-unsafe impl Sync for EventQueue {}
 
 impl EventQueue {
     pub const fn new() -> Self {
         Self {
-            inner: UnsafeCell::new(EventQueueInner {
-                buf: [RuntimeEvent::VendorReportRx {
+            inner: SpscQueue::from_array([
+                RuntimeEvent::VendorReportRx {
                     route: 0,
                     len: 0,
                     timestamp: 0,
-                }; EVENT_QUEUE_CAPACITY],
-                head: 0,
-                tail: 0,
-                dropped: 0,
-            }),
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+                RuntimeEvent::VendorReportRx {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                },
+            ]),
         }
     }
 
-    /// 只能在 ISR 上下文调用
     pub fn push(&self, event: RuntimeEvent) -> bool {
-        let inner = unsafe { &mut *self.inner.get() };
-        let next_head = (inner.head + 1) & EVENT_QUEUE_MASK;
-
-        if next_head == inner.tail {
-            inner.dropped += 1;
-            return false;
-        }
-
-        inner.buf[inner.head as usize] = event;
-        compiler_fence(Ordering::Release);
-        inner.head = next_head;
-        true
+        self.inner.push(event)
     }
 
-    /// 只能在主循环上下文调用
     pub fn pop(&self) -> Option<RuntimeEvent> {
-        let inner = unsafe { &mut *self.inner.get() };
-
-        if inner.head == inner.tail {
-            return None;
-        }
-
-        let event = inner.buf[inner.tail as usize];
-        compiler_fence(Ordering::Acquire);
-        inner.tail = (inner.tail + 1) & EVENT_QUEUE_MASK;
-        Some(event)
+        self.inner.pop()
     }
 
     pub fn is_empty(&self) -> bool {
-        let inner = unsafe { &*self.inner.get() };
-        inner.head == inner.tail
+        self.inner.is_empty()
     }
 
     pub fn stats(&self) -> EventQueueStats {
-        let inner = unsafe { &*self.inner.get() };
         EventQueueStats {
-            dropped: inner.dropped,
+            dropped: self.inner.dropped(),
         }
     }
 }
@@ -149,4 +182,104 @@ impl EventQueue {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EventQueueStats {
     pub dropped: u32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn event(ts: u32) -> RuntimeEvent {
+        RuntimeEvent::DebounceTick { timestamp: ts }
+    }
+
+    #[test]
+    fn new_is_empty() {
+        let q = EventQueue::new();
+        assert!(q.pop().is_none());
+        assert!(q.is_empty());
+        assert_eq!(q.stats().dropped, 0);
+    }
+
+    #[test]
+    fn push_then_pop() {
+        let q = EventQueue::new();
+        assert!(q.push(event(1)));
+        assert!(!q.is_empty());
+        assert_eq!(q.pop(), Some(event(1)));
+        assert!(q.is_empty());
+    }
+
+    #[test]
+    fn fifo_order() {
+        let q = EventQueue::new();
+        q.push(event(10));
+        q.push(event(20));
+        q.push(event(30));
+        assert_eq!(q.pop(), Some(event(10)));
+        assert_eq!(q.pop(), Some(event(20)));
+        assert_eq!(q.pop(), Some(event(30)));
+    }
+
+    #[test]
+    fn full_rejects_and_counts_dropped() {
+        let q = EventQueue::new();
+        let cap = 16usize;
+        for i in 0..cap - 1 {
+            assert!(q.push(event(i as u32)));
+        }
+        assert!(!q.push(event(99)));
+        assert_eq!(q.stats().dropped, 1);
+    }
+
+    #[test]
+    fn pop_after_full() {
+        let q = EventQueue::new();
+        for i in 0..15 {
+            q.push(event(i));
+        }
+        assert_eq!(q.pop(), Some(event(0)));
+        assert!(q.push(event(99)));
+        assert_eq!(q.pop(), Some(event(1)));
+    }
+
+    #[test]
+    fn wrap_around() {
+        let q = EventQueue::new();
+        for i in 0..15 {
+            q.push(event(i));
+        }
+        for i in 0..15 {
+            assert_eq!(q.pop(), Some(event(i as u32)));
+        }
+        // 清空后重新入队，验证回绕
+        for i in 100..114 {
+            assert!(q.push(event(i)));
+        }
+        for i in 100..114 {
+            assert_eq!(q.pop(), Some(event(i as u32)));
+        }
+    }
+
+    #[test]
+    fn stats_dropped_no_false_positive() {
+        let q = EventQueue::new();
+        q.push(event(1));
+        q.push(event(2));
+        assert_eq!(q.stats().dropped, 0);
+        q.pop();
+        q.pop();
+        assert_eq!(q.stats().dropped, 0);
+    }
+
+    #[test]
+    fn is_empty_edge_cases() {
+        let q = EventQueue::new();
+        assert!(q.is_empty());
+        q.push(event(1));
+        assert!(!q.is_empty());
+        q.pop();
+        assert!(q.is_empty());
+        q.push(event(2));
+        assert!(!q.is_empty());
+    }
 }

@@ -11,6 +11,7 @@ pub mod power;
 pub mod report;
 pub mod route;
 pub mod runtime;
+pub mod sync;
 pub mod utils;
 pub mod vendor;
 

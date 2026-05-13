@@ -4,9 +4,7 @@ use crate::config::ConfigManager;
 use crate::hid::types::CustomReport;
 use crate::power::PowerManager;
 use crate::route::HidRouter;
-use core::cell::UnsafeCell;
-use core::sync::atomic::Ordering;
-use core::sync::atomic::compiler_fence;
+use crate::sync::spsc::SpscQueue;
 use protocol::{
     CUSTOM_STATUS_BAD_LENGTH, CUSTOM_STATUS_INTERNAL_ERROR, CUSTOM_STATUS_INVALID_COMMAND,
     ProtocolStats, encode_error_response, handle_request, parse_frame, preferred_response_route,
@@ -14,7 +12,6 @@ use protocol::{
 
 pub const VENDOR_RX_PAYLOAD_CAPACITY: usize = 64;
 const VENDOR_RX_QUEUE_CAPACITY: usize = 4;
-const VENDOR_RX_QUEUE_MASK: u32 = (VENDOR_RX_QUEUE_CAPACITY - 1) as u32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VendorRxReport {
@@ -41,38 +38,39 @@ pub struct VendorRxStats {
     pub too_large: u16,
 }
 
-struct VendorRxQueueInner {
-    buf: [VendorRxReport; VENDOR_RX_QUEUE_CAPACITY],
-    /// 仅 ISR 写，主循环读
-    head: u32,
-    /// 仅主循环写，ISR 读
-    tail: u32,
-    /// 仅 ISR 写入
-    dropped: u16,
-    too_large: u16,
-}
-
 pub struct VendorRxQueue {
-    inner: UnsafeCell<VendorRxQueueInner>,
+    inner: SpscQueue<VendorRxReport, VENDOR_RX_QUEUE_CAPACITY>,
 }
-
-unsafe impl Sync for VendorRxQueue {}
 
 impl VendorRxQueue {
     pub const fn new() -> Self {
         Self {
-            inner: UnsafeCell::new(VendorRxQueueInner {
-                buf: [VendorRxReport {
+            inner: SpscQueue::from_array([
+                VendorRxReport {
                     route: 0,
                     len: 0,
                     timestamp: 0,
                     data: [0u8; VENDOR_RX_PAYLOAD_CAPACITY],
-                }; VENDOR_RX_QUEUE_CAPACITY],
-                head: 0,
-                tail: 0,
-                dropped: 0,
-                too_large: 0,
-            }),
+                },
+                VendorRxReport {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                    data: [0u8; VENDOR_RX_PAYLOAD_CAPACITY],
+                },
+                VendorRxReport {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                    data: [0u8; VENDOR_RX_PAYLOAD_CAPACITY],
+                },
+                VendorRxReport {
+                    route: 0,
+                    len: 0,
+                    timestamp: 0,
+                    data: [0u8; VENDOR_RX_PAYLOAD_CAPACITY],
+                },
+            ]),
         }
     }
 
@@ -90,7 +88,7 @@ impl VendorRxQueue {
     ) -> bool {
         let len_usize = len as usize;
         if ptr.is_null() || len_usize > VENDOR_RX_PAYLOAD_CAPACITY {
-            unsafe { (*self.inner.get()).too_large += 1 };
+            self.inner.mark_drop_detail(1);
             return false;
         }
 
@@ -100,44 +98,17 @@ impl VendorRxQueue {
         }
 
         let report = VendorRxReport::new(route, len, timestamp, data);
-        self.push(report)
+        self.inner.push(report)
     }
 
-    fn push(&self, report: VendorRxReport) -> bool {
-        let inner = unsafe { &mut *self.inner.get() };
-        let next_head = (inner.head + 1) & VENDOR_RX_QUEUE_MASK;
-
-        if next_head == inner.tail {
-            inner.dropped += 1;
-            return false;
-        }
-
-        // 先写数据再更新 head，避免消费者读到未初始化的 buf[head]
-        inner.buf[inner.head as usize] = report;
-        compiler_fence(Ordering::Release);
-        inner.head = next_head;
-        true
-    }
-
-    /// 只能在主循环上下文调用
     pub fn pop(&self) -> Option<VendorRxReport> {
-        let inner = unsafe { &mut *self.inner.get() };
-
-        if inner.head == inner.tail {
-            return None;
-        }
-
-        let report = inner.buf[inner.tail as usize];
-        compiler_fence(Ordering::Acquire);
-        inner.tail = (inner.tail + 1) & VENDOR_RX_QUEUE_MASK;
-        Some(report)
+        self.inner.pop()
     }
 
     pub fn stats(&self) -> VendorRxStats {
-        let inner = unsafe { &*self.inner.get() };
         VendorRxStats {
-            dropped: inner.dropped,
-            too_large: inner.too_large,
+            dropped: self.inner.dropped() as u16,
+            too_large: self.inner.drop_detail() as u16,
         }
     }
 }
@@ -276,5 +247,116 @@ impl VendorRuntime {
 impl Default for VendorRuntime {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_queue_is_empty() {
+        let q = VendorRxQueue::new();
+        assert!(q.pop().is_none());
+        let s = q.stats();
+        assert_eq!(s.dropped, 0);
+        assert_eq!(s.too_large, 0);
+    }
+
+    #[test]
+    fn copy_from_ptr_valid() {
+        let q = VendorRxQueue::new();
+        let payload: [u8; 4] = [0xA5, 0x01, 0x01, 0x00];
+        let copied = unsafe { q.copy_from_ptr(3, payload.as_ptr(), 4, 1000) };
+        assert!(copied);
+        let report = q.pop().unwrap();
+        assert_eq!(report.route, 3);
+        assert_eq!(report.len, 4);
+        assert_eq!(report.timestamp, 1000);
+        assert_eq!(&report.data[..4], &payload);
+    }
+
+    #[test]
+    fn copy_from_ptr_null_returns_false() {
+        let q = VendorRxQueue::new();
+        let copied = unsafe { q.copy_from_ptr(3, core::ptr::null(), 4, 1000) };
+        assert!(!copied);
+        assert_eq!(q.stats().too_large, 1);
+    }
+
+    #[test]
+    fn copy_from_ptr_oversized_returns_false() {
+        let q = VendorRxQueue::new();
+        let buf = [0u8; VENDOR_RX_PAYLOAD_CAPACITY + 1];
+        let copied = unsafe { q.copy_from_ptr(3, buf.as_ptr(), buf.len() as u16, 1000) };
+        assert!(!copied);
+        assert_eq!(q.stats().too_large, 1);
+    }
+
+    #[test]
+    fn copy_from_ptr_fifo_order() {
+        let q = VendorRxQueue::new();
+        let a: [u8; 4] = [1, 2, 3, 4];
+        let b: [u8; 4] = [5, 6, 7, 8];
+        unsafe {
+            q.copy_from_ptr(3, a.as_ptr(), 4, 100);
+            q.copy_from_ptr(3, b.as_ptr(), 4, 200);
+        }
+        assert_eq!(q.pop().unwrap().timestamp, 100);
+        assert_eq!(q.pop().unwrap().timestamp, 200);
+        assert!(q.pop().is_none());
+    }
+
+    #[test]
+    fn stats_reflects_full_queue() {
+        let q = VendorRxQueue::new();
+        let buf = [0u8; 4];
+        for _ in 0..VENDOR_RX_QUEUE_CAPACITY {
+            unsafe {
+                q.copy_from_ptr(3, buf.as_ptr(), 4, 0);
+            }
+        }
+        // next push fails
+        assert!(!unsafe { q.copy_from_ptr(3, buf.as_ptr(), 4, 0) });
+        assert!(q.stats().dropped > 0);
+    }
+
+    #[test]
+    fn pop_after_full() {
+        let q = VendorRxQueue::new();
+        let buf = [0u8; 4];
+        for _ in 0..VENDOR_RX_QUEUE_CAPACITY - 1 {
+            unsafe {
+                q.copy_from_ptr(1, buf.as_ptr(), 4, 0);
+            }
+        }
+        assert!(q.pop().is_some());
+        // now one slot free
+        assert!(unsafe { q.copy_from_ptr(1, buf.as_ptr(), 4, 0) });
+    }
+
+    #[test]
+    fn stats_separates_dropped_and_too_large() {
+        let q = VendorRxQueue::new();
+        // 超长数据递增 too_large
+        unsafe {
+            q.copy_from_ptr(1, core::ptr::null(), 4, 0);
+        }
+        assert_eq!(q.stats().too_large, 1);
+        assert_eq!(q.stats().dropped, 0);
+
+        // fill queue (SPSC 预留一个空位，所以最多 cap-1 个)
+        let buf = [0u8; 4];
+        for _ in 0..VENDOR_RX_QUEUE_CAPACITY - 1 {
+            unsafe {
+                q.copy_from_ptr(1, buf.as_ptr(), 4, 0);
+            }
+        }
+        // 再入队一次触发 dropped
+        unsafe {
+            q.copy_from_ptr(1, buf.as_ptr(), 4, 0);
+        }
+        assert_eq!(q.stats().dropped, 1);
+        assert_eq!(q.stats().too_large, 1);
     }
 }
