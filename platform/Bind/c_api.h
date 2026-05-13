@@ -194,8 +194,8 @@ vp_status_t c_vp_flash_read(uint32_t offset, uint8_t* ptr, uint32_t len);
 vp_status_t c_vp_flash_erase(uint32_t offset, uint32_t len);
 vp_status_t c_vp_flash_write(uint32_t offset, const uint8_t* ptr, uint32_t len);
 
-/* Debug 与 diagnostics API，只能在 bottom-half 调用 */
-void        c_vp_debug_print(const char* ptr, uint16_t len);
+/* print 与 diagnostics API，只能在 bottom-half 调用 */
+void        c_vp_print(const char* ptr, uint16_t len);
 vp_status_t c_vp_platform_reset(uint32_t reason);
 
 #ifdef __cplusplus

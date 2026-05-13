@@ -1,4 +1,4 @@
-use crate::ffi::bindings::c_vp_debug_print;
+use crate::ffi::bindings::c_vp_print;
 use core::ffi::c_char;
 use core::fmt::Write;
 use heapless::String;
@@ -30,7 +30,7 @@ fn format_module_path(module_path: Option<&str>) -> &str {
 pub fn print_to_uart(s: &str) {
     // SAFETY: `s` 在调用期间提供有效的 `len` 字节
     unsafe {
-        c_vp_debug_print(s.as_ptr() as *const c_char, s.len() as u16);
+        c_vp_print(s.as_ptr() as *const c_char, s.len() as u16);
     }
 }
 

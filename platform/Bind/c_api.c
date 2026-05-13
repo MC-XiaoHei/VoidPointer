@@ -14,6 +14,7 @@
 #include "rust_api.h"
 #include <hiddev.h>
 #include <hidmouseservice.h>
+#include <stdio.h>
 #include "ble_hid_app.h"
 #include "usbhs_hid_device.h"
 #include "lsm6dsv.h"
@@ -651,13 +652,13 @@ vp_status_t c_vp_flash_write(const uint32_t offset, const uint8_t* ptr,
     return VP_STATUS_OK;
 }
 
-void c_vp_debug_print(const char* ptr, const uint16_t len) {
+void c_vp_print(const char* ptr, const uint16_t len) {
     if (ptr == NULL || len == 0u) {
         return;
     }
 
     for (uint16_t i = 0; i < len; i++) {
-        PRINT("%c", ptr[i]);
+        printf("%c", ptr[i]);
     }
 }
 
