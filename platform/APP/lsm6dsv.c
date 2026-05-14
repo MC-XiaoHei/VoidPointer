@@ -239,7 +239,7 @@ static bool lsm6dsv_apply_active_profile(void) {
 
 #undef VP_IMU_WRITE_OR_FAIL
 
-    return lsm6dsv_route_basic_interrupts(0x00, 0x00);
+    return true;
 }
 
 static bool lsm6dsv_apply_suspend_profile(void) {
@@ -658,11 +658,19 @@ void I2C_IRQHandler(void) {
                 }
             }
         } else {
+            if (event & RB_I2C_AF) {
+                I2C_ClearFlag(I2C_FLAG_AF);
+                lsm6dsv_async_finish(VP_STATUS_IO_ERROR);
+                return;
+            }
+
             if (event & RB_I2C_ADDR) {
                 if (g_lsm6dsv_async.rx_len == 1u && !g_lsm6dsv_async.nack_sent) {
                     I2C_AcknowledgeConfig(DISABLE);
                     I2C_GenerateSTOP(ENABLE);
                     g_lsm6dsv_async.nack_sent = 1u;
+                } else if (g_lsm6dsv_async.rx_len > 1u) {
+                    I2C_AcknowledgeConfig(ENABLE);
                 }
                 return;
             }

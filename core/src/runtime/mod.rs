@@ -433,8 +433,10 @@ impl Runtime {
             &self.router,
         );
         let current_state = self.power.state();
-        if previous_state != current_state && current_state == PowerState::Active {
-            self.restore_active_runtime_state(previous_state);
+        if previous_state != current_state {
+            if current_state == PowerState::Active {
+                self.restore_active_runtime_state(previous_state);
+            }
         }
 
         self.arm_power_recheck_deadline(now, effective_config_dirty);
