@@ -1,7 +1,7 @@
 #include "board_input.h"
 
 #include "CH58x_common.h"  // IWYU pragma: keep
-#include "board_gpio.h"
+#include "vp_hal.h"
 #include "c_api.h"
 #include "rust_api.h"
 
@@ -9,7 +9,7 @@ static uint16_t board_input_exti_both_sim_mask_a = 0u;
 static uint16_t board_input_exti_both_sim_mask_b = 0u;
 
 static vp_bool_t active_low_gpio_level(const BoardGpio gpio) {
-    return board_gpio_read_level(gpio) ? 0u : 1u;
+    return vp_gpio_read_level(gpio) ? 0u : 1u;
 }
 
 static uint16_t* board_input_exti_both_sim_mask_ptr(
@@ -84,16 +84,16 @@ static vp_bool_t board_input_dispatch_one(const BoardGpio      gpio,
                                           const uint16_t       active_flags,
                                           const vp_input_id_t  input_id,
                                           const vp_timestamp_t timestamp) {
-    if (!board_gpio_is_valid(gpio) || (active_flags & gpio.pin) == 0u) {
+    if (!vp_gpio_is_valid(gpio) || (active_flags & gpio.pin) == 0u) {
         return 0u;
     }
 
-    board_gpio_clear_it_flag(gpio);
+    vp_gpio_clear_it_flag(gpio);
 
     if (board_input_is_encoder(input_id)) {
-        const vp_bool_t a_level = active_low_gpio_level(board_enc_a);
-        const vp_bool_t b_level = active_low_gpio_level(board_enc_b);
-        board_gpio_config_next_edge(gpio);
+        const vp_bool_t a_level = active_low_gpio_level(board_signal_get(BOARD_SIGNAL_ENC_A));
+        const vp_bool_t b_level = active_low_gpio_level(board_signal_get(BOARD_SIGNAL_ENC_B));
+        vp_gpio_config_next_edge(gpio);
         vp_on_encoder_exti(a_level, b_level, timestamp);
         return 1u;
     }
@@ -121,40 +121,25 @@ vp_bool_t board_input_id_to_gpio(const vp_input_id_t input_id,
         return 0u;
     }
 
-    switch (input_id) {
-        case VP_INPUT_LEFT:
-            *out_gpio = board_btn_left;
-            return 1u;
-        case VP_INPUT_RIGHT:
-            *out_gpio = board_btn_right;
-            return 1u;
-        case VP_INPUT_MIDDLE:
-            *out_gpio = board_btn_middle;
-            return 1u;
-        case VP_INPUT_ACTION:
-            *out_gpio = board_btn_action;
-            return 1u;
-        case VP_INPUT_LASER:
-            *out_gpio = board_btn_laser;
-            return 1u;
-        case VP_INPUT_MODE_SWITCH:
-            *out_gpio = board_mode_switch;
-            return 1u;
-        case VP_INPUT_ENCODER_A:
-            *out_gpio = board_enc_a;
-            return 1u;
-        case VP_INPUT_ENCODER_B:
-            *out_gpio = board_enc_b;
-            return 1u;
-        case VP_INPUT_IMU_INT1:
-            *out_gpio = board_imu_int1;
-            return 1u;
-        case VP_INPUT_IMU_INT2:
-            *out_gpio = board_imu_int2;
-            return 1u;
-        default:
-            return 0u;
+    static const BoardSignal id_map[] = {
+        [VP_INPUT_LEFT]        = BOARD_SIGNAL_BTN_LEFT,
+        [VP_INPUT_RIGHT]       = BOARD_SIGNAL_BTN_RIGHT,
+        [VP_INPUT_MIDDLE]      = BOARD_SIGNAL_BTN_MIDDLE,
+        [VP_INPUT_ACTION]      = BOARD_SIGNAL_BTN_ACTION,
+        [VP_INPUT_LASER]       = BOARD_SIGNAL_BTN_LASER,
+        [VP_INPUT_MODE_SWITCH] = BOARD_SIGNAL_MODE_SWITCH,
+        [VP_INPUT_ENCODER_A]   = BOARD_SIGNAL_ENC_A,
+        [VP_INPUT_ENCODER_B]   = BOARD_SIGNAL_ENC_B,
+        [VP_INPUT_IMU_INT1]    = BOARD_SIGNAL_IMU_INT1,
+        [VP_INPUT_IMU_INT2]    = BOARD_SIGNAL_IMU_INT2,
+    };
+
+    if (input_id >= sizeof(id_map) / sizeof(id_map[0])) {
+        return 0u;
     }
+
+    *out_gpio = board_signal_get(id_map[input_id]);
+    return board_signal_is_present(id_map[input_id]);
 }
 
 vp_status_t board_input_exti_unmask(const vp_input_id_t input_id,
@@ -166,22 +151,22 @@ vp_status_t board_input_exti_unmask(const vp_input_id_t input_id,
     }
 
     if ((*both_sim_mask & gpio.pin) != 0u) {
-        board_gpio_clear_it_flag_port(gpio.group,
-                                      board_gpio_read_it_flag_port(gpio.group));
-        board_gpio_config_next_edge(gpio);
+        vp_gpio_clear_it_flag_port(gpio.group,
+                                      vp_gpio_read_it_flag_port(gpio.group));
+        vp_gpio_config_next_edge(gpio);
     } else {
         vp_button_id_t button_id = 0u;
         if (board_input_id_to_button_id(input_id, &button_id)) {
-            board_gpio_prepare_level_rearm(gpio);
+            vp_gpio_prepare_level_rearm(gpio);
         } else {
-            board_gpio_clear_it_flag_port(
-                gpio.group, board_gpio_read_it_flag_port(gpio.group));
-            board_gpio_clear_it_flag(gpio);
+            vp_gpio_clear_it_flag_port(
+                gpio.group, vp_gpio_read_it_flag_port(gpio.group));
+            vp_gpio_clear_it_flag(gpio);
         }
     }
 
-    (void)board_gpio_int_unmask(gpio);
-    board_gpio_irq_enable(gpio);
+    (void)vp_gpio_int_unmask(gpio);
+    vp_gpio_irq_enable(gpio);
     return VP_STATUS_OK;
 }
 
@@ -198,8 +183,8 @@ vp_status_t board_input_exti_set_edge(const vp_input_id_t  input_id,
             return VP_STATUS_UNSUPPORTED;
         }
         *both_sim_mask |= (uint16_t)gpio.pin;
-        board_gpio_config_next_edge(gpio);
-        board_gpio_irq_enable(gpio);
+        vp_gpio_config_next_edge(gpio);
+        vp_gpio_irq_enable(gpio);
         return VP_STATUS_OK;
     }
 
@@ -219,20 +204,20 @@ vp_status_t board_input_exti_set_edge(const vp_input_id_t  input_id,
     }
 
     *both_sim_mask &= (uint16_t)(~gpio.pin);
-    board_gpio_it_mode_cfg(gpio, mode);
-    board_gpio_irq_enable(gpio);
+    vp_gpio_it_mode_cfg(gpio, mode);
+    vp_gpio_irq_enable(gpio);
     return VP_STATUS_OK;
 }
 
 vp_bool_t board_input_service_pending_group(const BoardGpioGroup group) {
-    const uint16_t flags = board_gpio_read_it_flag_port(group);
+    const uint16_t flags = vp_gpio_read_it_flag_port(group);
     const uint16_t active_flags =
-        (uint16_t)(flags & board_gpio_read_int_enable_port(group));
+        (uint16_t)(flags & vp_gpio_read_int_enable_port(group));
 
     if (active_flags == 0u) {
         if (flags != 0u) {
-            board_gpio_clear_it_flag_port(group, flags);
-            board_gpio_irq_clear_pending(group);
+            vp_gpio_clear_it_flag_port(group, flags);
+            vp_gpio_irq_clear_pending(group);
         }
         return 0u;
     }
@@ -253,7 +238,7 @@ vp_bool_t board_input_service_pending_group(const BoardGpioGroup group) {
         }
     }
 
-    board_gpio_irq_clear_pending(group);
+    vp_gpio_irq_clear_pending(group);
     return handled;
 }
 

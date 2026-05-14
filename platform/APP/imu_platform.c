@@ -1,7 +1,7 @@
 #include "imu_platform.h"
 
 #include "CH58x_common.h"  // IWYU pragma: keep
-#include "board_gpio.h"
+#include "vp_hal.h"
 #include "board_map.h"
 #include "c_api.h"
 #include "lsm6dsv.h"
@@ -10,24 +10,23 @@ static const vp_exti_edge_t VP_IMU_INT_EDGE = VP_EXTI_EDGE_RISING;
 static const uint8_t        VP_I2C_RECOVER_CLOCK_PULSES = 9u;
 
 static void i2c_release_lines_to_pullup(void) {
-    board_gpio_mode_cfg(board_i2c_sda, GPIO_ModeIN_PU);
-    board_gpio_mode_cfg(board_i2c_scl, GPIO_ModeIN_PU);
+    vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SDA), GPIO_ModeIN_PU);
+    vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SCL), GPIO_ModeIN_PU);
 }
 
 static void i2c_drive_scl_low(void) {
-    board_gpio_reset(board_i2c_scl);
-    board_gpio_mode_cfg(board_i2c_scl, GPIO_ModeOut_PP_5mA);
+    vp_gpio_reset(board_signal_get(BOARD_SIGNAL_I2C_SCL));
+    vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SCL), GPIO_ModeOut_PP_5mA);
 }
 
 static void i2c_drive_sda_low(void) {
-    board_gpio_reset(board_i2c_sda);
-    board_gpio_mode_cfg(board_i2c_sda, GPIO_ModeOut_PP_5mA);
+    vp_gpio_reset(board_signal_get(BOARD_SIGNAL_I2C_SDA));
+    vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SDA), GPIO_ModeOut_PP_5mA);
 }
 
 static void I2C_Hardware_Init(void) {
-    board_gpio_digital_cfg(board_i2c_sda, ENABLE);
-    board_gpio_digital_cfg(board_i2c_scl, ENABLE);
-    GPIOPinRemap(ENABLE, RB_PIN_I2C);
+    vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_I2C_SDA), ENABLE);
+    vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_I2C_SCL), ENABLE);
     GPIOAGPPCfg(DISABLE, RB_PIN_USB2_EN);
     i2c_release_lines_to_pullup();
     I2C_Cmd(DISABLE);
@@ -39,34 +38,37 @@ static void I2C_Hardware_Init(void) {
 }
 
 void ImuPlatform_InitGpio(void) {
-    if (board_gpio_is_valid(board_imu_int1)) {
-        board_gpio_digital_cfg(board_imu_int1, ENABLE);
-        board_gpio_mode_cfg(board_imu_int1, GPIO_ModeIN_PU);
+    if (vp_gpio_is_valid(board_signal_get(BOARD_SIGNAL_IMU_INT1))) {
+        vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT1), ENABLE);
+        vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT1), GPIO_ModeIN_PU);
     }
 
-    if (board_gpio_is_valid(board_imu_int2)) {
-        board_gpio_digital_cfg(board_imu_int2, ENABLE);
-        board_gpio_mode_cfg(board_imu_int2, GPIO_ModeIN_PU);
+    if (vp_gpio_is_valid(board_signal_get(BOARD_SIGNAL_IMU_INT2))) {
+        vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT2), ENABLE);
+        vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT2), GPIO_ModeIN_PU);
     }
 }
 
 void ImuPlatform_InitExti(void) {
-    if (board_gpio_is_valid(board_imu_int1)) {
+    if (vp_gpio_is_valid(board_signal_get(BOARD_SIGNAL_IMU_INT1))) {
         (void)c_vp_exti_set_edge(VP_INPUT_IMU_INT1, VP_IMU_INT_EDGE);
     }
 
-    if (board_gpio_is_valid(board_imu_int2)) {
+    if (vp_gpio_is_valid(board_signal_get(BOARD_SIGNAL_IMU_INT2))) {
         (void)c_vp_exti_set_edge(VP_INPUT_IMU_INT2, VP_IMU_INT_EDGE);
     }
 }
 
 vp_bool_t ImuPlatform_I2cBusIdle(void) {
-    if (!board_gpio_is_valid(board_i2c_sda) || !board_gpio_is_valid(board_i2c_scl)) {
+    const BoardGpio i2c_sda = board_signal_get(BOARD_SIGNAL_I2C_SDA);
+    const BoardGpio i2c_scl = board_signal_get(BOARD_SIGNAL_I2C_SCL);
+
+    if (!vp_gpio_is_valid(i2c_sda) || !vp_gpio_is_valid(i2c_scl)) {
         return 0u;
     }
 
-    return (board_gpio_read_level(board_i2c_sda) &&
-            board_gpio_read_level(board_i2c_scl) &&
+    return (vp_gpio_read_level(i2c_sda) &&
+            vp_gpio_read_level(i2c_scl) &&
             I2C_GetFlagStatus(I2C_FLAG_BUSY) == RESET)
                ? 1u
                : 0u;
@@ -78,7 +80,10 @@ vp_status_t ImuPlatform_I2cInit(void) {
 }
 
 vp_status_t ImuPlatform_I2cRecoverBus(void) {
-    if (!board_gpio_is_valid(board_i2c_sda) || !board_gpio_is_valid(board_i2c_scl)) {
+    const BoardGpio i2c_sda = board_signal_get(BOARD_SIGNAL_I2C_SDA);
+    const BoardGpio i2c_scl = board_signal_get(BOARD_SIGNAL_I2C_SCL);
+
+    if (!vp_gpio_is_valid(i2c_sda) || !vp_gpio_is_valid(i2c_scl)) {
         return VP_STATUS_INVALID_ARG;
     }
 
@@ -93,13 +98,13 @@ vp_status_t ImuPlatform_I2cRecoverBus(void) {
     mDelayuS(10);
     I2C_SoftwareResetCmd(DISABLE);
 
-    board_gpio_digital_cfg(board_i2c_sda, ENABLE);
-    board_gpio_digital_cfg(board_i2c_scl, ENABLE);
+    vp_gpio_digital_cfg(i2c_sda, ENABLE);
+    vp_gpio_digital_cfg(i2c_scl, ENABLE);
     i2c_release_lines_to_pullup();
     mDelayuS(10);
 
     for (uint8_t i = 0; i < VP_I2C_RECOVER_CLOCK_PULSES; i++) {
-        if (board_gpio_read_level(board_i2c_sda)) {
+        if (vp_gpio_read_level(i2c_sda)) {
             break;
         }
 
@@ -109,7 +114,7 @@ vp_status_t ImuPlatform_I2cRecoverBus(void) {
         mDelayuS(5);
     }
 
-    if (!board_gpio_read_level(board_i2c_sda)) {
+    if (!vp_gpio_read_level(i2c_sda)) {
         i2c_drive_sda_low();
         mDelayuS(5);
         i2c_drive_scl_low();

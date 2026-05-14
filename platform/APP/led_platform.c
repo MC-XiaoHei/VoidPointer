@@ -1,52 +1,37 @@
+// led_platform.c —— LED 驱动（通过 vp_hal 路由到具体 TMR 外设）
 #include "led_platform.h"
-#include "board_map.h"
-#include "board_gpio.h"
-#include "CH58x_common.h"
-#include "c_api.h"
+#include "vp_hal.h"
 
-static uint8_t current_led = 0xFFu;
-
-static void led_init_inner(const BoardGpio gpio) {
-    board_gpio_mode_cfg(gpio, GPIO_ModeOut_PP_5mA);
-}
+static uint8_t current_led_active = 0u;
 
 void LedPlatform_Init(void) {
-    led_init_inner(board_led_status);
-    GPIOPinRemap(DISABLE, RB_PIN_TMR3);
-    TMR3_PWMCycleCfg(VP_LED_PWM_CYCLE);
-    TMR3_PWMInit(High_Level, PWM_Times_1);
+    vp_tmr_pwm_init(BOARD_SIGNAL_LED_STATUS, VP_LED_PWM_CYCLE);
 }
 
-void LedPlatform_Play(const uint8_t led_id, const uint8_t* data,
+void LedPlatform_Play(const BoardSignal sig, const uint8_t* data,
                        const uint16_t byte_len, const uint8_t is_loop) {
     if (data == NULL || byte_len == 0u) {
         return;
     }
 
-    if (current_led != 0xFFu) {
+    if (current_led_active) {
         LedPlatform_Stop();
     }
 
     uint32_t start_addr = (uint32_t)(uintptr_t)data;
     uint32_t end_addr = start_addr + byte_len;
-    DMAModeTypeDef dma_mode = is_loop ? Mode_LOOP : Mode_Single;
 
-    switch (led_id) {
-        case VP_LED_ID_STATUS:
-            TMR3_DMACfg(ENABLE, start_addr, end_addr, dma_mode);
-            TMR3_PWMEnable();
-            TMR3_Enable();
-            current_led = led_id;
-            break;
-        default:
-            break;
-    }
+    vp_tmr_pwm_dma_cfg(sig, start_addr, end_addr, is_loop);
+    vp_tmr_pwm_enable(sig);
+    current_led_active = 1u;
 }
 
 void LedPlatform_Stop(void) {
-    TMR3_PWMDisable();
-    TMR3_Disable();
-    TMR3_DMACfg(DISABLE, 0u, 0u, Mode_Single);
-    R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
-    current_led = 0xFFu;
+    if (!current_led_active) {
+        return;
+    }
+    vp_tmr_pwm_disable(BOARD_SIGNAL_LED_STATUS);
+    vp_tmr_pwm_dma_stop(BOARD_SIGNAL_LED_STATUS);
+    vp_tmr_reset(BOARD_SIGNAL_LED_STATUS);
+    current_led_active = 0u;
 }

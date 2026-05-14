@@ -20,7 +20,7 @@
 #include "c_api.h"
 #include "usbhs_hid_device.h"
 #include "board_map.h"
-#include "board_gpio.h"
+#include "vp_hal.h"
 #include "board_input.h"
 #include "imu_platform.h"
 #include "led_platform.h"
@@ -135,19 +135,7 @@ void RuntimeTask_Init() {
 }
 
 void InputGPIO_Init() {
-    board_gpio_digital_cfg(board_btn_right, ENABLE);
-    board_gpio_digital_cfg(board_btn_left, ENABLE);
-    board_gpio_digital_cfg(board_btn_action, ENABLE);
-    board_gpio_digital_cfg(board_enc_a, ENABLE);
-    board_gpio_digital_cfg(board_btn_middle, ENABLE);
-    board_gpio_digital_cfg(board_enc_b, ENABLE);
-
-    board_gpio_mode_cfg(board_btn_right, GPIO_ModeIN_PU);
-    board_gpio_mode_cfg(board_btn_left, GPIO_ModeIN_PU);
-    board_gpio_mode_cfg(board_btn_action, GPIO_ModeIN_PU);
-    board_gpio_mode_cfg(board_enc_a, GPIO_ModeIN_PU);
-    board_gpio_mode_cfg(board_btn_middle, GPIO_ModeIN_PU);
-    board_gpio_mode_cfg(board_enc_b, GPIO_ModeIN_PU);
+    board_gpio_init_all();
 
     ImuPlatform_InitGpio();
 }
@@ -173,29 +161,13 @@ int main() {
     SetSysClock(SYSCLK_FREQ);
 
 #if (defined(HAL_SLEEP)) && (HAL_SLEEP == TRUE)
-    board_gpio_mode_cfg_mask(BOARD_GPIO_GROUP_A, GPIO_Pin_All, GPIO_ModeIN_PU);
-    board_gpio_mode_cfg_mask(BOARD_GPIO_GROUP_B, GPIO_Pin_All, GPIO_ModeIN_PU);
+    vp_gpio_mode_cfg_mask(BOARD_GPIO_GROUP_A, GPIO_Pin_All, GPIO_ModeIN_PU);
+    vp_gpio_mode_cfg_mask(BOARD_GPIO_GROUP_B, GPIO_Pin_All, GPIO_ModeIN_PU);
 #endif
 
 #ifdef DEBUG
-    board_gpio_set(board_debug_tx);
-    board_gpio_mode_cfg(board_debug_tx, GPIO_ModeOut_PP_5mA);
-    GPIOPinRemap(ENABLE, RB_PIN_UART0);
-    board_gpio_mode_cfg(board_debug_rx, GPIO_ModeIN_PU);
     UART0_DefInit();
 #endif
-
-    board_gpio_mode_cfg(
-        (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_0},
-        GPIO_ModeOut_PP_5mA);
-    board_gpio_mode_cfg(
-        (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1},
-        GPIO_ModeOut_PP_5mA);
-
-    board_gpio_reset(
-        (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_0});
-    board_gpio_reset(
-        (BoardGpio){.group = BOARD_GPIO_GROUP_A, .pin = GPIO_Pin_1});
 
     CH58x_BLEInit();
     HAL_Init();

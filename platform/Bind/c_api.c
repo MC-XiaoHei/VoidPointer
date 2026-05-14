@@ -21,7 +21,7 @@
 #include "usbhs_hid_device.h"
 #include "lsm6dsv.h"
 #include "board_map.h"
-#include "board_gpio.h"
+#include "vp_hal.h"
 #include "board_input.h"
 #include "imu_platform.h"
 
@@ -111,7 +111,7 @@ static vp_status_t enable_imu_wake_sources(void) {
     const vp_input_id_t inputs[] = {VP_INPUT_IMU_INT1, VP_INPUT_IMU_INT2};
     for (uint8_t i = 0u; i < (uint8_t)(sizeof(inputs) / sizeof(inputs[0])); i++) {
         BoardGpio gpio = {0};
-        if (!board_input_id_to_gpio(inputs[i], &gpio) || !board_gpio_is_valid(gpio)) {
+        if (!board_input_id_to_gpio(inputs[i], &gpio) || !vp_gpio_is_valid(gpio)) {
             continue;
         }
 
@@ -142,7 +142,7 @@ vp_bool_t c_vp_gpio_read(const vp_input_id_t input_id) {
         return 0u;
     }
 
-    return board_gpio_read_level(gpio) ? 0u : 1u;
+    return vp_gpio_read_level(gpio) ? 0u : 1u;
 }
 
 vp_status_t c_vp_gpio_read_inputs(uint16_t* out_snapshot) {
@@ -150,8 +150,8 @@ vp_status_t c_vp_gpio_read_inputs(uint16_t* out_snapshot) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    const uint32_t portA_data = board_gpio_read_port(BOARD_GPIO_GROUP_A);
-    const uint32_t portB_data = board_gpio_read_port(BOARD_GPIO_GROUP_B);
+    const uint32_t portA_data = vp_gpio_read_port(BOARD_GPIO_GROUP_A);
+    const uint32_t portB_data = vp_gpio_read_port(BOARD_GPIO_GROUP_B);
     uint16_t       snapshot = 0u;
     for (uint8_t input = VP_INPUT_LEFT; input <= VP_INPUT_IMU_INT2; input++) {
         BoardGpio gpio = {0};
@@ -177,14 +177,17 @@ vp_status_t c_vp_gpio_write(const vp_output_id_t output_id,
                             const vp_bool_t      level) {
     switch (output_id) {
         case VP_OUTPUT_LASER:
-            if (!board_gpio_is_valid(board_btn_laser)) {
+        {
+            const BoardGpio gpio = board_signal_get(BOARD_SIGNAL_BTN_LASER);
+            if (!vp_gpio_is_valid(gpio)) {
                 return VP_STATUS_UNSUPPORTED;
             }
             if (level) {
-                board_gpio_set(board_btn_laser);
+                vp_gpio_set(gpio);
             } else {
-                board_gpio_reset(board_btn_laser);
+                vp_gpio_reset(gpio);
             }
+        }
             return VP_STATUS_OK;
         default:
             return VP_STATUS_INVALID_ARG;
@@ -197,7 +200,7 @@ vp_status_t c_vp_exti_mask(const vp_input_id_t input_id) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    return board_gpio_int_mask(gpio);
+    return vp_gpio_int_mask(gpio);
 }
 
 vp_status_t c_vp_exti_unmask(const vp_input_id_t input_id) {
@@ -215,7 +218,7 @@ vp_status_t c_vp_exti_clear_pending(const vp_input_id_t input_id) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    board_gpio_clear_it_flag(gpio);
+    vp_gpio_clear_it_flag(gpio);
     return VP_STATUS_OK;
 }
 
@@ -670,15 +673,15 @@ vp_status_t c_vp_platform_reset(const uint32_t reason) {
     return VP_STATUS_OK;
 }
 
-void c_vp_led_play(const vp_led_id_t led_id, const uint32_t* ptr, const uint16_t len,
+void c_vp_led_play(const uint8_t led_sig, const uint32_t* ptr, const uint16_t len,
                    const vp_bool_t is_loop) {
-    LedPlatform_Play((uint8_t)led_id, (const uint8_t*)ptr, (uint16_t)(len * 4u), is_loop);
+    LedPlatform_Play((BoardSignal)led_sig, (const uint8_t*)ptr, (uint16_t)(len * 4u), is_loop);
 }
 
 void c_vp_led_stop(void) {
     LedPlatform_Stop();
 }
 
-void c_vp_pwm_set_duty(const uint8_t pwm_id, const uint8_t duty) {
-    PwmPlatform_SetDuty(pwm_id, duty);
+void c_vp_pwm_set_duty(const uint8_t pwm_sig, const uint8_t duty) {
+    PwmPlatform_SetDuty((BoardSignal)pwm_sig, duty);
 }
