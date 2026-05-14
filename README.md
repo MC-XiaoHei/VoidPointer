@@ -1,27 +1,49 @@
 # VoidPointer
 
-VoidPointer 是一个面向 CH585 平台的混合固件项目，使用 C 处理硬件与协议栈边界，使用 Rust 承担输入、姿态、路由、电源和配置等核心业务逻辑
+**2026 年全国大学生嵌入式竞赛参赛作品**
+
+---
+
+## 项目简介
+
+VoidPointer 是一款面向教师和演讲者的演示笔，集成空中鼠标、激光笔和便携存储三项能力，满足翻页、激光指示和携带文件等使用场景。
+
+硬件方面，主控采用 CH585，IMU 采用 LSM6DSV。
+
+固件方面，使用 Rust 与 C 共同开发，C 处理硬件与协议栈边界，Rust 实现核心业务逻辑。
+
+> 目前本仓库仅用于维护固件源码，硬件原理图与 PCB 暂未开源，后续补充。
+
+---
+
+## 快速开始
+
+```bash
+# 安装 Rust 目标
+rustup target add riscv32imc-unknown-none-elf
+
+# 初始化工具链配置
+python tools/dev-task.py init
+
+# 构建固件
+python tools/dev-task.py build
+
+# 下载到设备
+python tools/dev-task.py download
+```
 
 ## 仓库结构
 
-- `core/`：Rust 核心逻辑
-- `platform/`：CH585 平台层、BLE/USB glue、FFI 绑定
-- `docs/`：长期文档、文档导航和仓库维护规范
-- `tools/`：辅助脚本与工具
+```
+VoidPointer/
+  ├── core/       # 业务层（负责业务逻辑实现，由 Rust 编写）
+  ├── platform/   # 平台层（负责 BLE，USB，IMU 等平台相关工作，由 C 编写）
+  ├── docs/       # 设计文档
+  └── tools/      # 开发脚本
+```
 
-## 建议阅读顺序
+---
 
-1. `docs/README.md`
-2. `docs/DESIGN.md`
-3. `docs/SETUP.md`
-4. `docs/FFI_ABI.md`
-5. `docs/POWER_STATE_MACHINE.md` 与 `docs/ROUTE_STATE_MACHINE.md`
-6. `docs/STYLE.md`
+## 许可
 
-## 代码约定
-
-- 注释优先解释约束、边界和为什么这样做
-- 代码中的长期事实应回填到 `docs/`，不要散落在临时笔记里
-- 开发期决策、任务和待确认问题统一放在 `docs/dev/`
-- 注释与文档风格约定见 `docs/STYLE.md`
-- Git 提交消息使用简短的英文，尽可能让提交短小
+MIT © 2026 MC_XiaoHei
