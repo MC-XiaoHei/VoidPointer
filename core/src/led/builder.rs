@@ -56,10 +56,10 @@ impl<const N: usize> LedSequenceBuilder<N> {
         while i < frames {
             assert!(self.pos < N, "fade: 缓冲区溢出");
             let val = if end > start {
-                let diff = (end as usize - start as usize);
+                let diff = end as usize - start as usize;
                 start as usize + (diff * i * i) / (frames * frames)
             } else {
-                let diff = (start as usize - end as usize);
+                let diff = start as usize - end as usize;
                 let j = frames - i;
                 end as usize + (diff * j * j) / (frames * frames)
             };
@@ -79,7 +79,7 @@ impl<const N: usize> LedSequenceBuilder<N> {
     }
 
     /// 不追加终止 0，用于循环播放
-    pub const fn finish_loop(mut self) -> (usize, [u32; N]) {
+    pub const fn finish_loop(self) -> (usize, [u32; N]) {
         (self.pos, self.data)
     }
 }
