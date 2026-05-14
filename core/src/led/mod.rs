@@ -1,33 +1,9 @@
 pub mod builder;
 pub mod macros;
 
-use crate::ffi::bindings::{VP_LED_ID_STATUS, vp_led_id_t};
-
 /// TICK_MS = 10, 硬件 PWM 每帧持续 10ms, 必须能被 1s 整除
 pub const TICK_MS: usize = 10;
 const _: () = assert!(1000 % TICK_MS == 0, "TICK_MS 必须能被 1s 整除");
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LedId {
-    Status,
-}
-
-impl From<vp_led_id_t> for LedId {
-    fn from(v: vp_led_id_t) -> Self {
-        match v as u32 {
-            VP_LED_ID_STATUS => Self::Status,
-            _ => Self::Status,
-        }
-    }
-}
-
-impl From<LedId> for vp_led_id_t {
-    fn from(id: LedId) -> Self {
-        match id {
-            LedId::Status => VP_LED_ID_STATUS as u8,
-        }
-    }
-}
 
 pub struct LedProfile<const N: usize> {
     pub data: [u32; N],

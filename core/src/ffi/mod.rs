@@ -2,6 +2,7 @@
 
 pub mod api;
 pub mod bindings;
+pub mod board_map;
 
 #[cfg(test)]
 include!(concat!(env!("OUT_DIR"), "/test_stubs.rs"));

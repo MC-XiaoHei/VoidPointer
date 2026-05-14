@@ -6,7 +6,6 @@
 #define VOIDPOINTER_C_API_H
 
 #include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -198,21 +197,15 @@ vp_status_t c_vp_flash_write(uint32_t offset, const uint8_t* ptr, uint32_t len);
 void        c_vp_print(const char* ptr, uint16_t len);
 vp_status_t c_vp_platform_reset(uint32_t reason);
 
-typedef uint8_t vp_led_id_t;
-enum {
-    VP_LED_ID_STATUS = 0,
-};
-
 // TMR3 时钟 = SYSCLK_FREQ(60MHz)，VP_LED_PWM_CYCLE = SYSCLK / 100, 每帧 10ms
 #define VP_LED_PWM_CYCLE 600000u
 
 /* LED 控制 API，只能在 bottom-half 调用 */
-void c_vp_led_play(vp_led_id_t led_id, const uint32_t* ptr, uint16_t len,
+void c_vp_led_play(uint8_t led_sig, const uint32_t* ptr, uint16_t len,
                    vp_bool_t is_loop);
 void c_vp_led_stop(void);
 
-#define VP_PWM_ID_LASER 0u
-void c_vp_pwm_set_duty(uint8_t pwm_id, uint8_t duty);
+void c_vp_pwm_set_duty(uint8_t pwm_sig, uint8_t duty);
 
 #ifdef __cplusplus
 }
