@@ -1,4 +1,5 @@
 use crate::ffi::bindings::*;
+use crate::runtime::commands::map_hid_status;
 
 use crate::hid::types::{HidSendStatus, MouseReport};
 
@@ -12,17 +13,6 @@ pub struct BleHidSender;
 impl BleHidSender {
     pub fn new() -> Self {
         Self
-    }
-
-    #[allow(non_upper_case_globals)]
-    fn map_status(status: vp_hid_send_status_t) -> HidSendStatus {
-        match status {
-            x if x == VP_HID_SEND_SENT as u8 => HidSendStatus::Sent,
-            x if x == VP_HID_SEND_RETRY_LATER as u8 => HidSendStatus::RetryLater,
-            x if x == VP_HID_SEND_NOT_CONNECTED as u8 => HidSendStatus::NotConnected,
-            x if x == VP_HID_SEND_FATAL as u8 => HidSendStatus::Fatal,
-            _ => HidSendStatus::Fatal,
-        }
     }
 }
 
@@ -38,6 +28,6 @@ impl HidSender for BleHidSender {
             )
         };
 
-        Self::map_status(status)
+        map_hid_status(status)
     }
 }

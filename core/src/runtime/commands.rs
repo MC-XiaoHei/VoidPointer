@@ -134,7 +134,7 @@ fn enable_low_power_resume_sources(enabled: bool) -> bool {
 }
 
 #[allow(non_upper_case_globals)]
-fn map_hid_status(status: vp_hid_send_status_t) -> HidSendStatus {
+pub fn map_hid_status(status: vp_hid_send_status_t) -> HidSendStatus {
     // 未识别状态一律按 fatal 处理，避免在未知返回值上乐观重试
     match status {
         x if x == VP_HID_SEND_SENT as u8 => HidSendStatus::Sent,

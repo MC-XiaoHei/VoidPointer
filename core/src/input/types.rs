@@ -14,7 +14,6 @@ pub struct InputStatus {
     pub left: bool,
     pub right: bool,
     pub middle: bool,
-    pub light: bool,
     pub action: bool,
     pub wheel_delta: i8,
 }
@@ -215,7 +214,6 @@ impl InputManager {
             left: self.stable_active_level(VP_INPUT_LEFT as u8),
             right: self.stable_active_level(VP_INPUT_RIGHT as u8),
             middle: self.stable_active_level(VP_INPUT_MIDDLE as u8),
-            light: false,
             action: self.stable_active_level(VP_INPUT_ACTION as u8),
             wheel_delta,
         }

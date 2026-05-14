@@ -4,8 +4,9 @@
  * 对 BLE 来说，链路连上不等于输入路径已经可用，因此必须把 connected 和 input-ready 分开建模
  */
 use crate::ffi::bindings::{
-    VP_HID_ROUTE_BLE, VP_HID_ROUTE_DONGLE_2G4, VP_HID_ROUTE_NONE, VP_HID_ROUTE_USB, vp_hid_route_t,
-    vp_usb_state_t,
+    VP_HID_ROUTE_BLE, VP_HID_ROUTE_DONGLE_2G4, VP_HID_ROUTE_NONE, VP_HID_ROUTE_USB,
+    VP_USB_STATE_ATTACHED, VP_USB_STATE_CONFIGURED, VP_USB_STATE_ERROR, VP_USB_STATE_SUSPENDED,
+    vp_hid_route_t, vp_usb_state_t,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -30,9 +31,9 @@ impl HidRoute {
 impl From<vp_hid_route_t> for HidRoute {
     fn from(value: vp_hid_route_t) -> Self {
         match value {
-            1 => Self::Ble,
-            2 => Self::Dongle2G4,
-            3 => Self::Usb,
+            x if x == VP_HID_ROUTE_BLE as u8 => Self::Ble,
+            x if x == VP_HID_ROUTE_DONGLE_2G4 as u8 => Self::Dongle2G4,
+            x if x == VP_HID_ROUTE_USB as u8 => Self::Usb,
             _ => Self::None,
         }
     }
@@ -50,10 +51,10 @@ pub enum UsbState {
 impl From<vp_usb_state_t> for UsbState {
     fn from(value: vp_usb_state_t) -> Self {
         match value {
-            1 => Self::Attached,
-            2 => Self::Configured,
-            3 => Self::Suspended,
-            4 => Self::Error,
+            x if x == VP_USB_STATE_ATTACHED as u8 => Self::Attached,
+            x if x == VP_USB_STATE_CONFIGURED as u8 => Self::Configured,
+            x if x == VP_USB_STATE_SUSPENDED as u8 => Self::Suspended,
+            x if x == VP_USB_STATE_ERROR as u8 => Self::Error,
             _ => Self::Detached,
         }
     }
@@ -166,7 +167,6 @@ impl Default for HidRouter {
 mod tests {
     use super::*;
 
-
     #[test]
     fn hid_route_as_ffi() {
         assert_eq!(HidRoute::None.as_ffi(), 0);
@@ -184,7 +184,6 @@ mod tests {
         assert_eq!(HidRoute::from(99), HidRoute::None);
     }
 
-
     #[test]
     fn usb_state_from_ffi() {
         assert_eq!(UsbState::from(0), UsbState::Detached);
@@ -194,7 +193,6 @@ mod tests {
         assert_eq!(UsbState::from(4), UsbState::Error);
         assert_eq!(UsbState::from(99), UsbState::Detached);
     }
-
 
     #[test]
     fn router_default_state() {

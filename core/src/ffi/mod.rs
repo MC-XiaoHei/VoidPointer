@@ -1,5 +1,8 @@
 //! FFI 边界只负责两件事：承认 `c_api.h` 是唯一 ABI 事实来源，并在 Rust 侧提供最薄的一层包装
 
+#![cfg_attr(test, allow(unused_variables))]
+#![cfg_attr(test, allow(unused_unsafe))]
+
 pub mod api;
 pub mod bindings;
 pub mod board_map;

@@ -32,6 +32,7 @@ use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 const HID_RETRY_DELAY_MS: u32 = 8;
 const IMU_POLL_ACTIVE_MS: u32 = 30;
+const IMU_FIFO_MAX_SAMPLES: u16 = 8;
 const MOTION_REPORT_MS: u32 = 10;
 const ENABLE_POWER_MANAGER: bool = true;
 const ENABLE_SLEEP_POWER_STATE: bool = false;
@@ -55,46 +56,6 @@ pub struct DirtyFlags {
 impl DirtyFlags {
     pub fn any(self) -> bool {
         self.input || self.motion || self.report || self.power || self.config
-    }
-
-    pub fn mark_input(&mut self) {
-        self.input = true;
-    }
-
-    pub fn clear_input(&mut self) {
-        self.input = false;
-    }
-
-    pub fn mark_motion(&mut self) {
-        self.motion = true;
-    }
-
-    pub fn clear_motion(&mut self) {
-        self.motion = false;
-    }
-
-    pub fn mark_report(&mut self) {
-        self.report = true;
-    }
-
-    pub fn clear_report(&mut self) {
-        self.report = false;
-    }
-
-    pub fn mark_power(&mut self) {
-        self.power = true;
-    }
-
-    pub fn clear_power(&mut self) {
-        self.power = false;
-    }
-
-    pub fn mark_config(&mut self) {
-        self.config = true;
-    }
-
-    pub fn clear_config(&mut self) {
-        self.config = false;
     }
 }
 
@@ -187,7 +148,7 @@ impl Runtime {
     }
 
     pub fn request_poll() {
-        // 先立 pending 标记，再唤醒主循环，避免边沿事件在窗口里丢失
+        // POLL_PENDING 必须在唤醒主循环之前立起，否则 ISR 和主循环之间存在竞态
         POLL_PENDING.store(true, Ordering::Release);
         unsafe { c_vp_request_core_poll() };
     }
@@ -200,17 +161,22 @@ impl Runtime {
         self.last_activity_ms.store(timestamp_ms, Ordering::Release);
         if ENABLE_POWER_MANAGER {
             self.power_recheck_deadline_ms = None;
-            self.dirty.mark_power();
+            self.dirty.power = true;
             self.pending.power_recheck = true;
         }
     }
 
-    fn reset_motion_capture_state(&mut self, calibration_pending: bool) {
+    fn reset_motion_capture_state(&mut self) {
         self.report_state.reset_all();
         self.current_motion = MotionState::default();
         self.last_motion_sample_ts = None;
         self.motion_report_deadline_ms = Some(unsafe { c_vp_rtc_millis() });
-        self.motion_calibration_pending = calibration_pending;
+        self.motion_calibration_pending = false;
+    }
+
+    fn reset_and_calibrate_motion(&mut self) {
+        self.reset_motion_capture_state();
+        self.motion_calibration_pending = true;
     }
 
     fn imu_poll_enabled(&self) -> bool {
@@ -247,7 +213,9 @@ impl Runtime {
 
         self.pending.imu_fifo_read = true;
         self.imu_poll_deadline_ms = Some(now.wrapping_add(IMU_POLL_ACTIVE_MS));
-        Some(RuntimeCommand::ReadImuFifo { max_samples: 8 })
+        Some(RuntimeCommand::ReadImuFifo {
+            max_samples: IMU_FIFO_MAX_SAMPLES,
+        })
     }
 
     pub fn poll(&mut self) -> Option<RuntimeCommand> {
@@ -280,22 +248,22 @@ impl Runtime {
         Self::request_poll_after(HID_RETRY_DELAY_MS);
     }
 
-    fn apply_mouse_send_status(&mut self, report: MouseReport, status: HidSendStatus) {
-        self.mouse_report
-            .apply_send_status(report, status, &mut self.report_state);
-        self.dirty.clear_report();
-
+    fn handle_hid_send_status(&mut self, status: HidSendStatus) {
         match status {
-            HidSendStatus::Sent => {
+            HidSendStatus::Sent | HidSendStatus::NotConnected | HidSendStatus::Fatal => {
                 self.pending.hid_retry = false;
             }
             HidSendStatus::RetryLater => {
                 self.schedule_hid_retry();
             }
-            HidSendStatus::NotConnected | HidSendStatus::Fatal => {
-                self.pending.hid_retry = false;
-            }
         }
+    }
+
+    fn apply_mouse_send_status(&mut self, report: MouseReport, status: HidSendStatus) {
+        self.mouse_report
+            .apply_send_status(report, status, &mut self.report_state);
+        self.dirty.report = false;
+        self.handle_hid_send_status(status);
     }
 
     fn apply_vendor_send_status(
@@ -305,18 +273,13 @@ impl Runtime {
         status: HidSendStatus,
     ) {
         match status {
-            HidSendStatus::Sent => {
-                self.pending.hid_retry = false;
-            }
             HidSendStatus::RetryLater => {
                 self.vendor
                     .requeue_pending_tx(PendingVendorTx { route, report });
-                self.schedule_hid_retry();
             }
-            HidSendStatus::NotConnected | HidSendStatus::Fatal => {
-                self.pending.hid_retry = false;
-            }
+            _ => {}
         }
+        self.handle_hid_send_status(status);
     }
 
     pub fn apply_command_result(&mut self, result: RuntimeCommandResult) {
@@ -339,7 +302,7 @@ impl Runtime {
                 self.power_recheck_deadline_ms = None;
                 self.power.apply_request_result(target, accepted);
                 self.pending.power_recheck = false;
-                self.dirty.clear_power();
+                self.dirty.power = false;
             }
             RuntimeCommandResult::ImuFifoReadRequested { status } => {
                 if status != VP_STATUS_OK as u8 {
@@ -403,13 +366,15 @@ impl Runtime {
         }
 
         if self.pending.imu_fifo_read {
-            return Some(RuntimeCommand::ReadImuFifo { max_samples: 8 });
+            return Some(RuntimeCommand::ReadImuFifo {
+                max_samples: IMU_FIFO_MAX_SAMPLES,
+            });
         }
 
         if self.pending.config_save || self.dirty.config {
             self.config.poll();
             self.pending.config_save = false;
-            self.dirty.clear_config();
+            self.dirty.config = false;
         }
 
         if let Some(command) = self.poll_power() {
@@ -446,7 +411,7 @@ impl Runtime {
 
         self.power_recheck_deadline_ms = None;
         self.pending.power_recheck = false;
-        self.dirty.clear_power();
+        self.dirty.power = false;
 
         let config_dirty = self.pending.config_save || self.dirty.config || self.config.is_dirty();
         let effective_config_dirty = config_dirty || !ENABLE_SLEEP_POWER_STATE;
@@ -580,23 +545,23 @@ impl Runtime {
             RuntimeEvent::BleInputReady { timestamp } => {
                 self.router.set_ble_input_ready(true);
                 self.mark_activity(timestamp);
-                self.dirty.mark_report();
+                self.dirty.report = true;
             }
             RuntimeEvent::BleDisconnected { timestamp, .. } => {
                 self.router.set_ble_input_ready(false);
                 self.router.set_ble_connected(false);
                 self.mark_activity(timestamp);
-                self.dirty.mark_report();
+                self.dirty.report = true;
             }
             RuntimeEvent::DongleConnected { timestamp } => {
                 self.router.set_dongle_connected(true);
                 self.mark_activity(timestamp);
-                self.dirty.mark_report();
+                self.dirty.report = true;
             }
             RuntimeEvent::DongleDisconnected { timestamp, .. } => {
                 self.router.set_dongle_connected(false);
                 self.mark_activity(timestamp);
-                self.dirty.mark_report();
+                self.dirty.report = true;
             }
             RuntimeEvent::UsbStateChanged { state, timestamp } => {
                 let usb_state = UsbState::from(state);
@@ -607,7 +572,7 @@ impl Runtime {
                     usb_state_log_name(usb_state),
                     matches!(usb_state, UsbState::Configured)
                 );
-                self.dirty.mark_report();
+                self.dirty.report = true;
             }
             RuntimeEvent::ButtonExti {
                 button_id,
@@ -616,18 +581,18 @@ impl Runtime {
             } => {
                 self.mark_activity(timestamp);
                 if self.input.on_button_exti(button_id, level != 0) {
-                    self.dirty.mark_input();
+                    self.dirty.input = true;
                 }
             }
             RuntimeEvent::ModeSwitchExti { timestamp, .. } => {
                 self.mark_activity(timestamp);
-                self.dirty.mark_input();
+                self.dirty.input = true;
             }
             RuntimeEvent::DebounceTick { timestamp } => {
                 self.mark_activity(timestamp);
                 if self.input.on_debounce_tick() {
-                    self.dirty.mark_input();
-                    self.dirty.mark_report();
+                    self.dirty.input = true;
+                    self.dirty.report = true;
                 }
             }
             RuntimeEvent::EncoderExti {
@@ -637,8 +602,8 @@ impl Runtime {
             } => {
                 self.mark_activity(timestamp);
                 if self.input.on_encoder_exti(a_level != 0, b_level != 0) {
-                    self.dirty.mark_input();
-                    self.dirty.mark_report();
+                    self.dirty.input = true;
+                    self.dirty.report = true;
                 }
             }
             RuntimeEvent::ImuInt { timestamp } => {
@@ -647,7 +612,7 @@ impl Runtime {
 
                 self.pending.imu_fifo_read = false;
                 self.imu_poll_deadline_ms = Some(timestamp);
-                self.dirty.mark_power();
+                self.dirty.power = true;
             }
             RuntimeEvent::ImuSample {
                 raw_x,
@@ -667,8 +632,8 @@ impl Runtime {
                     timestamp_ms: timestamp,
                     valid: true,
                 };
-                self.dirty.mark_motion();
-                self.dirty.mark_report();
+                self.dirty.motion = true;
+                self.dirty.report = true;
             }
             RuntimeEvent::ImuFifoDone {
                 status,
@@ -708,19 +673,17 @@ impl Runtime {
         self.motion_report_deadline_ms = Some(unsafe { c_vp_rtc_millis() });
     }
 
-    /// 鼠标路由不存在或尚未 ready 时，要收敛本次发送尝试
-    /// 等真正改变路由可用性的事件再次唤醒，例如 BLE ready、USB 状态变化或新的输入活动
+    /// 路由不可用时不累计失效 motion，避免恢复后回放旧移动
+    /// 后续由 BLE ready、USB 状态变化或新输入活动再次唤醒
     fn defer_report_until_route_event(&mut self) -> Option<RuntimeCommand> {
         // route 不可用时不累计失效 motion，避免恢复后回放旧移动。
         self.clear_unsent_motion_output();
         self.mouse_report.reset_all();
         self.pending.hid_retry = false;
-        self.dirty.clear_report();
+        self.dirty.report = false;
         None
     }
 
-    /// vendor 待发包已经真实存在，但 route not-ready 不等于可短退避重试
-    /// 这里保留待发包并收敛本次尝试，等待 BLE ready、USB 状态变化等 route 事件再次唤醒
     fn defer_vendor_until_route_event(&mut self, tx: PendingVendorTx) -> Option<RuntimeCommand> {
         self.vendor.requeue_pending_tx(tx);
         self.pending.hid_retry = false;
@@ -730,7 +693,7 @@ impl Runtime {
     fn poll_input_and_hid(&mut self) -> Option<RuntimeCommand> {
         let input = self.input.get_current_input();
         self.last_input_status = input;
-        self.dirty.clear_input();
+        self.dirty.input = false;
         let buttons = MouseButtons {
             left: input.left,
             right: input.right,
@@ -740,9 +703,9 @@ impl Runtime {
         let motion_capture_active = input.action || input.middle;
 
         if motion_capture_active && !self.motion_capture_active {
-            self.reset_motion_capture_state(true);
+            self.reset_and_calibrate_motion();
         } else if !motion_capture_active && self.motion_capture_active {
-            self.reset_motion_capture_state(false);
+            self.reset_motion_capture_state();
         }
         self.motion_capture_active = motion_capture_active;
 
@@ -779,7 +742,7 @@ impl Runtime {
         let wheel_changed = input.wheel_delta != 0;
         if wheel_changed || button_changed {
             self.mark_activity(now);
-            self.dirty.mark_report();
+            self.dirty.report = true;
         }
 
         if motion_capture_active && !deadline_due(now, motion_report_deadline) {
@@ -792,7 +755,6 @@ impl Runtime {
             self.pending.hid_retry,
             self.dirty.report,
         ) {
-            // 没有 motion、wheel、button 变化，也没有 retry/dirty 压力时直接退出
             return None;
         }
 
@@ -839,7 +801,7 @@ fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
 }
 
 fn clear_suspend_resume_sources() {
-    // 清理 Suspend 期间使用的恢复源配置。
+    // Suspend 期间启用的唤醒源在恢复后不再需要。
     for source in [
         VP_WAKE_SOURCE_BUTTON,
         VP_WAKE_SOURCE_ENCODER,

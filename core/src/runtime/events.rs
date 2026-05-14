@@ -75,88 +75,13 @@ pub struct EventQueue {
 impl EventQueue {
     pub const fn new() -> Self {
         Self {
-            inner: SpscQueue::from_array([
-                RuntimeEvent::VendorReportRx {
+            inner: SpscQueue::from_array(
+                [RuntimeEvent::VendorReportRx {
                     route: 0,
                     len: 0,
                     timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-                RuntimeEvent::VendorReportRx {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                },
-            ]),
+                }; EVENT_QUEUE_CAPACITY],
+            ),
         }
     }
 

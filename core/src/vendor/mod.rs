@@ -45,32 +45,14 @@ pub struct VendorRxQueue {
 impl VendorRxQueue {
     pub const fn new() -> Self {
         Self {
-            inner: SpscQueue::from_array([
-                VendorRxReport {
+            inner: SpscQueue::from_array(
+                [VendorRxReport {
                     route: 0,
                     len: 0,
                     timestamp: 0,
                     data: [0u8; VENDOR_RX_PAYLOAD_CAPACITY],
-                },
-                VendorRxReport {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                    data: [0u8; VENDOR_RX_PAYLOAD_CAPACITY],
-                },
-                VendorRxReport {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                    data: [0u8; VENDOR_RX_PAYLOAD_CAPACITY],
-                },
-                VendorRxReport {
-                    route: 0,
-                    len: 0,
-                    timestamp: 0,
-                    data: [0u8; VENDOR_RX_PAYLOAD_CAPACITY],
-                },
-            ]),
+                }; VENDOR_RX_QUEUE_CAPACITY],
+            ),
         }
     }
 
