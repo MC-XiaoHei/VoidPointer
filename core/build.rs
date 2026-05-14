@@ -48,6 +48,7 @@ fn generate_rust_from_c(bind_dir: &PathBuf, out_dir: &PathBuf) {
 
     println!("cargo::rustc-check-cfg=cfg(coverage)");
     println!("cargo:rerun-if-changed={}", header.display());
+    println!("cargo:rerun-if-changed=build.rs");
 
     let bindings = bindgen::builder()
         .header(header.to_str().expect("Path error"))
@@ -78,28 +79,37 @@ fn generate_test_stubs(out_dir: &PathBuf) {
 fn build_stubs_from(source: &str) -> String {
     let mut stubs = String::new();
     stubs.push_str("// 自动生成，勿手动编辑\n");
-    stubs.push_str("use crate::ffi::bindings::*;\n");
-    stubs.push_str("#[allow(unused_variables)]\n");
-    stubs.push_str("#[allow(unused_unsafe)]\n\n");
+    stubs.push_str("use crate::ffi::bindings::*;\n\n");
 
-    let mut pending: Option<String> = None;
+    let lines: Vec<&str> = source.lines().collect();
+    let mut i = 0;
+    while i < lines.len() {
+        let trimmed = lines[i].trim();
+        i += 1;
 
-    for line in source.lines() {
-        let trimmed = line.trim();
-        pending = match pending {
-            None if trimmed.starts_with("pub fn") => Some(trimmed.to_string()),
-            _ => pending,
-        };
-
-        let Some(ref mut sig) = pending else { continue };
-        if !trimmed.ends_with(';') {
-            sig.push_str(trimmed);
+        if !trimmed.starts_with("pub fn") {
             continue;
         }
 
-        let sig = pending.take().unwrap();
-        let body = stub_body_from(&sig);
-        stubs.push_str(&body);
+        let mut sig = trimmed.to_string();
+        if trimmed.ends_with(';') {
+            let body = stub_body_from(&sig);
+            stubs.push_str(&body);
+            continue;
+        }
+
+        // multi-line: consume subsequent lines until ;
+        while i < lines.len() {
+            let t = lines[i].trim();
+            i += 1;
+            sig.push(' ');
+            sig.push_str(t);
+            if t.ends_with(';') {
+                let body = stub_body_from(&sig);
+                stubs.push_str(&body);
+                break;
+            }
+        }
     }
 
     stubs
