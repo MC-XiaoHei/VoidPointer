@@ -16,9 +16,7 @@ use crate::ffi::bindings::{
 };
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::input::types::{InputManager, InputStatus};
-use crate::motion::config::MotionConfig;
-use crate::motion::resolver::TiltMotionSolver;
-use crate::motion::state::MotionState;
+use crate::motion::session::MotionSession;
 use crate::power::{PowerManager, PowerState};
 use crate::report::config::ReportConfig;
 use crate::report::state::ReportState;
@@ -101,13 +99,9 @@ pub struct Runtime {
     pub power_recheck_deadline_ms: Option<u32>,
     pub imu_poll_deadline_ms: Option<u32>,
     pub latest_imu_sample: LatestImuSample,
-    pub last_motion_sample_ts: Option<u32>,
     pub motion_report_deadline_ms: Option<u32>,
-    pub motion_calibration_pending: bool,
-    pub motion_solver: TiltMotionSolver,
-    pub current_motion: MotionState,
+    pub motion_session: MotionSession,
     pub report_state: ReportState,
-    pub motion_capture_active: bool,
 }
 
 impl Runtime {
@@ -117,10 +111,13 @@ impl Runtime {
         let initial_input = input.sync_snapshot();
         clear_current_attitude();
 
+        let config = ConfigManager::new();
+        let motion_cfg = config.current_config().motion;
+
         Self {
             router: HidRouter::new(),
             power: PowerManager::new(),
-            config: ConfigManager::new(),
+            config,
             vendor: VendorRuntime::new(),
             input,
             last_input_status: initial_input,
@@ -131,15 +128,11 @@ impl Runtime {
             power_recheck_deadline_ms: None,
             imu_poll_deadline_ms: Some(now),
             latest_imu_sample: LatestImuSample::default(),
-            last_motion_sample_ts: None,
             motion_report_deadline_ms: Some(now),
-            motion_calibration_pending: false,
-            motion_solver: TiltMotionSolver::new(MotionConfig::default()),
-            current_motion: MotionState::default(),
+            motion_session: MotionSession::new(motion_cfg),
             report_state: ReportState::new(ReportConfig {
                 report_hz: 1000.0 / MOTION_REPORT_MS as f32,
             }),
-            motion_capture_active: false,
         }
     }
 
@@ -166,17 +159,11 @@ impl Runtime {
         }
     }
 
-    fn reset_motion_capture_state(&mut self) {
-        self.report_state.reset_all();
-        self.current_motion = MotionState::default();
-        self.last_motion_sample_ts = None;
+    pub fn sync_motion_config(&mut self) {
+        let motion_cfg = self.config.current_config().motion;
+        self.motion_session.reconfigure(motion_cfg);
         self.motion_report_deadline_ms = Some(unsafe { c_vp_rtc_millis() });
-        self.motion_calibration_pending = false;
-    }
-
-    fn reset_and_calibrate_motion(&mut self) {
-        self.reset_motion_capture_state();
-        self.motion_calibration_pending = true;
+        self.report_state.reset_all();
     }
 
     fn imu_poll_enabled(&self) -> bool {
@@ -344,9 +331,14 @@ impl Runtime {
         }
 
         if self.pending.vendor_rx {
+            let prev_motion = self.config.current_config().motion;
             self.vendor
                 .poll(&self.router, &mut self.config, &self.power);
             self.pending.vendor_rx = false;
+
+            if self.config.current_config().motion != prev_motion {
+                self.sync_motion_config();
+            }
         }
 
         if let Some(command) = self.maybe_start_imu_poll() {
@@ -464,7 +456,7 @@ impl Runtime {
             || self.config.is_dirty()
             || self.dirty.input
             || self.dirty.report
-            || self.motion_capture_active
+            || self.motion_session.is_active()
             || buttons_pressed
             || self.report_state.has_pending()
             || self.mouse_report.send_needed(
@@ -502,9 +494,8 @@ impl Runtime {
         clear_suspend_resume_sources();
         clear_current_attitude();
         self.latest_imu_sample = LatestImuSample::default();
-        self.current_motion = MotionState::default();
-        self.last_motion_sample_ts = None;
         self.report_state.reset_all();
+        self.motion_session.reset();
         self.mouse_report.reset_all();
 
         let status = unsafe { c_vp_imu_config_active() };
@@ -671,7 +662,6 @@ impl Runtime {
 
     fn clear_unsent_motion_output(&mut self) {
         self.report_state.reset_all();
-        self.current_motion = MotionState::default();
         self.motion_report_deadline_ms = Some(unsafe { c_vp_rtc_millis() });
     }
 
@@ -702,42 +692,31 @@ impl Runtime {
             middle: input.middle,
         };
         let packed_buttons = buttons.pack();
-        let motion_capture_active = input.action || input.middle;
 
-        if motion_capture_active && !self.motion_capture_active {
-            self.reset_and_calibrate_motion();
-        } else if !motion_capture_active && self.motion_capture_active {
-            self.reset_motion_capture_state();
-        }
-        self.motion_capture_active = motion_capture_active;
+        let motion_active = self
+            .motion_session
+            .update_trigger(input.action, input.middle);
 
-        if motion_capture_active
-            && self.latest_imu_sample.valid
-            && self.last_motion_sample_ts != Some(self.latest_imu_sample.timestamp_ms)
-        {
+        if self.motion_session.should_process_sample(
+            self.latest_imu_sample.timestamp_ms,
+            self.latest_imu_sample.valid,
+        ) {
             if let Some(attitude) = get_current_attitude() {
-                if self.motion_calibration_pending {
-                    self.motion_solver.calibrate(attitude);
-                    self.current_motion = MotionState::default();
-                    self.report_state.reset_all();
-                    self.motion_calibration_pending = false;
-                } else {
-                    self.current_motion = self.motion_solver.update(attitude);
-                }
-                self.last_motion_sample_ts = Some(self.latest_imu_sample.timestamp_ms);
+                self.motion_session
+                    .update_attitude(&attitude, self.latest_imu_sample.timestamp_ms);
             }
         }
 
         let now = unsafe { c_vp_rtc_millis() };
         let motion_report_deadline = self.motion_report_deadline_ms.unwrap_or(now);
-        if motion_capture_active && deadline_due(now, motion_report_deadline) {
-            self.report_state.ingest_motion(self.current_motion);
+        if motion_active && deadline_due(now, motion_report_deadline) {
+            self.report_state
+                .ingest_motion(self.motion_session.output());
             self.motion_report_deadline_ms = Some(now.wrapping_add(MOTION_REPORT_MS));
             Self::request_poll_after(MOTION_REPORT_MS);
         }
         let motion_delta = self.report_state.peek_report();
 
-        // 运行时把输入侧滚轮增量汇总到发送侧缓冲，避免短时间多个步进被后来的 report 覆盖
         self.mouse_report.ingest_wheel_delta(input.wheel_delta);
 
         let button_changed = self.mouse_report.buttons_changed(packed_buttons);
@@ -747,7 +726,7 @@ impl Runtime {
             self.dirty.report = true;
         }
 
-        if motion_capture_active && !deadline_due(now, motion_report_deadline) {
+        if motion_active && !deadline_due(now, motion_report_deadline) {
             Self::request_poll_after(deadline_remaining_ms(now, motion_report_deadline));
         }
 

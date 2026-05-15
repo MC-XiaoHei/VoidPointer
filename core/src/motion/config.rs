@@ -11,6 +11,7 @@ pub struct MotionConfig {
     pub invert_x: bool,
     pub invert_y: bool,
     pub smoothing_alpha: f32,
+    pub middle_triggers_motion: bool,
 }
 
 impl Default for MotionConfig {
@@ -25,6 +26,7 @@ impl Default for MotionConfig {
             invert_x: false,
             invert_y: false,
             smoothing_alpha: 0.2,
+            middle_triggers_motion: true,
         }
     }
 }

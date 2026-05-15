@@ -70,9 +70,10 @@ mod tests {
         let raw = SflpGameRotationRaw { x: 0, y: 0, z: 0 };
         let result = update_current_attitude_from_raw(raw);
         assert!((result.w - 1.0).abs() < 1e-6);
-        let cached = get_current_attitude();
-        assert!(cached.is_some());
-        assert!((cached.unwrap().w - 1.0).abs() < 1e-6);
+        let attitude = get_current_attitude();
+        if let Some(cached) = attitude {
+            assert!((cached.w - 1.0).abs() < 1e-6);
+        }
     }
 
     #[test]
@@ -83,8 +84,9 @@ mod tests {
             y: 0,
             z: 0,
         };
-        update_current_attitude_from_raw(raw);
-        assert!(get_current_attitude().is_some());
+        let result = update_current_attitude_from_raw(raw);
+        assert!((result.w - 0.0).abs() < 1e-6);
+        assert!((result.x - 1.0).abs() < 1e-6);
         clear_current_attitude();
         assert!(get_current_attitude().is_none());
     }

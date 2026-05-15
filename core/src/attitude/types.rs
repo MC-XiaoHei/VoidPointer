@@ -1,5 +1,8 @@
 use half::f16;
 
+const QUAT_NORM_SQ_MIN: f32 = 0.5;
+const QUAT_NORM_SQ_MAX: f32 = 1.5;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct SflpGameRotationRaw {
     pub x: u16,
@@ -16,6 +19,24 @@ pub struct AttitudeData {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+impl AttitudeData {
+    pub fn is_valid(&self) -> bool {
+        let all_finite = self.roll.is_finite()
+            && self.pitch.is_finite()
+            && self.yaw.is_finite()
+            && self.w.is_finite()
+            && self.x.is_finite()
+            && self.y.is_finite()
+            && self.z.is_finite();
+        if !all_finite {
+            return false;
+        }
+
+        let norm_sq = self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z;
+        norm_sq >= QUAT_NORM_SQ_MIN && norm_sq <= QUAT_NORM_SQ_MAX
+    }
 }
 
 impl From<SflpGameRotationRaw> for AttitudeData {
@@ -64,6 +85,60 @@ impl From<SflpGameRotationRaw> for AttitudeData {
 #[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn valid_identity_rotation() {
+        let raw = SflpGameRotationRaw { x: 0, y: 0, z: 0 };
+        let attitude = AttitudeData::from(raw);
+        assert!(attitude.is_valid());
+    }
+
+    #[test]
+    fn valid_normal_rotation() {
+        let raw = SflpGameRotationRaw {
+            x: f16::from_f32(0.5).to_bits(),
+            y: 0,
+            z: 0,
+        };
+        let attitude = AttitudeData::from(raw);
+        assert!(attitude.is_valid());
+    }
+
+    #[test]
+    fn invalid_nan_is_caught() {
+        let attitude = AttitudeData {
+            roll: f32::NAN,
+            ..AttitudeData::default()
+        };
+        assert!(!attitude.is_valid());
+    }
+
+    #[test]
+    fn invalid_infinite_is_caught() {
+        let attitude = AttitudeData {
+            pitch: f32::INFINITY,
+            ..AttitudeData::default()
+        };
+        assert!(!attitude.is_valid());
+    }
+
+    #[test]
+    fn invalid_negative_infinite_is_caught() {
+        let attitude = AttitudeData {
+            yaw: f32::NEG_INFINITY,
+            ..AttitudeData::default()
+        };
+        assert!(!attitude.is_valid());
+    }
+
+    #[test]
+    fn invalid_extreme_norm_is_caught() {
+        let attitude = AttitudeData {
+            w: 100.0,
+            ..AttitudeData::default()
+        };
+        assert!(!attitude.is_valid());
+    }
 
     #[test]
     fn identity_rotation() {
