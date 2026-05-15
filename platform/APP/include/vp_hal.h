@@ -22,6 +22,8 @@ void vp_tmr_pwm_disable(BoardSignal sig);
 void vp_tmr_pwm_dma_cfg(BoardSignal sig, uint32_t start_addr, uint32_t end_addr, uint8_t loop);
 void vp_tmr_pwm_dma_stop(BoardSignal sig);
 void vp_tmr_reset(BoardSignal sig);
+void vp_tmr_pwm_set_polarity(BoardSignal sig, uint8_t active_low);
+void vp_tmr_pwm_load_fifo(BoardSignal sig, uint32_t value);
 
 // 外设常量（隔离 CH58x HAL 类型）
 #define VP_PWMX_CYCLE_256   ((uint16_t)256)

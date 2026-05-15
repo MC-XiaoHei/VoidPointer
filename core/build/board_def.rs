@@ -93,7 +93,7 @@ pub fn voidpointer_board() -> Vec<Def> {
         },
         Def {
             name: "pwm_laser",
-            pin: (B, 4),
+            pin: (B, 1),
             func: Pwm(7),
         },
         Def {

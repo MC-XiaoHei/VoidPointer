@@ -8,8 +8,9 @@
 
 void vp_pwm_init(BoardSignal sig, uint16_t cycle) {
     uint8_t ch = board_signal_get_channel(sig);
+    PWMX_CLKCfg(4u);
     PWMX_CycleCfg(cycle);
-    PWMX_ACTOUT(ch, 0u, High_Level, ENABLE);
+    PWMX_ACTOUT(ch, 0u, Low_Level, ENABLE);
 }
 
 void vp_pwm_set_duty(BoardSignal sig, uint8_t duty) {
@@ -134,6 +135,31 @@ void vp_tmr_reset(BoardSignal sig) {
         case 1: R8_TMR1_CTRL_MOD = RB_TMR_ALL_CLEAR; break;
         case 2: R8_TMR2_CTRL_MOD = RB_TMR_ALL_CLEAR; break;
         case 3: R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR; break;
+        default: break;
+    }
+}
+
+void vp_tmr_pwm_set_polarity(BoardSignal sig, uint8_t active_low) {
+    uint8_t ch = board_signal_get_channel(sig);
+    switch (ch) {
+        case 0: R8_TMR0_CTRL_MOD = RB_TMR_ALL_CLEAR;
+                R8_TMR0_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6); break;
+        case 1: R8_TMR1_CTRL_MOD = RB_TMR_ALL_CLEAR;
+                R8_TMR1_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6); break;
+        case 2: R8_TMR2_CTRL_MOD = RB_TMR_ALL_CLEAR;
+                R8_TMR2_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6); break;
+        case 3: R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
+                R8_TMR3_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6); break;
+        default: break;
+    }
+}
+
+void vp_tmr_pwm_load_fifo(BoardSignal sig, uint32_t value) {
+    switch (board_signal_get_channel(sig)) {
+        case 0: TMR0_PWMActDataWidth(value); break;
+        case 1: TMR1_PWMActDataWidth(value); break;
+        case 2: TMR2_PWMActDataWidth(value); break;
+        case 3: TMR3_PWMActDataWidth(value); break;
         default: break;
     }
 }

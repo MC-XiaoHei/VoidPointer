@@ -82,17 +82,6 @@ pub fn derive_hw_config(def: &Def) -> HwConfig {
             remap: None,
         },
 
-        (Port::A, 2, Tmr(3)) => HwConfig {
-            mode: "GPIO_ModeOut_PP_5mA",
-            digital: false,
-            remap: Some(("RB_PIN_TMR3", false)),
-        },
-        (Port::B, 22, Tmr(3)) => HwConfig {
-            mode: "GPIO_ModeOut_PP_5mA",
-            digital: false,
-            remap: Some(("RB_PIN_TMR3", true)),
-        },
-
         // TMR0：PA9 默认，PB23 重映射
         (Port::A, 9, Tmr(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
@@ -127,6 +116,18 @@ pub fn derive_hw_config(def: &Def) -> HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR2", true)),
+        },
+
+        // TMR3：PB22 默认，PA2 重映射
+        (Port::B, 22, Tmr(3)) => HwConfig {
+            mode: "GPIO_ModeOut_PP_5mA",
+            digital: false,
+            remap: Some(("RB_PIN_TMR3", false)),
+        },
+        (Port::A, 2, Tmr(3)) => HwConfig {
+            mode: "GPIO_ModeOut_PP_5mA",
+            digital: false,
+            remap: Some(("RB_PIN_TMR3", true)),
         },
 
         (Port::A, 12, Pwm(4)) => HwConfig {
