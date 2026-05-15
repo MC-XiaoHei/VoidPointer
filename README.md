@@ -35,7 +35,7 @@ VoidPointer/
   ├── core/       # 业务层（负责业务逻辑实现，由 Rust 编写）
   ├── platform/   # 平台层（负责 BLE，USB，IMU 等平台相关工作，由 C 编写）
   ├── docs/       # 设计文档
-  └── tools/      # 开发脚本
+  └── tools/      # 开发实用工具
 ```
 
 ## 许可
