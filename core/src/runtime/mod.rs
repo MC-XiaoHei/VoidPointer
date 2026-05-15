@@ -16,6 +16,10 @@ use crate::ffi::bindings::{
 };
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::input::types::{InputManager, InputStatus};
+use crate::led::LedProfile;
+use crate::led::TICK_MS;
+use crate::led::patterns::{CONNECTED, MODE_2G4, MODE_BLE};
+use crate::led::runtime::LedManager;
 use crate::motion::session::MotionSession;
 use crate::power::{PowerManager, PowerState};
 use crate::report::config::ReportConfig;
@@ -102,6 +106,7 @@ pub struct Runtime {
     pub motion_report_deadline_ms: Option<u32>,
     pub motion_session: MotionSession,
     pub report_state: ReportState,
+    pub led_manager: LedManager,
 }
 
 impl Runtime {
@@ -133,6 +138,7 @@ impl Runtime {
             report_state: ReportState::new(ReportConfig {
                 report_hz: 1000.0 / MOTION_REPORT_MS as f32,
             }),
+            led_manager: LedManager::new(),
         }
     }
 
@@ -164,6 +170,17 @@ impl Runtime {
         self.motion_session.reconfigure(motion_cfg);
         self.motion_report_deadline_ms = Some(unsafe { c_vp_rtc_millis() });
         self.report_state.reset_all();
+    }
+
+    fn play_transient_led<const N: usize>(
+        &mut self,
+        profile: &'static LedProfile<N>,
+        timestamp: u32,
+    ) {
+        profile.play(crate::ffi::board_map::BoardSignal::LED_STATUS);
+        self.led_manager
+            .begin_transient(profile.playback_ms(), timestamp);
+        Self::request_poll_after(TICK_MS as u32);
     }
 
     fn imu_poll_enabled(&self) -> bool {
@@ -317,6 +334,12 @@ impl Runtime {
     }
 
     fn process_once(&mut self) -> Option<RuntimeCommand> {
+        let now = unsafe { c_vp_rtc_millis() };
+        self.led_manager.clear_tick_scheduled();
+        if self.led_manager.poll(now) {
+            Self::request_poll_after(10);
+        }
+
         if EVENTS_PENDING.load(Ordering::Acquire) {
             EVENTS_PENDING.store(false, Ordering::Release);
             self.pending.events = true;
@@ -534,6 +557,7 @@ impl Runtime {
                 self.router.set_ble_connected(true);
                 self.router.set_ble_input_ready(false);
                 self.mark_activity(timestamp);
+                self.play_transient_led(&CONNECTED, timestamp);
             }
             RuntimeEvent::BleInputReady { timestamp } => {
                 self.router.set_ble_input_ready(true);
@@ -550,6 +574,7 @@ impl Runtime {
                 self.router.set_dongle_connected(true);
                 self.mark_activity(timestamp);
                 self.dirty.report = true;
+                self.play_transient_led(&CONNECTED, timestamp);
             }
             RuntimeEvent::DongleDisconnected { timestamp, .. } => {
                 self.router.set_dongle_connected(false);
@@ -565,6 +590,9 @@ impl Runtime {
                     usb_state_log_name(usb_state),
                     matches!(usb_state, UsbState::Configured)
                 );
+                if matches!(usb_state, UsbState::Configured) {
+                    self.play_transient_led(&CONNECTED, timestamp);
+                }
                 self.dirty.report = true;
             }
             RuntimeEvent::ButtonExti {
@@ -577,9 +605,14 @@ impl Runtime {
                     self.dirty.input = true;
                 }
             }
-            RuntimeEvent::ModeSwitchExti { timestamp, .. } => {
+            RuntimeEvent::ModeSwitchExti { level, timestamp } => {
                 self.mark_activity(timestamp);
                 self.dirty.input = true;
+                if level != 0 {
+                    self.play_transient_led(&MODE_2G4, timestamp);
+                } else {
+                    self.play_transient_led(&MODE_BLE, timestamp);
+                }
             }
             RuntimeEvent::DebounceTick { timestamp } => {
                 self.mark_activity(timestamp);

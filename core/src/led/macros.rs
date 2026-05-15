@@ -1,46 +1,79 @@
-/// 生成单次播放的 `LedProfile`，播放完毕自动熄灭
+/// 语义化渐亮/渐暗段
 ///
 /// ```rs
-/// once_profile!(CONNECTED, 256, [
-///     Segment::Fade(0, 50, 300),
-///     Segment::Level(50, 100),
-///     Segment::Fade(50, 0, 800),
-/// ]);
+/// fade!(from 0 to 128 over 300 ms)
 /// ```
 #[macro_export]
-macro_rules! once_profile {
-    ($name:ident, $max:expr, [$($segment:expr),* $(,)?]) => {
-        const ONCE_BLD: (usize, [u32; $max]) =
-            $crate::led::builder::LedSequenceBuilder::new()
-            $( .apply($segment) )*
-            .finish();
-        static $name: $crate::led::LedProfile<$max> = $crate::led::LedProfile {
-            data: ONCE_BLD.1,
-            len: ONCE_BLD.0,
-            is_loop: false,
-        };
+macro_rules! fade {
+    (from $start:tt to $end:tt over $time:tt ms) => {
+        $crate::led::builder::Segment::Fade($start, $end, $time)
     };
 }
 
-/// 生成循环播放的 `LedProfile`
+/// 语义化恒定亮度段
 ///
 /// ```rs
-/// loop_profile!(BREATHING, 256, [
-///     Segment::Fade(0, 50, 300),
-///     Segment::Fade(50, 0, 300),
-/// ]);
+/// level!(102 for 150 ms)
 /// ```
 #[macro_export]
-macro_rules! loop_profile {
-    ($name:ident, $max:expr, [$($segment:expr),* $(,)?]) => {
-        const LOOP_BLD: (usize, [u32; $max]) =
-            $crate::led::builder::LedSequenceBuilder::new()
-            $( .apply($segment) )*
-            .finish_loop();
-        static $name: $crate::led::LedProfile<$max> = $crate::led::LedProfile {
-            data: LOOP_BLD.1,
-            len: LOOP_BLD.0,
-            is_loop: true,
+macro_rules! level {
+    ($value:tt for $time:tt ms) => {
+        $crate::led::builder::Segment::Level($value, $time)
+    };
+}
+
+/// 内容透传，配合 `led_profile!` 表示单次播放。
+/// `led_profile!(x, once!{ ... })` 播完自动熄灭。
+#[macro_export]
+macro_rules! once {
+    ({ $($inner:tt)* }) => { $($inner)* };
+}
+
+/// 内容透传，配合 `led_profile!` 表示循环播放。
+/// `led_profile!(x, repeat!{ ... })` 持续循环。
+#[macro_export]
+macro_rules! repeat {
+    ({ $($inner:tt)* }) => { $($inner)* };
+}
+
+/// 生成 `LedProfile`，`once!{ }` 单次播放，`repeat!{ }` 循环播放
+///
+/// ```rs
+/// led_profile!(CONNECTED, once!{
+///     fade!(from 0 to 128 over 300 ms),
+///     fade!(from 128 to 0 over 800 ms),
+/// });
+///
+/// led_profile!(CHARGING, repeat!{
+///     fade!(from 0 to 51 over 1500 ms),
+///     fade!(from 51 to 0 over 1500 ms),
+///     level!(0 for 3000 ms),
+/// });
+/// ```
+#[macro_export]
+macro_rules! led_profile {
+    ($name:ident, once! { $($segment:expr),* $(,)? }) => {
+        pub static $name: $crate::led::LedProfile<1024> = {
+            let (len, data) = $crate::led::builder::LedSequenceBuilder::new()
+                $( .apply($segment) )*
+                .finish();
+            $crate::led::LedProfile {
+                data,
+                len,
+                is_loop: false,
+            }
+        };
+    };
+    ($name:ident, repeat! { $($segment:expr),* $(,)? }) => {
+        pub static $name: $crate::led::LedProfile<1024> = {
+            let (len, data) = $crate::led::builder::LedSequenceBuilder::new()
+                $( .apply($segment) )*
+                .finish_loop();
+            $crate::led::LedProfile {
+                data,
+                len,
+                is_loop: true,
+            }
         };
     };
 }
