@@ -673,9 +673,19 @@ vp_status_t c_vp_platform_reset(const uint32_t reason) {
     return VP_STATUS_OK;
 }
 
+// TMR DMA 不能从 Flash 读取，需要先拷贝到 RAM
+#define VP_LED_DMA_BUF_LEN 1024u
+__attribute__((aligned(4))) static uint32_t led_dma_buf[VP_LED_DMA_BUF_LEN];
+
 void c_vp_led_play(const uint8_t led_sig, const uint32_t* ptr, const uint16_t len,
                    const vp_bool_t is_loop) {
-    LedPlatform_Play((BoardSignal)led_sig, (const uint8_t*)ptr, (uint16_t)(len * 4u), is_loop);
+    if ((uint32_t)len > VP_LED_DMA_BUF_LEN) {
+        return;
+    }
+    for (uint16_t i = 0u; i < len; i++) {
+        led_dma_buf[i] = ptr[i];
+    }
+    LedPlatform_Play((BoardSignal)led_sig, (const uint8_t*)led_dma_buf, (uint16_t)(len * 4u), is_loop);
 }
 
 void c_vp_led_stop(void) {
