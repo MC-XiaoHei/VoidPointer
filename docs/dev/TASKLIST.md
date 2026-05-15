@@ -18,6 +18,7 @@
 | Power | Partial | Rust `PowerManager` 已接通，Suspend 最小闭环已进入实现；button/encoder/IMU 的 Suspend wake source 已接通最小实现，并可在 wake 后恢复 Active IMU profile；`Sleep` 的 `prepare/enter/restore` 已补成项目级最小闭环，但尚未映射到真实 deep low-power；当前 `Sleep restore` 已避免在 `USB configured` 时误重新打开 BLE advertising，并且 runtime 已把 requeue 中的 vendor 待发包视为低功耗 blocker；恢复回 `Active` 时还会清掉旧 attitude / IMU sample / motion cache，重置 report 累积状态，并清理旧 wheel 暂存 / button sync 基线，避免 wake 后误用陈旧姿态、残余累计量或过期 mouse transport 状态；待确认重点仍是 **BLE connected 下能否映射到真实平台浅低功耗且不断链**，以及更完整的 deep low-power enter/restore。 |
 | Config | Done | 双槽 DataFlash 持久化、SlotHeader + CRC32 + postcard 序列化、全链路校验、写入状态机、WebHID 配置命令、主机测试框架与 100% 纯逻辑覆盖率。 |
 | Vendor / WebHID | Partial | 单包 RX queue、协议解析、基础查询命令、配置读写会话已接通；多包分片和完整 transport backend 未完成。 |
+| LED / PWM | Partial | LED profile 系统（编译期定义 + builder + 测试）已就位，缺运行时播放器；PWM 仅 `set_laser_duty()` 薄层封装。 |
 | 2.4G | Not started | 目前仅保留 route / HID stub。 |
 
 ---
@@ -214,7 +215,24 @@
 - [ ] 版本迁移（migration）。
 - [ ] 配置写入运行时 apply（apply_to runtime 子系统）。
 
-## 4.8 Vendor / WebHID
+## 4.8 LED / PWM
+
+LED 负责复杂灯光状态（profile 动画），PWM 负责简单占空比控制（如激光），两者独立。
+
+### 已完成
+- [x] `LedProfile<N>` 编译期定义，支持 loop / once 两种模式。
+- [x] `LedSequenceBuilder` 支持 `Segment::Level`（固定亮度）和 `Segment::Fade`（匀加速淡入淡出）。
+- [x] `once_profile!` / `loop_profile!` 宏，编译期生成 profile 常量。
+- [x] 单元测试覆盖 builder 边界条件。
+- [x] `set_laser_duty()` 通过 FFI 设置 PWM 占空比。
+- [x] C 侧 `PwmPlatform_Init()` 初始化 PWM 硬件。
+
+### 未完成
+- [ ] Rust FFI 绑定 `LedPlatform_Play()` / `LedPlatform_Stop()`。
+- [ ] Rust 运行时播放器：选择 `LedProfile` 并通过 FFI 启停 C 侧 DMA 播放。
+- [ ] LED / PWM 与电源状态联动（低功耗时关闭）。
+
+## 4.9 Vendor / WebHID
 
 ### 已完成
 - [x] `VendorRuntime` RX queue。
