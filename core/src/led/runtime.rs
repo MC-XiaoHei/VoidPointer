@@ -76,7 +76,7 @@ impl LedManager {
 
         // 有持续态则立即切换；无持续态时不调 stop_playback()，
         // 让当前 DMA 播完末尾 0 自动灭
-        if let Some(p) = &self.persistent {
+        if self.persistent.is_some() {
             self.apply_persistent();
         }
 
