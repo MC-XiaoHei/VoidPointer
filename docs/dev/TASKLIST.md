@@ -9,10 +9,10 @@
 
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
-| Runtime / FFI | Partial | 已切到 `vp_core_init()` / `vp_core_poll()`，TMOS bottom-half 主路径已接通；长耗时路径边界与文档沉淀仍需继续收敛。Motion 相关 5 个离散字段已合并为 `MotionSession`。 |
+| Runtime / FFI | Done | `vp_core_init/poll`、RuntimeCommand 边界、事件队列、bindgen/cbindgen 全链路已接通；长耗时已通过 command→execute→apply 模式隔离；Motion 相关 5 个离散字段已合并为 `MotionSession`。 |
 | Input | Partial | 按键 EXTI + debounce、编码器 EXTI + wheel 已跑通；Mode switch 当前板无硬件，暂不实现。 |
 | IMU / I2C | Partial | CH585 I2C + LSM6DSV 基础通信、WHO_AM_I、active/suspend/sleep profile、通用 I2C API、bus idle / recovery、异步 FIFO 读取主链路已完成；profile API 整理与完整低功耗闭环仍需继续收敛。 |
-| Motion / Attitude | Partial | FIFO → latest sample cache → 姿态更新 → motion 主链路已通；validity check、MotionSession、config 参数配置化已完成；Middle/Action 优先级策略待确认。 |
+| Motion / Attitude | Done | validity check、MotionSession、config 参数配置化、Middle/Action 触发策略均已实现 |
 | HID / Report | Partial | BLE/USB mouse report 已接入，wheel/buttons/motion 已能出报告；USB vendor 收发已接通；mouse 发送条件已收敛为 motion/wheel/button/retry/dirty 五类触发，并已抽出最小 `MouseReportRuntime`；统一 `ReportRuntime` 结构和无线 vendor backend 仍待补齐；当前 route 不可用时会丢弃未发送的 motion/wheel 暂存，并重置 button sync 基线，避免恢复后回放旧输入或沿用过期按钮发送状态。 |
 | Route | Partial | 当前策略为“USB configured 优先且独占，否则无线固定 BLE”；2.4G 仍为 stub。 |
 | Power | Partial | Rust `PowerManager` 已接通，Suspend 最小闭环已进入实现；button/encoder/IMU 的 Suspend wake source 已接通最小实现，并可在 wake 后恢复 Active IMU profile；`Sleep` 的 `prepare/enter/restore` 已补成项目级最小闭环，但尚未映射到真实 deep low-power；当前 `Sleep restore` 已避免在 `USB configured` 时误重新打开 BLE advertising，并且 runtime 已把 requeue 中的 vendor 待发包视为低功耗 blocker；恢复回 `Active` 时还会清掉旧 attitude / IMU sample / motion cache，重置 report 累积状态，并清理旧 wheel 暂存 / button sync 基线，避免 wake 后误用陈旧姿态、残余累计量或过期 mouse transport 状态；待确认重点仍是 **BLE connected 下能否映射到真实平台浅低功耗且不断链**，以及更完整的 deep low-power enter/restore。 |
@@ -91,10 +91,8 @@
 - [x] `c_vp_*` 前缀迁移已完成。
 - [x] 旧 `tick()` 残留已清理。
 - [x] Rust→C API 调用上下文已在 `c_api.h` 标注。
-
-### 未完成
-- [ ] 继续拆分长耗时路径，避免持有 Runtime 可变借用跨越慢调用。
-- [ ] 将“当前事实”更多沉淀到长期文档，减少 TaskList 负担。
+- [x] 继续拆分长耗时路径，避免持有 Runtime 可变借用跨越慢调用。
+- [x] 将“当前事实”更多沉淀到长期文档，减少 TaskList 负担。
 
 ## 4.2 Input
 
@@ -105,11 +103,11 @@
 - [x] EXTI mask / unmask / clear pending / edge API。
 - [x] 共享 debounce timer 启停控制。
 - [x] `InputSnapshot` 已覆盖 left/right/middle/action/laser/wheel。
+- [x] 输入事件到业务行为的文档化与代码收敛仍需继续整理。——边界清晰，无结构性缺口。
+- [x] 将 debounce core 明确整理为“可复用核心 + button policy”结构。——结构已完备，`DebouncedTwoStateInput` 为通用核心，`InputManager` 承载 policy。
 
 ### 未完成
-- [ ] 将 debounce core 明确整理为“可复用核心 + button policy”结构。
-- [ ] `Laser` 输出语义与输入语义进一步理顺。
-- [ ] 输入事件到业务行为的文档化与代码收敛仍需继续整理。
+- [ ] `Laser` 输出语义与输入语义进一步理顺。——Laser 按键事件当前在 Rust 侧被丢弃（`button_id_to_input_id` 未映射），需要接入 debounce 管线 + `pwm::set_laser_duty()` 控制。
 
 ### 暂缓
 - [ ] `ModeSwitch` 输入链路：当前板无硬件，不做。
@@ -151,8 +149,9 @@
 - [x] Quadratic 默认曲线已可用。
 - [x] **validity check**：`AttitudeData::is_valid()` 检查 NaN/Inf/模长异常，在 session 和 runtime 两级生效。
 - [x] **MotionSession**：抽取 Idle→Calibrating→Active 状态机，封装触发检测、校零、样本去重和 validity check。
-- [x] **motion 参数配置化**：`Runtime::new()` 现在从 `ConfigManager` 加载配置喂给 solver；WebHID 改配置后自动 `sync_motion_config()`。
-- [x] **Middle/Action 触发策略**：`MotionConfig.middle_triggers_motion` 开关，默认 `true`（等同 Action），可配为 `false`（仅 Action 触发）。
+- [x] **motion 参数配置化**：`Runtime::new()` 从 `ConfigManager` 加载配置；WebHID 改配置后自动 `sync_motion_config()`。
+- [x] **Middle/Action 触发策略**：`MotionConfig.middle_triggers_motion` 开关，默认 `true`，可配为 `false`。
+- [x] 总体状态已从 `Partial` 升级为 `Done`。
 
 ## 4.5 HID / Report / Route
 
