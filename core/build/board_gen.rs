@@ -4,6 +4,7 @@ pub struct HwConfig {
     pub mode: &'static str,
     pub digital: bool,
     pub remap: Option<(&'static str, bool)>,
+    pub polarity: Option<bool>,
 }
 
 fn signal_name_to_enum(name: &str) -> String {
@@ -46,6 +47,7 @@ pub fn derive_hw_config(def: &Def) -> HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: d,
             remap: None,
+            polarity: None,
         },
         (
             _,
@@ -58,6 +60,7 @@ pub fn derive_hw_config(def: &Def) -> HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: d,
             remap: None,
+            polarity: None,
         },
         (
             _,
@@ -70,479 +73,619 @@ pub fn derive_hw_config(def: &Def) -> HwConfig {
             mode: "GPIO_ModeIN_PD",
             digital: d,
             remap: None,
+            polarity: None,
         },
         (_, _, Out { drive: PP5mA, .. }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (_, _, Out { drive: PP20mA, .. }) => HwConfig {
             mode: "GPIO_ModeOut_PP_20mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
 
-        // TMR0：PA9 默认，PB23 重映射
-        (Port::A, 9, Tmr(0)) => HwConfig {
+        // TMR0: PA9 → PB23
+        (Port::A, 9, Tmr { id: 0, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR0", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::B, 23, Tmr(0)) => HwConfig {
+        (Port::B, 23, Tmr { id: 0, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR0", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
-        // TMR1：PA10 默认，PB10 重映射
-        (Port::A, 10, Tmr(1)) => HwConfig {
+        // CAP0: PA9 → PB23
+        (Port::A, 9, Cap(0)) => HwConfig {
+            mode: "GPIO_ModeIN_Floating",
+            digital: true,
+            remap: Some(("RB_PIN_TMR0", false)),
+            polarity: None,
+        },
+        (Port::B, 23, Cap(0)) => HwConfig {
+            mode: "GPIO_ModeIN_Floating",
+            digital: true,
+            remap: Some(("RB_PIN_TMR0", true)),
+            polarity: None,
+        },
+
+        // TMR1: PA10 → PB10
+        (Port::A, 10, Tmr { id: 1, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR1", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::B, 10, Tmr(1)) => HwConfig {
+        (Port::B, 10, Tmr { id: 1, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR1", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
+        },
+        (Port::A, 10, Cap(1)) => HwConfig {
+            mode: "GPIO_ModeIN_Floating",
+            digital: true,
+            remap: Some(("RB_PIN_TMR1", false)),
+            polarity: None,
+        },
+        (Port::B, 10, Cap(1)) => HwConfig {
+            mode: "GPIO_ModeIN_Floating",
+            digital: true,
+            remap: Some(("RB_PIN_TMR1", true)),
+            polarity: None,
         },
 
-        // TMR2：PA11 默认，PB11 重映射
-        (Port::A, 11, Tmr(2)) => HwConfig {
+        // TMR2: PA11 → PB11
+        (Port::A, 11, Tmr { id: 2, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR2", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::B, 11, Tmr(2)) => HwConfig {
+        (Port::B, 11, Tmr { id: 2, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR2", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
+        },
+        (Port::A, 11, Cap(2)) => HwConfig {
+            mode: "GPIO_ModeIN_Floating",
+            digital: true,
+            remap: Some(("RB_PIN_TMR2", false)),
+            polarity: None,
+        },
+        (Port::B, 11, Cap(2)) => HwConfig {
+            mode: "GPIO_ModeIN_Floating",
+            digital: true,
+            remap: Some(("RB_PIN_TMR2", true)),
+            polarity: None,
         },
 
-        // TMR3：PB22 默认，PA2 重映射
-        (Port::B, 22, Tmr(3)) => HwConfig {
+        // TMR3: PB22 → PA2
+        (Port::B, 22, Tmr { id: 3, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR3", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::A, 2, Tmr(3)) => HwConfig {
+        (Port::A, 2, Tmr { id: 3, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_TMR3", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
+        },
+        (Port::B, 22, Cap(3)) => HwConfig {
+            mode: "GPIO_ModeIN_Floating",
+            digital: true,
+            remap: Some(("RB_PIN_TMR3", false)),
+            polarity: None,
+        },
+        (Port::A, 2, Cap(3)) => HwConfig {
+            mode: "GPIO_ModeIN_Floating",
+            digital: true,
+            remap: Some(("RB_PIN_TMR3", true)),
+            polarity: None,
         },
 
-        (Port::A, 12, Pwm(4)) => HwConfig {
+        // PWM4: PA12 → PA6
+        (Port::A, 12, Pwm { id: 4, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::A, 6, Pwm(4)) => HwConfig {
+        (Port::A, 6, Pwm { id: 4, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
-        (Port::A, 13, Pwm(5)) => HwConfig {
+        // PWM5: PA13 → PA7
+        (Port::A, 13, Pwm { id: 5, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::A, 7, Pwm(5)) => HwConfig {
+        (Port::A, 7, Pwm { id: 5, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
-        (Port::B, 4, Pwm(7)) => HwConfig {
+        // PWM7: PB4 → PB1
+        (Port::B, 4, Pwm { id: 7, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::B, 1, Pwm(7)) => HwConfig {
+        (Port::B, 1, Pwm { id: 7, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
-        (Port::B, 6, Pwm(8)) => HwConfig {
+        // PWM8: PB6 → PB2
+        (Port::B, 6, Pwm { id: 8, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::B, 2, Pwm(8)) => HwConfig {
+        (Port::B, 2, Pwm { id: 8, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
-        (Port::B, 7, Pwm(9)) => HwConfig {
+        // PWM9: PB7 → PB3
+        (Port::B, 7, Pwm { id: 9, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", false)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
-        (Port::B, 3, Pwm(9)) => HwConfig {
+        (Port::B, 3, Pwm { id: 9, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_PWMX", true)),
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
-        // PWM6：仅 PB0（无重映射）
-        (Port::B, 0, Pwm(6)) => HwConfig {
+        // PWM6: PB0
+        (Port::B, 0, Pwm { id: 6, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
-        // PWM10：仅 PB14（无重映射）
-        (Port::B, 14, Pwm(10)) => HwConfig {
+        // PWM10: PB14
+        (Port::B, 14, Pwm { id: 10, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
-        // PWM11：仅 PB23（无重映射）
-        (Port::B, 23, Pwm(11)) => HwConfig {
+        // PWM11: PB23
+        (Port::B, 23, Pwm { id: 11, polar }) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: Some(polar == Polarity::ActiveLow),
         },
 
         (Port::B, 12, I2c) | (Port::B, 20, I2c) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: true,
             remap: Some(i2c_remap(def.port(), def.pin_num())),
+            polarity: None,
         },
         (Port::B, 13, I2c) | (Port::B, 21, I2c) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: true,
             remap: Some(i2c_remap(def.port(), def.pin_num())),
+            polarity: None,
         },
 
-        // UART0 发送：PB7 默认，PA14 重映射
+        // UART0 TX: PB7 → PA14
         (Port::B, 7, Uart(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_UART0", false)),
+            polarity: None,
         },
         (Port::A, 14, Uart(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_UART0", true)),
+            polarity: None,
         },
-        // UART0 接收：PB4 默认，PA15 重映射
+        // UART0 RX: PB4 → PA15
         (Port::B, 4, Uart(0)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_UART0", false)),
+            polarity: None,
         },
         (Port::A, 15, Uart(0)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_UART0", true)),
+            polarity: None,
         },
 
-        // UART1 发送：PA9 默认，PB13 重映射
+        // UART1 TX: PA9 → PB13
         (Port::A, 9, Uart(1)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_UART1", false)),
+            polarity: None,
         },
         (Port::B, 13, Uart(1)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_UART1", true)),
+            polarity: None,
         },
-        // UART1 接收：PA8 默认，PB12 重映射
+        // UART1 RX: PA8 → PB12
         (Port::A, 8, Uart(1)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_UART1", false)),
+            polarity: None,
         },
         (Port::B, 12, Uart(1)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_UART1", true)),
+            polarity: None,
         },
 
-        // UART2 发送：PA7 默认，PB23 重映射
+        // UART2 TX: PA7 → PB23
         (Port::A, 7, Uart(2)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_UART2", false)),
+            polarity: None,
         },
         (Port::B, 23, Uart(2)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_UART2", true)),
+            polarity: None,
         },
-        // UART2 接收：PA6 默认，PB22 重映射
+        // UART2 RX: PA6 → PB22
         (Port::A, 6, Uart(2)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_UART2", false)),
+            polarity: None,
         },
         (Port::B, 22, Uart(2)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_UART2", true)),
+            polarity: None,
         },
 
-        // UART3 发送：PA5 默认，PB21 重映射
+        // UART3 TX: PA5 → PB21
         (Port::A, 5, Uart(3)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_UART3", false)),
+            polarity: None,
         },
         (Port::B, 21, Uart(3)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_UART3", true)),
+            polarity: None,
         },
-        // UART3 接收：PA4 默认，PB20 重映射
+        // UART3 RX: PA4 → PB20
         (Port::A, 4, Uart(3)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_UART3", false)),
+            polarity: None,
         },
         (Port::B, 20, Uart(3)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_UART3", true)),
+            polarity: None,
         },
 
-        // SPI0 默认：PA12(SCS)、PA13(SCK)、PA14(MOSI)、PA15(MISO)
+        // SPI0: PA12-PA15 → PB12-PB15
         (Port::A, 12, Spi(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_SPI0", false)),
+            polarity: None,
         },
         (Port::A, 13, Spi(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_SPI0", false)),
+            polarity: None,
         },
         (Port::A, 14, Spi(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_SPI0", false)),
+            polarity: None,
         },
         (Port::A, 15, Spi(0)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_SPI0", false)),
+            polarity: None,
         },
-        // SPI0 重映射：PB12(SCS_)、PB13(SCK0_)、PB14(MOSI_)、PB15(MISO_)
         (Port::B, 12, Spi(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_SPI0", true)),
+            polarity: None,
         },
         (Port::B, 13, Spi(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_SPI0", true)),
+            polarity: None,
         },
         (Port::B, 14, Spi(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: Some(("RB_PIN_SPI0", true)),
+            polarity: None,
         },
         (Port::B, 15, Spi(0)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: Some(("RB_PIN_SPI0", true)),
+            polarity: None,
         },
 
-        // SPI1：PA0(SCK1)、PA1(MOSI1)、PA2(MISO1)，无重映射
+        // SPI1: PA0-PA2
         (Port::A, 0, Spi(1)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 1, Spi(1)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 2, Spi(1)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
 
-        // USB 全速：PB10(UD-)、PB11(UD+)
+        // USB FS: PB10/PB11
         (Port::B, 10, Usb(FullSpeed)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::B, 11, Usb(FullSpeed)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
-        // USB 高速：PB12(U2D-)、PB13(U2D+)
+        // USB HS: PB12/PB13
         (Port::B, 12, Usb(HighSpeed)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::B, 13, Usb(HighSpeed)) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
 
-        // NFC：PB8(NFCM)、PB9(NFCI)、PB16(NFC-)、PB17(NFC+)
+        // NFC: PB8/PB9/PB16/PB17
         (Port::B, 8, Nfc) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::B, 9, Nfc) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::B, 16, Nfc) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::B, 17, Nfc) => HwConfig {
             mode: "GPIO_ModeIN_PU",
             digital: false,
             remap: None,
+            polarity: None,
         },
 
-        // X32K：PA10(X32KI)、PA11(X32KO)
+        // X32K: PA10/PA11
         (Port::A, 10, X32k) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 11, X32k) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
 
-        // LED：PA0-8 对应 LED0-7，PA4 为 LEDC 公共端
+        // LED: PA0-PA15
         (Port::A, 0, Led(0)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 1, Led(1)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 2, Led(2)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 3, Led(3)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 4, Led(8)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 5, Led(4)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 6, Led(5)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 7, Led(6)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 8, Led(7)) => HwConfig {
             mode: "GPIO_ModeOut_PP_5mA",
             digital: false,
             remap: None,
+            polarity: None,
         },
 
-        // ADC 一对一：引脚号与 ADC 通道号按引脚表严格对应
+        // ADC: 14 通道
         (Port::A, 4, Adc(0)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 5, Adc(1)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 12, Adc(2)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 13, Adc(3)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 14, Adc(4)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 15, Adc(5)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 3, Adc(6)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 2, Adc(7)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 1, Adc(8)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 0, Adc(9)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 6, Adc(10)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 7, Adc(11)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 8, Adc(12)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
         (Port::A, 9, Adc(13)) => HwConfig {
             mode: "GPIO_ModeIN_Floating",
             digital: false,
             remap: None,
+            polarity: None,
         },
 
         (port, pin, func) => {
@@ -608,7 +751,8 @@ pub fn generate_c_header(defs: &[Def]) -> String {
     s.push_str("void board_remap_reset(void);\n");
     s.push_str("void board_remap_apply(const BoardGpio mapping[BOARD_SIGNAL_COUNT]);\n");
     s.push_str("void board_gpio_init_all(void);\n");
-    s.push_str("uint8_t board_signal_get_channel(BoardSignal sig);\n\n");
+    s.push_str("uint8_t board_signal_get_channel(BoardSignal sig);\n");
+    s.push_str("uint8_t board_signal_get_polarity(BoardSignal sig);\n\n");
 
     s.push_str("#ifdef __cplusplus\n");
     s.push_str("}\n");
@@ -683,6 +827,50 @@ pub fn generate_c_source(defs: &[Def]) -> String {
     s.push_str("        default: return 0;\n");
     s.push_str("    }\n");
     s.push_str("}\n\n");
+
+    // ── 极性查询 ──
+    s.push_str(&format!(
+        "static const uint8_t BOARD_SIGNAL_POLARITY[BOARD_SIGNAL_COUNT] = {{ \
+         {}\
+         }};\n\n",
+        defs.iter()
+            .map(|d| format!(
+                "    [{}] = {},",
+                signal_name_to_enum(d.name),
+                derive_hw_config(d).polarity.map_or(0u8, |v| v as u8)
+            ))
+            .collect::<Vec<_>>()
+            .join("\n")
+    ));
+
+    s.push_str("uint8_t board_signal_get_polarity(BoardSignal sig) {\n");
+    s.push_str("    if (sig >= BOARD_SIGNAL_COUNT) { return 0u; }\n");
+    s.push_str("    return BOARD_SIGNAL_POLARITY[sig];\n");
+    s.push_str("}\n\n");
+
+    // ── remap 冲突检测（编译期 panic）──
+    {
+        use std::collections::HashMap;
+        let mut remap_map: HashMap<&str, bool> = HashMap::new();
+        for def in defs {
+            let hw = derive_hw_config(def);
+            if let Some((reg, enabled)) = &hw.remap {
+                if let Some(&prev) = remap_map.get(reg) {
+                    assert!(
+                        prev == *enabled,
+                        "REMAP 冲突：信号 '{}' 要求 {}={}，但之前信号已要求 {}={}",
+                        def.name,
+                        reg,
+                        enabled,
+                        reg,
+                        prev
+                    );
+                } else {
+                    remap_map.insert(reg, *enabled);
+                }
+            }
+        }
+    }
 
     s.push_str("void board_gpio_init_all(void) {\n");
     s.push_str("    board_remap_reset();\n\n");
@@ -776,6 +964,7 @@ pub fn generate_rust_bindings(defs: &[Def]) -> String {
     s.push_str("    pub fn board_signal_get(sig: BoardSignal) -> BoardGpio;\n");
     s.push_str("    pub fn board_signal_is_present(sig: BoardSignal) -> bool;\n");
     s.push_str("    pub fn board_signal_get_channel(sig: BoardSignal) -> u8;\n");
+    s.push_str("    pub fn board_signal_get_polarity(sig: BoardSignal) -> u8;\n");
     s.push_str("    pub fn board_remap_reset();\n");
     s.push_str("    pub fn board_remap_apply(mapping: *const BoardGpio);\n");
     s.push_str("    pub fn board_gpio_init_all();\n");

@@ -10,7 +10,7 @@ void vp_pwm_init(BoardSignal sig, uint16_t cycle) {
     uint8_t ch = board_signal_get_channel(sig);
     PWMX_CLKCfg(4u);
     PWMX_CycleCfg(cycle);
-    PWMX_ACTOUT(ch, 0u, Low_Level, ENABLE);
+    PWMX_ACTOUT(ch, 0u, board_signal_get_polarity(sig) ? Low_Level : High_Level, ENABLE);
 }
 
 void vp_pwm_set_duty(BoardSignal sig, uint8_t duty) {

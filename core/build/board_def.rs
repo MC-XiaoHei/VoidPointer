@@ -2,6 +2,7 @@ pub fn voidpointer_board() -> Vec<Def> {
     use Drive::*;
     use Func::*;
     use PinLevel::*;
+    use Polarity::*;
     use Port::*;
     use Pull::*;
 
@@ -89,12 +90,18 @@ pub fn voidpointer_board() -> Vec<Def> {
         Def {
             name: "led_status",
             pin: (A, 2),
-            func: Tmr(3),
+            func: Tmr {
+                id: 3,
+                polar: ActiveLow,
+            },
         },
         Def {
             name: "pwm_laser",
             pin: (B, 1),
-            func: Pwm(7),
+            func: Pwm {
+                id: 7,
+                polar: ActiveLow,
+            },
         },
         Def {
             name: "i2c_sda",
@@ -150,6 +157,13 @@ pub enum UsbSpeed {
 
 #[allow(unused)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Polarity {
+    ActiveHigh,
+    ActiveLow,
+}
+
+#[allow(unused)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Func {
     In {
         pull: Pull,
@@ -159,8 +173,15 @@ pub enum Func {
         drive: Drive,
         init: Option<PinLevel>,
     },
-    Pwm(u8),
-    Tmr(u8),
+    Pwm {
+        id: u8,
+        polar: Polarity,
+    },
+    Tmr {
+        id: u8,
+        polar: Polarity,
+    },
+    Cap(u8),
     I2c,
     Spi(u8),
     Usb(UsbSpeed),
@@ -195,8 +216,9 @@ impl Def {
 
     pub fn channel(&self) -> Option<u8> {
         match self.func {
-            Func::Pwm(ch)
-            | Func::Tmr(ch)
+            Func::Pwm { id: ch, .. }
+            | Func::Tmr { id: ch, .. }
+            | Func::Cap(ch)
             | Func::Uart(ch)
             | Func::Led(ch)
             | Func::Adc(ch)

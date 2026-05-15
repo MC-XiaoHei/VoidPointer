@@ -1,5 +1,6 @@
 #include "led_platform.h"
 #include "vp_hal.h"
+#include "board_map.h"
 
 static uint8_t current_led_active = 0u;
 
@@ -25,8 +26,7 @@ void LedPlatform_Play(const BoardSignal sig, const uint8_t* data,
     vp_tmr_reset(sig);
     vp_tmr_pwm_init(sig, VP_LED_PWM_CYCLE);
 
-    // LED 低电平点亮，必须设 low_active 极性
-    vp_tmr_pwm_set_polarity(sig, 1u);
+    vp_tmr_pwm_set_polarity(sig, board_signal_get_polarity(sig));
 
     const uint32_t* frames = (const uint32_t*)data;
     uint32_t len_words = byte_len / 4u;
