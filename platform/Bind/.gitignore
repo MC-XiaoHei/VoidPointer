@@ -1,1 +1,3 @@
 rust_api.h
+board_map.h
+board_map_gen.c
