@@ -1,18 +1,19 @@
-# IDE / editor local state
+# IDE 本地状态
 .idea/
 .cache/
 
-# Operating system metadata
+# 操作系统元数据
 .DS_Store
 Thumbs.db
 
-# CMake build outputs and local compile database
+# CMake 构建产物
 cmake-build**/
 compile_commands.json
+__cmake_systeminformation
 
-# Local machine configuration
+# 本机开发环境配置
 CMakeUserPresets.json
 .env.local
 
-# User local resources
+# 用户本地资源
 resources/
