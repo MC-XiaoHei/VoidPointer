@@ -1,8 +1,7 @@
-# VoidPointer 资源依据与硬件/协议 Profile
+# 资源依据与硬件/协议 Profile
 
-本文档把 `resources/` 中已经存在的芯片手册和例程转化为固件实现时可直接引用的参数来源与目标 profile。它不是 WebHID 协议文档，也不替代 `CONFIG_SPEC.md`。
+芯片手册和例程中提取的参数来源和 Profile 配置。
 
----
 
 ## 1. 资源索引
 
@@ -42,7 +41,6 @@
 | `resources/main/CH585/EXAM/USB/USBHS/DEVICE/CompatibilityHID/User/usb_desc.c` | USBHS vendor HID descriptor，含 FS/HS report descriptor。 |
 | `resources/main/CH585/EXAM/USB/USBHS/DEVICE/CompatibilityHID/User/usbd_compatibility_hid.c` | USBHS HID 数据收发、端点 busy 处理示例。 |
 
----
 
 ## 2. IMU 基础事实
 
@@ -173,7 +171,6 @@
 - delay requirement。
 - 是否必须在 power-down 下修改。
 
----
 
 ## 3. IMU Profile 建议
 
@@ -245,7 +242,6 @@ Rust 策略：
 - 无连接、无 HID pending、无配置写入、laser off，且从无线断连时刻计算超过 `disconnect_sleep_timeout_ms` 后进入。
 - wake 后先进入 Active，再由 `vp_core_poll()` 根据连接状态决定是否回 Suspend 或 Sleep。
 
----
 
 ## 4. IMU Wake Strategy
 
@@ -456,7 +452,6 @@ SFLP 角度检测不作为默认唤醒方案。
 - 当前普通按键方案本来就是单边沿 EXTI 唤醒 + debounce timer，因此不依赖硬件 both-edge。
 - 编码器 A/B 需要任意边沿；平台层需验证 CH585 上 both-edge 模拟策略是否满足高速滚动，必要时使用更底层寄存器策略或定时采样兜底。
 
----
 
 ## 5. HID Mouse Profile
 
@@ -540,7 +535,6 @@ HID report map 定义：
 - USB mouse report 复用 BLE mouse 4-byte report 语义。
 - USB descriptor 具体 composite 结构放到 WebHID/USB 协议文档中定稿。
 
----
 
 ## 6. I2C Profile
 
@@ -562,7 +556,6 @@ HID report map 定义：
 | blocking read | 仅初始化/诊断允许，motion 主路径禁用 |
 | async read | IMU FIFO 主路径 |
 
----
 
 ## 7. 需要写入代码的常量来源
 
@@ -593,7 +586,6 @@ HID report map 定义：
 | SFLP ODR 240 Hz | bits `100` | datasheet |
 | SFLP ODR 480 Hz | bits `101` | datasheet |
 
----
 
 ## 8. 仍需实测确认的项目
 

@@ -1,6 +1,6 @@
 # Route State Machine
 
-本文定义 BLE / 2.4G / USB route 的目标行为。这里记录长期有效的 route 规则；当前实现进度和未完成项看 `dev/TASKLIST.md`。
+BLE / 2.4G / USB 路由状态机和切换规则。实现进度见 `TASKLIST.md`。
 
 ## 1. Route 类型
 
@@ -11,17 +11,8 @@
 | `Dongle2G4` | 2.4G dongle HID。 |
 | `USB` | USB HID / Vendor HID。 |
 
-## 1.1 v1 implementation scope
+v1 实现范围见 `TASKLIST.md`。
 
-v1 route 实现范围已确认：
-
-- BLE route 必须进入可用状态。
-- USB route 必须进入可用状态，至少覆盖 USB state、USB HID/vendor 发送和 Vendor/WebHID 配置通道。
-- 2.4G route v1 保留 stub：保留类型、状态、API 入口和错误映射，但不要求真实 dongle 协议栈可用。
-- CH585 2.4G dongle 协议栈暂无确定方案；文档和代码中保持 `Dongle2G4` route 类型，但 v1 一律按 `NotConnected` 收口，不阻塞 BLE/USB 闭环。
-- v1 不需要 shipping/storage mode，只做普通 `Sleep`。
-
----
 
 ## 2. 物理模式开关
 
@@ -175,6 +166,4 @@ CH585 USBHS 事件映射策略：
 | USB configured | 保持 `Active`，禁止 `Suspend` / `Sleep`。 |
 | Vendor/config active | 不做特殊 blocker；按普通 idle 规则允许 `Suspend`。 |
 
-## 10. Open questions
 
-本文件未决问题集中维护在 `dev/OPEN_QUESTIONS.md` 的 Route 部分。

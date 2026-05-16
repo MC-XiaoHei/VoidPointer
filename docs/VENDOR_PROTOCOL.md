@@ -1,6 +1,6 @@
-# Vendor/WebHID Protocol
+# Vendor/WebHID 协议
 
-本文定义 VoidPointer Vendor/WebHID 配置协议草案。当前是 Draft，用于统一 USBHS / BLE / 2.4G 三种配置通道的逻辑协议。
+配置通道的逻辑协议：帧格式、命令 ID 分配、响应状态。当前是 Draft。实现状态见 `TASKLIST.md`。
 
 ## 1. 目标
 
@@ -9,7 +9,7 @@
 - BLE / 2.4G 根据各自 MTU 或私有链路能力进行分片。
 - 协议层不依赖具体 transport 的物理包大小。
 
-## 2. Transport 能力
+## 2. 传输能力
 
 | Route | 物理包建议 | 来源 / 说明 |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ Vendor route 优先级规则见 `ROUTE_STATE_MACHINE.md`，其长期结论是：
 | Command | 解析 command id、request/response、错误码。 |
 | Config service | 读取/写入配置、保存、恢复默认、diagnostics。 |
 
-## 4. Packet framing 草案
+## 4. 分帧草案
 
 为了兼容不同 transport，建议所有 route 使用相同逻辑 frame header：
 
@@ -55,11 +55,9 @@ CRC16 策略：只在多包分片时启用。单包命令依赖 transport 校验
 
 ### 4.1 实现状态
 
-当前实现状态见 `dev/PROTOCOL_IMPL_STATUS.md`。
+协议层已从 transport 中抽离；后续 USB Custom HID、BLE Custom GATT、2.4G custom channel 只需要承载同一份 frame。已接入命令列表见 `TASKLIST.md` §4.9。
 
-协议层已从 transport 中抽离；后续 USB Custom HID、BLE Custom GATT、2.4G custom channel 只需要承载同一份 frame。
-
-## 5. Command id allocation
+## 5. 命令 ID 分配
 
 Vendor command id 使用 `u16`，按功能范围分段：
 
@@ -91,7 +89,7 @@ Vendor command id 使用 `u16`，按功能范围分段：
 | `0x0202` | `GetPowerState` | host → device | 查询 power diagnostics 状态；不暴露 Rust 内部 `vp_power_state_t` ABI。 |
 | `0x0300` | `GetDiagnostics` | host → device | 查询 debug counters / wake diagnostics。 |
 
-## 6. Vendor response status
+## 6. 响应状态
 
 Vendor/WebHID 使用独立 response status，不复用底层 `vp_status_t`。原因是 Vendor 协议需要表达分片、序号、CRC 等协议层错误。
 
@@ -115,7 +113,7 @@ Vendor/WebHID 使用独立 response status，不复用底层 `vp_status_t`。原
 - 收到新的 vendor packet 时唤醒并处理。
 - 进入 `Sleep` 前如果 config dirty，必须先保存。
 
-## 8. Confirmed decisions
+## 8. 已确认决策
 
 - Frame header 保持完整，优先可调试性。
 - `cmd` 使用 `u16`。
@@ -124,9 +122,9 @@ Vendor/WebHID 使用独立 response status，不复用底层 `vp_status_t`。原
 - command id 按功能范围分段：基础协议 `0x0000..0x00FF`，Config `0x0100..0x01FF`，Runtime/Route/Power `0x0200..0x02FF`，Diagnostics `0x0300..0x03FF`，experimental/debug `0x8000..0xFFFF`。
 - frame header 中 `offset` 使用 byte offset。
 - v1 不支持乱序分片；必须顺序发送。header 保留 byte offset 语义，为后续乱序/重传预留。
-- CH585 USBHS 硬件依据见 `CH585_NOTES.md`：Compatibility HID 示例验证 HS 512-byte、FS 64-byte report/endpoint 能力。
+- CH585 USBHS Compatibility HID 示例验证 HS 512-byte、FS 64-byte report/endpoint 能力。硬件依据参考 WCH 官方例程。
 
-## 9. Open questions
+## 9. 未决问题
 
 - BLE/2.4G 的最大单包 payload 待 route 实现确认。
 - 多包分片重组、`crc16` 仍待实现。

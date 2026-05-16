@@ -1,8 +1,7 @@
-# VoidPointer 配置存储格式规范
+# 配置存储格式规范
 
-本文档定义 VoidPointer 设备配置在 DataFlash 中的持久化格式。
+设备配置在 DataFlash 中的持久化格式、双槽布局、校验规则和版本迁移。
 
----
 
 ## 1. 术语
 
@@ -30,7 +29,6 @@ Config Region 中的一个配置副本存储单元。
 
 内层 `DeviceConfig` schema 版本。
 
----
 
 ## 2. 总体格式
 
@@ -52,7 +50,6 @@ Config Region
 - 一个变长 `Payload`
 - 若干未使用保留空间
 
----
 
 ## 3. DataFlash 约束
 
@@ -74,7 +71,6 @@ Config Region
 
 本规范不固定 Config Region 的绝对地址，由平台实现提供。
 
----
 
 ## 4. Slot 数量与布局
 
@@ -98,7 +94,6 @@ Config Region
 
 Slot 的起始地址与大小必须满足平台擦写约束。
 
----
 
 ## 5. SlotHeader
 
@@ -165,7 +160,6 @@ Slot 的起始地址与大小必须满足平台擦写约束。
 - 未定义标志位在当前版本中必须写 0。
 - 当前版本读取时必须忽略未知标志位。
 
----
 
 ## 6. SlotHeader 编码
 
@@ -190,7 +184,6 @@ Slot 的起始地址与大小必须满足平台擦写约束。
 
 `SlotHeader` 的编码大小是固定的，由上述字段唯一决定。
 
----
 
 ## 7. Payload 编码
 
@@ -227,7 +220,6 @@ Payload 不承载以下信息：
 - `postcard` 反序列化成功
 - 反序列化结果通过业务校验
 
----
 
 ## 8. Slot 有效性判定
 
@@ -246,7 +238,6 @@ Payload 不承载以下信息：
 
 如果某个 slot 不能直接按当前 `config_version` 使用，但可通过受支持的 migration 路径转换为当前版本，则该 slot 在 Active Slot 选择时视为有效 slot。
 
----
 
 ## 9. Active Slot 选择规则
 
@@ -264,7 +255,6 @@ Payload 不承载以下信息：
 
 如果两个 slot 都无效，则系统不得从 flash 应用配置，必须回退到默认配置。
 
----
 
 ## 10. 保存目标选择规则
 
@@ -279,7 +269,6 @@ Payload 不承载以下信息：
 
 如果当前不存在 Active Slot，且系统正在使用默认配置作为内存配置，则首次保存固定写入 `Slot A`。
 
----
 
 ## 11. Payload Schema
 
@@ -293,7 +282,6 @@ Payload 承载的是版本化 `DeviceConfig` 对象。
 
 本规范不在此定义具体业务字段。
 
----
 
 ## 12. 默认配置
 
@@ -306,7 +294,6 @@ Payload 承载的是版本化 `DeviceConfig` 对象。
 
 默认配置值由实现定义，但必须满足对应配置 schema 的全部约束。
 
----
 
 ## 13. 版本兼容性
 
@@ -331,7 +318,6 @@ migration 必须基于受支持的旧版本 schema 执行。旧版本 schema 可
 - 不要求存在任意旧版本直接迁移到当前版本的捷径。
 - migration 成功后，内存中的有效配置必须表现为当前 `config_version` 对应的 `DeviceConfig`。
 
----
 
 ## 14. 保存语义
 
@@ -360,7 +346,6 @@ migration 必须基于受支持的旧版本 schema 执行。旧版本 schema 可
 
 如果 migration 已成功生成当前版本的 `DeviceConfig`，但回写失败，则本次运行仍继续使用该当前版本配置；回写失败只影响持久化状态，不得回退为旧版本运行时配置对象。
 
----
 
 ## 15. 错误分类
 
@@ -383,7 +368,6 @@ migration 必须基于受支持的旧版本 schema 执行。旧版本 schema 可
 
 具体错误类型名可由实现定义，但语义不得弱于上述集合。
 
----
 
 ## 16. 读取语义
 
@@ -399,7 +383,6 @@ migration 必须基于受支持的旧版本 schema 执行。旧版本 schema 可
 
 如果 slot 通过 migration 成功加载，则系统在运行时必须只暴露当前版本的 `DeviceConfig`，不得继续以旧版本结构作为运行时配置对象。
 
----
 
 ## 17. 未定义与保留行为
 
@@ -407,7 +390,6 @@ migration 必须基于受支持的旧版本 schema 执行。旧版本 schema 可
 - 未定义的 enum 值必须由对应 schema 文档定义其处理方式；若未定义，则视为无效配置值。
 - 超出 schema 支持范围的数值必须视为校验失败或经显式 sanitize 后再应用。
 
----
 
 ## 18. 规范结论
 

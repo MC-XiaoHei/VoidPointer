@@ -1,7 +1,6 @@
 # VoidPointer 设计总览
 
-本文档只描述稳定目标、关键约束和总体分层
-实现状态、任务拆分和临时问题分别看 `dev/TASKLIST.md`、`dev/DECISIONS.md` 和 `dev/OPEN_QUESTIONS.md`
+产品目标、硬件背景和总体分层架构。实现状态和任务拆分见 `TASKLIST.md`。
 
 ## 1. 产品目标
 
