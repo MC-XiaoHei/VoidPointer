@@ -85,8 +85,8 @@ impl LedManager {
 
     fn apply_persistent(&self) {
         match self.persistent {
-            Some(PersistentState::Charging) => CHARGING.play(BoardSignal::LED_STATUS),
-            Some(PersistentState::LowBattery) => LOW_BATTERY.play(BoardSignal::LED_STATUS),
+            Some(PersistentState::Charging) => CHARGING.play(BoardSignal::STATUS_LED),
+            Some(PersistentState::LowBattery) => LOW_BATTERY.play(BoardSignal::STATUS_LED),
             None => stop_playback(),
         }
     }

@@ -4,8 +4,8 @@
 #include "vp_hal.h"
 
 void PwmPlatform_Init(void) {
-    vp_pwm_init(BOARD_SIGNAL_PWM_LASER, VP_PWMX_CYCLE_256);
-    PwmPlatform_SetDuty(BOARD_SIGNAL_PWM_LASER, 0u);
+    vp_pwm_init(BOARD_SIGNAL_LASER_LED, VP_PWMX_CYCLE_256);
+    PwmPlatform_SetDuty(BOARD_SIGNAL_LASER_LED, 0u);
 }
 
 void PwmPlatform_SetDuty(const BoardSignal sig, const uint8_t duty) {

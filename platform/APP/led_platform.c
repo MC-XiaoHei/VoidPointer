@@ -5,7 +5,7 @@
 static uint8_t current_led_active = 0u;
 
 void LedPlatform_Init(void) {
-    BoardGpio gpio = board_signal_get(BOARD_SIGNAL_LED_STATUS);
+    BoardGpio gpio = board_signal_get(BOARD_SIGNAL_STATUS_LED);
     vp_gpio_set(gpio);
 }
 
@@ -49,9 +49,9 @@ void LedPlatform_Stop(void) {
         return;
     }
     // 先置高 GPIO，再停 TMR，避免 TMR 停止后 GPIO 拉低导致的闪光
-    BoardGpio gpio = board_signal_get(BOARD_SIGNAL_LED_STATUS);
+    BoardGpio gpio = board_signal_get(BOARD_SIGNAL_STATUS_LED);
     vp_gpio_set(gpio);
-    vp_tmr_pwm_dma_stop(BOARD_SIGNAL_LED_STATUS);
-    vp_tmr_pwm_disable(BOARD_SIGNAL_LED_STATUS);
+    vp_tmr_pwm_dma_stop(BOARD_SIGNAL_STATUS_LED);
+    vp_tmr_pwm_disable(BOARD_SIGNAL_STATUS_LED);
     current_led_active = 0u;
 }

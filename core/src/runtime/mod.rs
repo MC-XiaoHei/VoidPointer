@@ -177,7 +177,7 @@ impl Runtime {
         profile: &'static LedProfile<N>,
         timestamp: u32,
     ) {
-        profile.play(crate::ffi::board_map::BoardSignal::LED_STATUS);
+        profile.play(crate::ffi::board_map::BoardSignal::STATUS_LED);
         self.led_manager
             .begin_transient(profile.playback_ms(), timestamp);
         Self::request_poll_after(TICK_MS as u32);

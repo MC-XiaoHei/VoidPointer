@@ -88,7 +88,7 @@ pub fn voidpointer_board() -> Vec<Def> {
             },
         },
         Def {
-            name: "led_status",
+            name: "status_led",
             pin: (A, 2),
             func: Tmr {
                 id: 3,
@@ -96,7 +96,7 @@ pub fn voidpointer_board() -> Vec<Def> {
             },
         },
         Def {
-            name: "pwm_laser",
+            name: "laser_led",
             pin: (B, 1),
             func: Pwm {
                 id: 7,
