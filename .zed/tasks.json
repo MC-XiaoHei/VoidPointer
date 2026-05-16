@@ -1,6 +1,6 @@
 [
   {
-    "label": "init local environment",
+    "label": "init local development environment",
     "command": "python",
     "args": ["tools/dev-task.py", "init"],
     "cwd": "$ZED_WORKTREE_ROOT",
@@ -11,7 +11,7 @@
     "save": "none",
   },
   {
-    "label": "refresh project config",
+    "label": "refresh project",
     "command": "python",
     "args": ["tools/dev-task.py", "refresh"],
     "cwd": "$ZED_WORKTREE_ROOT",
@@ -33,7 +33,7 @@
     "save": "all",
   },
   {
-    "label": "format source code",
+    "label": "format project",
     "command": "python",
     "args": ["tools/dev-task.py", "format"],
     "cwd": "$ZED_WORKTREE_ROOT",
@@ -77,7 +77,7 @@
     "save": "none",
   },
   {
-    "label": "test",
+    "label": "test project",
     "command": "python",
     "args": ["tools/dev-task.py", "test"],
     "cwd": "$ZED_WORKTREE_ROOT",
@@ -88,7 +88,7 @@
     "save": "all",
   },
   {
-    "label": "coverage",
+    "label": "test project with coverage",
     "command": "python",
     "args": ["tools/dev-task.py", "coverage"],
     "cwd": "$ZED_WORKTREE_ROOT",
