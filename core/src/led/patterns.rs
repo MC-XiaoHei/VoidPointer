@@ -50,3 +50,11 @@ led_profile!(
         level!(0 for 150 ms),
     }
 );
+
+led_profile!(
+    DISCONNECTED,
+    once! {
+        level!(102 for 150 ms),
+        level!(0 for 150 ms),
+    }
+);

@@ -18,7 +18,7 @@ use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::input::types::{InputManager, InputStatus};
 use crate::led::LedProfile;
 use crate::led::TICK_MS;
-use crate::led::patterns::{CONNECTED, MODE_2G4, MODE_BLE};
+use crate::led::patterns::{CONNECTED, DISCONNECTED, MODE_2G4, MODE_BLE};
 use crate::led::runtime::LedManager;
 use crate::motion::session::MotionSession;
 use crate::power::{PowerManager, PowerState};
@@ -567,6 +567,7 @@ impl Runtime {
             RuntimeEvent::BleDisconnected { timestamp, .. } => {
                 self.router.set_ble_input_ready(false);
                 self.router.set_ble_connected(false);
+                self.play_transient_led(&DISCONNECTED, timestamp);
                 self.mark_activity(timestamp);
                 self.dirty.report = true;
             }
@@ -579,6 +580,7 @@ impl Runtime {
             RuntimeEvent::DongleDisconnected { timestamp, .. } => {
                 self.router.set_dongle_connected(false);
                 self.mark_activity(timestamp);
+                self.play_transient_led(&DISCONNECTED, timestamp);
                 self.dirty.report = true;
             }
             RuntimeEvent::UsbStateChanged { state, timestamp } => {
@@ -592,6 +594,8 @@ impl Runtime {
                 );
                 if matches!(usb_state, UsbState::Configured) {
                     self.play_transient_led(&CONNECTED, timestamp);
+                } else if matches!(usb_state, UsbState::Detached) {
+                    self.play_transient_led(&DISCONNECTED, timestamp);
                 }
                 self.dirty.report = true;
             }
