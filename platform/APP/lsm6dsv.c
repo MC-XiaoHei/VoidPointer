@@ -159,7 +159,7 @@ static bool lsm6dsv_read_regs(const uint8_t reg, uint8_t* buf,
     return true;
 }
 
-static bool lsm6dsv_probe_address(const uint8_t addr) {
+static bool lsm6dsv_identify(const uint8_t addr) {
     uint8_t id = 0;
     if (!lsm6dsv_read_reg_addr(addr, LSM6DSV_REG_WHO_AM_I, &id)) {
         return false;
@@ -472,9 +472,8 @@ vp_status_t LSM6DSV_StartAsyncFifoRead(const uint16_t max_samples) {
 }
 
 bool LSM6DSV_Init(void) {
-    if (!lsm6dsv_probe_address((0x6A << 1)) &&
-        !lsm6dsv_probe_address((0x6B << 1))) {
-        VP_LOG_ERROR("imu", "no imu ack on 0x6A/0x6B");
+    if (!lsm6dsv_identify((0x6A << 1))) {
+        VP_LOG_ERROR("imu", "no imu ack on 0x6A");
         return false;
     }
 
