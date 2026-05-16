@@ -269,7 +269,7 @@ void c_vp_request_core_poll_after(const uint32_t ms) {
     core_request_poll_after(ms);
 }
 
-void Platform_NotifyUsbStateChanged(const vp_usb_state_t state) {
+void on_usb_state_change(const vp_usb_state_t state) {
     const vp_usb_state_t previous_state = current_usb_state;
     const vp_usb_state_t effective_state =
         (state == VP_USB_STATE_SUSPENDED) ? VP_USB_STATE_DETACHED : state;

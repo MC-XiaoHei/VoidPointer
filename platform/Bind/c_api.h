@@ -111,6 +111,7 @@ void vp_on_ble_disconnected(uint8_t reason, vp_timestamp_t timestamp);
 void vp_on_dongle_connected(vp_timestamp_t timestamp);
 void vp_on_dongle_disconnected(uint8_t reason, vp_timestamp_t timestamp);
 void vp_on_usb_state_changed(vp_usb_state_t state, vp_timestamp_t timestamp);
+void on_usb_state_change(vp_usb_state_t state);
 
 /* 输入事件，可在 ISR 调用 */
 void vp_on_button_exti(vp_button_id_t button_id, vp_bool_t level,

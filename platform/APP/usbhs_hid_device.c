@@ -2,7 +2,6 @@
 
 #include "CH58x_common.h"
 #include "c_api.h"
-#include "main.h"
 #include <stdint.h>
 #include <string.h>
 
