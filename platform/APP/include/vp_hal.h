@@ -1,4 +1,3 @@
-// vp_hal —— WCH HAL 抽象层
 #ifndef VOIDPOINTER_VP_HAL_H
 #define VOIDPOINTER_VP_HAL_H
 

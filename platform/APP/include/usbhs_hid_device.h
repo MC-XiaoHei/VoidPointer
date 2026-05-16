@@ -7,10 +7,10 @@
 extern "C" {
 #endif
 
-void    USBHS_HidDevice_Init(void);
-void    USBHS_HidDevice_ResetLinkState(void);
-uint8_t USBHS_HidDevice_SendMouseReport(const uint8_t* report, uint16_t len);
-uint8_t USBHS_HidDevice_SendVendorReport(const uint8_t* report, uint16_t len);
+void    usb_hid_init();
+void    usb_hid_reset_link();
+uint8_t usb_hid_send_mouse(const uint8_t* report, uint16_t len);
+uint8_t usb_hid_send_vendor(const uint8_t* report, uint16_t len);
 
 #ifdef __cplusplus
 }

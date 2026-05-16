@@ -1,4 +1,3 @@
-// vp_hal 实现
 #include "vp_hal.h"
 #include "CH58x_common.h"
 #include "CH58x_pwm.h"

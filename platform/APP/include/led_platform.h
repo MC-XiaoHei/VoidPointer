@@ -8,10 +8,10 @@
 extern "C" {
 #endif
 
-void LedPlatform_Init(void);
-void LedPlatform_Play(BoardSignal sig, const uint8_t* data, uint16_t byte_len,
+void led_init();
+void led_play(BoardSignal sig, const uint8_t* data, uint16_t byte_len,
                      uint8_t is_loop);
-void LedPlatform_Stop(void);
+void led_stop();
 
 #ifdef __cplusplus
 }

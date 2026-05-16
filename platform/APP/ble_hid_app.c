@@ -1,16 +1,4 @@
-﻿/********************************** (C) COPYRIGHT *******************************
- * File Name          : ble_hid_app.c
- * Author             : WCH
- * Version            : V1.0
- * Date               : 2018/12/10
- * Description        : BLE HID app TMOS glue，负责任务注册与 HID callback 接入
- *********************************************************************************
- * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * Attention: This software (modified or not) and binary are used for
- * microcontroller manufactured by Nanjing Qinheng Microelectronics.
- *******************************************************************************/
-
-#include "CONFIG.h"  // IWYU pragma: keep
+﻿#include "CONFIG.h"  // IWYU pragma: keep
 #include "battservice.h"
 #include "hiddev.h"
 #include "ble_gap_policy.h"
@@ -19,9 +7,9 @@
 #include "hidmouseservice.h"
 #include "c_api.h"
 
-static uint8_t bleHidAppTaskId = INVALID_TASK_ID;
+static uint8_t ble_hid_task_id = INVALID_TASK_ID;
 
-static uint8_t scanRspData[] = {0x0D,
+static uint8_t scan_rsp_data[] = {0x0D,
                                 GAP_ADTYPE_LOCAL_NAME_COMPLETE,
                                 'V',
                                 'o',
@@ -51,7 +39,7 @@ static uint8_t scanRspData[] = {0x0D,
                                 GAP_ADTYPE_POWER_LEVEL,
                                 0};
 
-static uint8_t advertData[] = {
+static uint8_t advert_data[] = {
     0x02,
     GAP_ADTYPE_FLAGS,
     GAP_ADTYPE_FLAGS_LIMITED | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
@@ -60,127 +48,120 @@ static uint8_t advertData[] = {
     LO_UINT16(GAP_APPEARE_HID_MOUSE),
     HI_UINT16(GAP_APPEARE_HID_MOUSE)};
 
-static CONST uint8_t attDeviceName[GAP_DEVICE_NAME_LEN] = "Void Pointer";
+static CONST uint8_t device_name[GAP_DEVICE_NAME_LEN] = "Void Pointer";
 
-static hidDevCfg_t bleHidAppCfg = {BLE_HID_APP_DEFAULT_HID_IDLE_TIMEOUT,
+static hidDevCfg_t hid_dev_cfg = {BLE_HID_APP_DEFAULT_HID_IDLE_TIMEOUT,
                                    HID_FEATURE_FLAGS};
 
-static void    bleHidApp_ConfigureGapRole(void);
-static void    bleHidApp_ConfigureBondManager(void);
-static void    bleHidApp_ConfigureBatteryService(void);
-static void    bleHidApp_ProcessTMOSMsg(tmos_event_hdr_t* pMsg);
-static uint8_t bleHidAppRptCB(uint8_t id, uint8_t type, uint16_t uuid,
+static void    init_advertising_params(void);
+static void    init_bonding_params(void);
+static void    init_battery_params(void);
+static void    process_tmos_msg(tmos_event_hdr_t* pMsg);
+static uint8_t hid_report_cb(uint8_t id, uint8_t type, uint16_t uuid,
                               uint8_t oper, uint16_t* pLen, uint8_t* pData);
-static void    bleHidAppEvtCB(uint8_t evt);
-static void bleHidAppStateCB(gapRole_States_t newState, gapRoleEvent_t* pEvent);
+static void    hid_event_cb(uint8_t evt);
+static void gap_state_cb(gapRole_States_t newState, gapRoleEvent_t* pEvent);
 
-static hidDevCB_t bleHidAppHidCBs = {bleHidAppRptCB, bleHidAppEvtCB, NULL,
-                                     bleHidAppStateCB};
+static hidDevCB_t hid_dev_callbacks = {hid_report_cb, hid_event_cb, NULL,
+                                     gap_state_cb};
 
-void BleHidApp_Init() {
-    bleHidAppTaskId = TMOS_ProcessEventRegister(BleHidApp_ProcessEvent);
-    BleGapPolicy_Init(bleHidAppTaskId);
+void ble_hid_init(void) {
+    ble_hid_task_id = TMOS_ProcessEventRegister(ble_hid_process_event);
+    ble_init(ble_hid_task_id);
 
-    bleHidApp_ConfigureGapRole();
+    init_advertising_params();
     GGS_SetParameter(GGS_DEVICE_NAME_ATT, GAP_DEVICE_NAME_LEN,
-                     (void*)attDeviceName);
-    bleHidApp_ConfigureBondManager();
-    bleHidApp_ConfigureBatteryService();
+                     (void*)device_name);
+    init_bonding_params();
+    init_battery_params();
 
     Hid_AddService();
-    HidDev_Register(&bleHidAppCfg, &bleHidAppHidCBs);
-    tmos_set_event(bleHidAppTaskId, START_DEVICE_EVT);
+    HidDev_Register(&hid_dev_cfg, &hid_dev_callbacks);
+
+    tmos_set_event(ble_hid_task_id, START_DEVICE_EVT);
 }
 
-uint8_t BleHidApp_SetAdvertisingEnabled(uint8_t enabled) {
-    return BleGapPolicy_SetAdvertisingEnabled(enabled);
+uint8_t ble_hid_set_advertising(uint8_t enabled) {
+    return ble_set_advertising(enabled);
 }
 
-uint8_t BleHidApp_Disconnect(void) { return BleGapPolicy_Disconnect(); }
+uint8_t ble_hid_disconnect(void) { return ble_disconnect(); }
 
-uint8_t BleHidApp_IsConnected(void) { return BleGapPolicy_IsConnected(); }
+uint8_t ble_hid_is_connected(void) { return ble_is_connected(); }
 
-uint16_t BleHidApp_ProcessEvent(uint8_t task_id, uint16_t events) {
+uint16_t ble_hid_process_event(uint8_t task_id, uint16_t events) {
     (void)task_id;
 
     if (events & SYS_EVENT_MSG) {
-        uint8_t* pMsg;
-
-        if ((pMsg = tmos_msg_receive(bleHidAppTaskId)) != NULL) {
-            bleHidApp_ProcessTMOSMsg((tmos_event_hdr_t*)pMsg);
+        uint8_t* pMsg = tmos_msg_receive(ble_hid_task_id);
+        if (pMsg != NULL) {
+            process_tmos_msg((tmos_event_hdr_t*)pMsg);
             tmos_msg_deallocate(pMsg);
         }
-
-        return (events ^ SYS_EVENT_MSG);
+        return events ^ SYS_EVENT_MSG;
     }
 
     if (events & START_DEVICE_EVT) {
-        return (events ^ START_DEVICE_EVT);
+        return events ^ START_DEVICE_EVT;
     }
 
     if (events & START_PARAM_UPDATE_EVT) {
         VP_LOG_DEBUG("ble_hid", "conn param update requested");
         GAPRole_PeripheralConnParamUpdateReq(
-            BleGapPolicy_GetConnectionHandle(),
+            ble_conn_handle(),
             BLE_GAP_POLICY_CONN_INTERVAL_MIN, BLE_GAP_POLICY_CONN_INTERVAL_MAX,
             BLE_GAP_POLICY_CONN_LATENCY, BLE_GAP_POLICY_CONN_TIMEOUT,
-            bleHidAppTaskId);
-        return (events ^ START_PARAM_UPDATE_EVT);
+            ble_hid_task_id);
+        return events ^ START_PARAM_UPDATE_EVT;
     }
 
     if (events & START_PHY_UPDATE_EVT) {
-        VP_LOG_DEBUG(
-            "ble_hid", "phy update requested;status=0x%02x",
-            GAPRole_UpdatePHY(BleGapPolicy_GetConnectionHandle(), 0,
+        VP_LOG_DEBUG("ble_hid", "phy update requested;status=0x%02x",
+            GAPRole_UpdatePHY(ble_conn_handle(), 0,
                               GAP_PHY_BIT_LE_2M, GAP_PHY_BIT_LE_2M, 0));
-        return (events ^ START_PHY_UPDATE_EVT);
+        return events ^ START_PHY_UPDATE_EVT;
     }
 
     return 0;
 }
 
-static void bleHidApp_ConfigureGapRole(void) {
-    uint8_t initialAdvertisingEnable = BLE_HID_APP_DEFAULT_ADVERTISING_ENABLED;
+static void init_advertising_params(void) {
+    uint8_t enable = BLE_HID_APP_DEFAULT_ADVERTISING_ENABLED;
 
-    GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(uint8_t),
-                         &initialAdvertisingEnable);
-    GAPRole_SetParameter(GAPROLE_ADVERT_DATA, sizeof(advertData), advertData);
-    GAPRole_SetParameter(GAPROLE_SCAN_RSP_DATA, sizeof(scanRspData),
-                         scanRspData);
+    GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(enable), &enable);
+    GAPRole_SetParameter(GAPROLE_ADVERT_DATA, sizeof(advert_data), advert_data);
+    GAPRole_SetParameter(GAPROLE_SCAN_RSP_DATA, sizeof(scan_rsp_data),
+                         scan_rsp_data);
 }
 
-static void bleHidApp_ConfigureBondManager(void) {
+static void init_bonding_params(void) {
     uint32_t passkey = BLE_HID_APP_DEFAULT_PASSCODE;
-    uint8_t  pairMode = BLE_HID_APP_DEFAULT_PAIRING_MODE;
-    uint8_t  mitm = BLE_HID_APP_DEFAULT_MITM_MODE;
-    uint8_t  ioCap = BLE_HID_APP_DEFAULT_IO_CAPABILITIES;
-    uint8_t  bonding = BLE_HID_APP_DEFAULT_BONDING_MODE;
+    uint8_t  mode    = BLE_HID_APP_DEFAULT_PAIRING_MODE;
+    uint8_t  mitm    = BLE_HID_APP_DEFAULT_MITM_MODE;
+    uint8_t  io      = BLE_HID_APP_DEFAULT_IO_CAPABILITIES;
+    uint8_t  bond    = BLE_HID_APP_DEFAULT_BONDING_MODE;
 
-    GAPBondMgr_SetParameter(GAPBOND_PERI_DEFAULT_PASSCODE, sizeof(uint32_t),
+    GAPBondMgr_SetParameter(GAPBOND_PERI_DEFAULT_PASSCODE, sizeof(passkey),
                             &passkey);
-    GAPBondMgr_SetParameter(GAPBOND_PERI_PAIRING_MODE, sizeof(uint8_t),
-                            &pairMode);
-    GAPBondMgr_SetParameter(GAPBOND_PERI_MITM_PROTECTION, sizeof(uint8_t),
-                            &mitm);
-    GAPBondMgr_SetParameter(GAPBOND_PERI_IO_CAPABILITIES, sizeof(uint8_t),
-                            &ioCap);
-    GAPBondMgr_SetParameter(GAPBOND_PERI_BONDING_ENABLED, sizeof(uint8_t),
-                            &bonding);
+    GAPBondMgr_SetParameter(GAPBOND_PERI_PAIRING_MODE, sizeof(mode), &mode);
+    GAPBondMgr_SetParameter(GAPBOND_PERI_MITM_PROTECTION, sizeof(mitm), &mitm);
+    GAPBondMgr_SetParameter(GAPBOND_PERI_IO_CAPABILITIES, sizeof(io), &io);
+    GAPBondMgr_SetParameter(GAPBOND_PERI_BONDING_ENABLED, sizeof(bond), &bond);
 }
 
-static void bleHidApp_ConfigureBatteryService(void) {
-    uint8_t critical = BLE_HID_APP_DEFAULT_BATT_CRITICAL_LEVEL;
-    Batt_SetParameter(BATT_PARAM_CRITICAL_LEVEL, sizeof(uint8_t), &critical);
+static void init_battery_params(void) {
+    uint8_t level = BLE_HID_APP_DEFAULT_BATT_CRITICAL_LEVEL;
+    Batt_SetParameter(BATT_PARAM_CRITICAL_LEVEL, sizeof(level), &level);
 }
 
-static void bleHidApp_ProcessTMOSMsg(tmos_event_hdr_t* pMsg) {
+static void process_tmos_msg(tmos_event_hdr_t* pMsg) {
     switch (pMsg->event) {
         default:
             break;
     }
 }
 
-static uint8_t bleHidAppRptCB(uint8_t id, uint8_t type, uint16_t uuid,
+static uint8_t hid_report_cb(uint8_t id, uint8_t type, uint16_t uuid,
                               uint8_t oper, uint16_t* pLen, uint8_t* pData) {
     uint8_t status = SUCCESS;
 
@@ -189,13 +170,13 @@ static uint8_t bleHidAppRptCB(uint8_t id, uint8_t type, uint16_t uuid,
     } else if (oper == HID_DEV_OPER_READ) {
         status = Hid_GetParameter(id, type, uuid, pLen, pData);
     } else if (oper == HID_DEV_OPER_ENABLE) {
-        BleGapPolicy_HandleReportNotifyEnabled(id, type, uuid);
+        ble_on_notify_enabled(id, type, uuid);
     }
 
     return status;
 }
 
-static void bleHidAppEvtCB(uint8_t evt) {
+static void hid_event_cb(uint8_t evt) {
     switch (evt) {
         case HID_DEV_SUSPEND_EVT:
             VP_LOG_INFO("ble_hid", "hid state changed;state=suspended");
@@ -208,7 +189,7 @@ static void bleHidAppEvtCB(uint8_t evt) {
     }
 }
 
-static void bleHidAppStateCB(gapRole_States_t newState,
+static void gap_state_cb(gapRole_States_t newState,
                              gapRoleEvent_t*  pEvent) {
-    BleGapPolicy_HandleGapState(newState, pEvent);
+    ble_on_state_change(newState, pEvent);
 }

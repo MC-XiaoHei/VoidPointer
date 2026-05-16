@@ -45,22 +45,22 @@ typedef struct {
     uint8_t   raw;
 } lsm6dsv_wake_status_t;
 
-bool LSM6DSV_Init(void);
-bool LSM6DSV_ConfigActive(void);
-bool LSM6DSV_ConfigSuspend(void);
-bool LSM6DSV_ConfigSleep(void);
-bool LSM6DSV_ReadWhoAmI(uint8_t* out_id);
-bool LSM6DSV_ReadWakeStatus(lsm6dsv_wake_status_t* out_status);
-bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
+bool lsm6dsv_init();
+bool lsm6dsv_set_active();
+bool lsm6dsv_set_suspend();
+bool lsm6dsv_set_sleep();
+bool lsm6dsv_read_id(uint8_t* out_id);
+bool lsm6dsv_read_wake_status(lsm6dsv_wake_status_t* out_status);
+bool lsm6dsv_read_latest_rotation(sflp_game_rotation_raw_t* raw,
                                            uint16_t  max_samples,
                                            uint16_t* out_dropped_count);
-bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw);
+bool lsm6dsv_read_rotation(sflp_game_rotation_raw_t* raw);
 
-void        LSM6DSV_AsyncInit(void);
-void        LSM6DSV_ReinitAsync(void);
-vp_status_t LSM6DSV_StartAsyncFifoRead(uint16_t max_samples);
-vp_status_t LSM6DSV_AbortAsync(void);
-vp_bool_t   LSM6DSV_IsAsyncBusy(void);
+void        lsm6dsv_async_init();
+void        lsm6dsv_reinit_async();
+vp_status_t lsm6dsv_start_async_read(uint16_t max_samples);
+vp_status_t lsm6dsv_abort_async();
+vp_bool_t   lsm6dsv_is_async_busy();
 
 #ifdef __cplusplus
 }

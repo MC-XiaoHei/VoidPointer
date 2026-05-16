@@ -40,4 +40,6 @@ VoidPointer/
 
 ## 许可
 
+默认情况下，按 MIT 协议开源，文件头有声明的则应以文件头为准。
+
 MIT © 2026 MC_XiaoHei

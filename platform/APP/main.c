@@ -1,16 +1,4 @@
-﻿/********************************** (C) COPYRIGHT *******************************
- * File Name          : main.c
- * Author             : WCH
- * Version            : V1.0
- * Date               : 2018/12/10
- * Description        : 主程序，完成系统初始化后进入 TMOS/BLE 主循环
- *********************************************************************************
- * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * Attention: This software (modified or not) and binary are used for
- * microcontroller manufactured by Nanjing Qinheng Microelectronics.
- *******************************************************************************/
-
-#include "CONFIG.h"
+﻿#include "CONFIG.h"
 #include "HAL.h"
 #include "main.h"
 #include "hiddev.h"
@@ -34,17 +22,17 @@ __attribute__((aligned(4))) uint32_t MEM_BUF[BLE_MEMHEAP_SIZE / 4];
 const uint8_t MacAddr[6] = {0x4F, 0x9D, 0x2A, 0x8B, 0xC1, 0x7E};
 #endif
 
-static void     RuntimeTask_Service(void);
-static uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events);
+static void     core_service(void);
+static uint16_t core_process_event(uint8_t task_id, uint16_t events);
 
-#define RUNTIME_CORE_POLL_EVT 0x0001
+#define CORE_POLL_EVT 0x0001
 
 __HIGH_CODE
-__attribute__((noinline)) void Main_Circulation() {
+__attribute__((noinline)) void main_loop() {
     while (1) {
-        RuntimeTask_Service();
+        core_service();
         TMOS_SystemProcess();
-        RuntimeTask_Service();
+        core_service();
     }
 }
 
@@ -53,7 +41,7 @@ static volatile uint8_t runtime_poll_request_pending = 0u;
 static volatile uint8_t runtime_debounce_timer_running = 0u;
 static uint32_t         runtime_debounce_next_ms = 0u;
 
-static void ServiceLatchedInputInterrupts(void) {
+static void service_latched_irqs(void) {
     if (runtime_debounce_timer_running) {
         return;
     }
@@ -63,7 +51,7 @@ static void ServiceLatchedInputInterrupts(void) {
     }
 }
 
-static void ServiceDebounceTimer(void) {
+static void service_debounce(void) {
     if (!runtime_debounce_timer_running) {
         return;
     }
@@ -77,29 +65,29 @@ static void ServiceDebounceTimer(void) {
     vp_on_debounce_tick(now);
 }
 
-static void RuntimeTask_Service(void) {
+static void core_service(void) {
     if (runtime_poll_request_pending) {
         runtime_poll_request_pending = 0u;
         vp_core_poll();
     }
 
-    ServiceLatchedInputInterrupts();
-    ServiceDebounceTimer();
+    service_latched_irqs();
+    service_debounce();
 }
 
-static uint16_t RuntimeTask_ProcessEvent(uint8_t task_id, uint16_t events) {
+static uint16_t core_process_event(uint8_t task_id, uint16_t events) {
     (void)task_id;
-    if (events & RUNTIME_CORE_POLL_EVT) {
+    if (events & CORE_POLL_EVT) {
         runtime_poll_request_pending = 1u;
-        return events & (uint16_t)(~RUNTIME_CORE_POLL_EVT);
+        return events & (uint16_t)(~CORE_POLL_EVT);
     }
 
     return 0u;
 }
 
-void RuntimeTask_RequestPoll(void) { runtime_poll_request_pending = 1u; }
+void core_request_poll() { runtime_poll_request_pending = 1u; }
 
-void RuntimeTask_RequestPollAfter(const uint32_t ms) {
+void core_request_poll_after(const uint32_t ms) {
     if (runtime_task_id == 0xFF) {
         return;
     }
@@ -109,11 +97,11 @@ void RuntimeTask_RequestPollAfter(const uint32_t ms) {
         return;
     }
 
-    tmos_start_task(runtime_task_id, RUNTIME_CORE_POLL_EVT,
+    tmos_start_task(runtime_task_id, CORE_POLL_EVT,
                     MS1_TO_SYSTEM_TIME(ms));
 }
 
-void RuntimeTask_StartDebounceTimer(void) {
+void debounce_start() {
     if (runtime_task_id == 0xFF) {
         return;
     }
@@ -121,26 +109,26 @@ void RuntimeTask_StartDebounceTimer(void) {
     runtime_debounce_next_ms = c_vp_rtc_millis() + 1u;
 }
 
-void RuntimeTask_StopDebounceTimer(void) {
+void debounce_stop() {
     runtime_debounce_timer_running = 0u;
 }
 
-void RuntimeTask_Init() {
-    runtime_task_id = TMOS_ProcessEventRegister(RuntimeTask_ProcessEvent);
+void core_init() {
+    runtime_task_id = TMOS_ProcessEventRegister(core_process_event);
     if (runtime_task_id == 0xFF) {
         VP_LOG_ERROR("runtime", "task registration failed");
         return;
     }
-    RuntimeTask_RequestPoll();
+    core_request_poll();
 }
 
-void InputGPIO_Init() {
+void input_init_pins() {
     board_gpio_init_all();
 
-    ImuPlatform_InitGpio();
+    imu_init_pins();
 }
 
-void InputEXTI_Init() {
+void input_init_irq() {
     (void)c_vp_exti_set_edge(VP_INPUT_LEFT, VP_EXTI_EDGE_FALLING);
     (void)c_vp_exti_set_edge(VP_INPUT_RIGHT, VP_EXTI_EDGE_FALLING);
     (void)c_vp_exti_set_edge(VP_INPUT_MIDDLE, VP_EXTI_EDGE_FALLING);
@@ -148,7 +136,7 @@ void InputEXTI_Init() {
     (void)c_vp_exti_set_edge(VP_INPUT_ENCODER_A, VP_EXTI_EDGE_BOTH);
     (void)c_vp_exti_set_edge(VP_INPUT_ENCODER_B, VP_EXTI_EDGE_BOTH);
 
-    ImuPlatform_InitExti();
+    imu_init_irq();
 }
 
 int main() {
@@ -171,22 +159,22 @@ int main() {
 
     CH58x_BLEInit();
     HAL_Init();
-    InputGPIO_Init();
-    InputEXTI_Init();
+    input_init_pins();
+    input_init_irq();
 
-    ImuPlatform_InitDevice();
+    imu_init();
 
     GAPRole_PeripheralInit();
     HidDev_Init();
-    BleHidApp_Init();
+    ble_hid_init();
 
-    USBHS_HidDevice_Init();
-    LedPlatform_Init();
-    PwmPlatform_Init();
+    usb_hid_init();
+    led_init();
+    pwm_init();
 
     vp_core_init();
-    RuntimeTask_Init();
+    core_init();
     vp_input_enable();
 
-    Main_Circulation();
+    main_loop();
 }

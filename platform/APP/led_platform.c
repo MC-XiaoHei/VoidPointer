@@ -4,19 +4,19 @@
 
 static uint8_t current_led_active = 0u;
 
-void LedPlatform_Init(void) {
+void led_init(void) {
     BoardGpio gpio = board_signal_get(BOARD_SIGNAL_STATUS_LED);
     vp_gpio_set(gpio);
 }
 
-void LedPlatform_Play(const BoardSignal sig, const uint8_t* data,
+void led_play(const BoardSignal sig, const uint8_t* data,
                        const uint16_t byte_len, const uint8_t is_loop) {
     if (data == NULL || byte_len == 0u) {
         return;
     }
 
     if (current_led_active) {
-        LedPlatform_Stop();
+        led_stop();
     }
 
     BoardGpio gpio = board_signal_get(sig);
@@ -44,7 +44,7 @@ void LedPlatform_Play(const BoardSignal sig, const uint8_t* data,
     current_led_active = 1u;
 }
 
-void LedPlatform_Stop(void) {
+void led_stop(void) {
     if (!current_led_active) {
         return;
     }

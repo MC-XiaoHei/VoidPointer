@@ -24,7 +24,7 @@ static void i2c_drive_sda_low(void) {
     vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SDA), GPIO_ModeOut_PP_5mA);
 }
 
-static void I2C_Hardware_Init(void) {
+static void imu_i2c_hw_init(void) {
     vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_I2C_SDA), ENABLE);
     vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_I2C_SCL), ENABLE);
     GPIOAGPPCfg(DISABLE, RB_PIN_USB2_EN);
@@ -37,7 +37,7 @@ static void I2C_Hardware_Init(void) {
     I2C_Cmd(ENABLE);
 }
 
-void ImuPlatform_InitGpio(void) {
+void imu_init_pins(void) {
     if (vp_gpio_is_valid(board_signal_get(BOARD_SIGNAL_IMU_INT1))) {
         vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT1), ENABLE);
         vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT1), GPIO_ModeIN_PU);
@@ -49,7 +49,7 @@ void ImuPlatform_InitGpio(void) {
     }
 }
 
-void ImuPlatform_InitExti(void) {
+void imu_init_irq(void) {
     if (vp_gpio_is_valid(board_signal_get(BOARD_SIGNAL_IMU_INT1))) {
         (void)c_vp_exti_set_edge(VP_INPUT_IMU_INT1, VP_IMU_INT_EDGE);
     }
@@ -59,7 +59,7 @@ void ImuPlatform_InitExti(void) {
     }
 }
 
-vp_bool_t ImuPlatform_I2cBusIdle(void) {
+vp_bool_t imu_i2c_is_idle(void) {
     const BoardGpio i2c_sda = board_signal_get(BOARD_SIGNAL_I2C_SDA);
     const BoardGpio i2c_scl = board_signal_get(BOARD_SIGNAL_I2C_SCL);
 
@@ -74,12 +74,12 @@ vp_bool_t ImuPlatform_I2cBusIdle(void) {
                : 0u;
 }
 
-vp_status_t ImuPlatform_I2cInit(void) {
-    I2C_Hardware_Init();
-    return ImuPlatform_I2cBusIdle() ? VP_STATUS_OK : VP_STATUS_BUSY;
+vp_status_t imu_i2c_init(void) {
+    imu_i2c_hw_init();
+    return imu_i2c_is_idle() ? VP_STATUS_OK : VP_STATUS_BUSY;
 }
 
-vp_status_t ImuPlatform_I2cRecoverBus(void) {
+vp_status_t imu_i2c_recover(void) {
     const BoardGpio i2c_sda = board_signal_get(BOARD_SIGNAL_I2C_SDA);
     const BoardGpio i2c_scl = board_signal_get(BOARD_SIGNAL_I2C_SCL);
 
@@ -126,9 +126,9 @@ vp_status_t ImuPlatform_I2cRecoverBus(void) {
     i2c_release_lines_to_pullup();
     mDelayuS(10);
 
-    I2C_Hardware_Init();
-    LSM6DSV_ReinitAsync();
-    if (!ImuPlatform_I2cBusIdle()) {
+    imu_i2c_hw_init();
+    lsm6dsv_reinit_async();
+    if (!imu_i2c_is_idle()) {
         VP_LOG_WARN("imu", "i2c recover incomplete");
         return VP_STATUS_BUSY;
     }
@@ -137,14 +137,14 @@ vp_status_t ImuPlatform_I2cRecoverBus(void) {
     return VP_STATUS_OK;
 }
 
-void ImuPlatform_InitDevice(void) {
-    const vp_status_t i2c_status = ImuPlatform_I2cInit();
+void imu_init(void) {
+    const vp_status_t i2c_status = imu_i2c_init();
     if (i2c_status != VP_STATUS_OK) {
         VP_LOG_ERROR("imu", "i2c init failed;status=%u", i2c_status);
         return;
     }
 
-    if (!LSM6DSV_Init()) {
+    if (!lsm6dsv_init()) {
         VP_LOG_ERROR("imu", "init failed");
     } else {
         VP_LOG_INFO("imu", "initialized");

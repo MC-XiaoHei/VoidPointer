@@ -7,12 +7,12 @@
 extern "C" {
 #endif
 
-void        ImuPlatform_InitGpio(void);
-void        ImuPlatform_InitExti(void);
-void        ImuPlatform_InitDevice(void);
-vp_status_t ImuPlatform_I2cInit(void);
-vp_status_t ImuPlatform_I2cRecoverBus(void);
-vp_bool_t   ImuPlatform_I2cBusIdle(void);
+void        imu_init_pins();
+void        imu_init_irq();
+void        imu_init();
+vp_status_t imu_i2c_init();
+vp_status_t imu_i2c_recover();
+vp_bool_t   imu_i2c_is_idle();
 
 #ifdef __cplusplus
 }

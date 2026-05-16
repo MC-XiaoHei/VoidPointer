@@ -422,7 +422,7 @@ static void lsm6dsv_async_consume_fifo_word(void) {
     lsm6dsv_async_begin_next_phase();
 }
 
-void LSM6DSV_AsyncInit(void) {
+void lsm6dsv_async_init() {
     lsm6dsv_async_reset_io_state();
     g_lsm6dsv_async.busy = 0u;
     g_lsm6dsv_async.phase = LSM6DSV_ASYNC_IDLE;
@@ -433,11 +433,11 @@ void LSM6DSV_AsyncInit(void) {
     PFIC_EnableIRQ(I2C_IRQn);
 }
 
-void LSM6DSV_ReinitAsync(void) { LSM6DSV_AsyncInit(); }
+void lsm6dsv_reinit_async() { lsm6dsv_async_init(); }
 
-vp_bool_t LSM6DSV_IsAsyncBusy(void) { return g_lsm6dsv_async.busy; }
+vp_bool_t lsm6dsv_is_async_busy() { return g_lsm6dsv_async.busy; }
 
-vp_status_t LSM6DSV_AbortAsync(void) {
+vp_status_t lsm6dsv_abort_async() {
     if (!g_lsm6dsv_async.busy) {
         return VP_STATUS_OK;
     }
@@ -446,7 +446,7 @@ vp_status_t LSM6DSV_AbortAsync(void) {
     return VP_STATUS_OK;
 }
 
-vp_status_t LSM6DSV_StartAsyncFifoRead(const uint16_t max_samples) {
+vp_status_t lsm6dsv_start_async_read(const uint16_t max_samples) {
     if (g_lsm6dsv_async.busy) {
         return VP_STATUS_BUSY;
     }
@@ -471,7 +471,7 @@ vp_status_t LSM6DSV_StartAsyncFifoRead(const uint16_t max_samples) {
     return VP_STATUS_OK;
 }
 
-bool LSM6DSV_Init(void) {
+bool lsm6dsv_init() {
     if (!lsm6dsv_identify((0x6A << 1))) {
         VP_LOG_ERROR("imu", "no imu ack on 0x6A");
         return false;
@@ -491,12 +491,12 @@ bool LSM6DSV_Init(void) {
         return false;
     }
 
-    LSM6DSV_AsyncInit();
+    lsm6dsv_async_init();
     mDelaymS(100);
     return true;
 }
 
-bool LSM6DSV_ConfigActive(void) {
+bool lsm6dsv_set_active() {
     if (g_lsm6dsv_async.busy) {
         return false;
     }
@@ -504,7 +504,7 @@ bool LSM6DSV_ConfigActive(void) {
     return lsm6dsv_apply_active_profile();
 }
 
-bool LSM6DSV_ConfigSuspend(void) {
+bool lsm6dsv_set_suspend() {
     if (g_lsm6dsv_async.busy) {
         return false;
     }
@@ -512,7 +512,7 @@ bool LSM6DSV_ConfigSuspend(void) {
     return lsm6dsv_apply_suspend_profile();
 }
 
-bool LSM6DSV_ConfigSleep(void) {
+bool lsm6dsv_set_sleep() {
     if (g_lsm6dsv_async.busy) {
         return false;
     }
@@ -520,7 +520,7 @@ bool LSM6DSV_ConfigSleep(void) {
     return lsm6dsv_apply_sleep_profile();
 }
 
-bool LSM6DSV_ReadWhoAmI(uint8_t* out_id) {
+bool lsm6dsv_read_id(uint8_t* out_id) {
     if (out_id == 0) {
         return false;
     }
@@ -528,7 +528,7 @@ bool LSM6DSV_ReadWhoAmI(uint8_t* out_id) {
     return lsm6dsv_read_reg(LSM6DSV_REG_WHO_AM_I, out_id);
 }
 
-bool LSM6DSV_ReadWakeStatus(lsm6dsv_wake_status_t* out_status) {
+bool lsm6dsv_read_wake_status(lsm6dsv_wake_status_t* out_status) {
     uint8_t raw = 0u;
 
     if (out_status == 0) {
@@ -545,7 +545,7 @@ bool LSM6DSV_ReadWakeStatus(lsm6dsv_wake_status_t* out_status) {
     return true;
 }
 
-bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
+bool lsm6dsv_read_latest_rotation(sflp_game_rotation_raw_t* raw,
                                            const uint16_t max_samples,
                                            uint16_t*      out_dropped_count) {
     if (raw == 0) return false;
@@ -595,8 +595,8 @@ bool LSM6DSV_ReadLatestSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw,
     return found;
 }
 
-bool LSM6DSV_ReadSFLPGameRotationRaw(sflp_game_rotation_raw_t* raw) {
-    return LSM6DSV_ReadLatestSFLPGameRotationRaw(raw, 0u, 0);
+bool lsm6dsv_read_rotation(sflp_game_rotation_raw_t* raw) {
+    return lsm6dsv_read_latest_rotation(raw, 0u, 0);
 }
 
 __INTERRUPT

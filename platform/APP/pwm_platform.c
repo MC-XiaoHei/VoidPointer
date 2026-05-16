@@ -1,13 +1,12 @@
-// pwm_platform.c —— PWM 驱动（通过 vp_hal 路由到具体 PWM 通道）
 #include "pwm_platform.h"
 #include "board_map.h"
 #include "vp_hal.h"
 
-void PwmPlatform_Init(void) {
+void pwm_init(void) {
     vp_pwm_init(BOARD_SIGNAL_LASER_LED, VP_PWMX_CYCLE_256);
-    PwmPlatform_SetDuty(BOARD_SIGNAL_LASER_LED, 0u);
+    pwm_set_duty(BOARD_SIGNAL_LASER_LED, 0u);
 }
 
-void PwmPlatform_SetDuty(const BoardSignal sig, const uint8_t duty) {
+void pwm_set_duty(const BoardSignal sig, const uint8_t duty) {
     vp_pwm_set_duty(sig, duty);
 }

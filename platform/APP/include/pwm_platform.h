@@ -8,8 +8,8 @@
 extern "C" {
 #endif
 
-void PwmPlatform_Init(void);
-void PwmPlatform_SetDuty(BoardSignal sig, uint8_t duty);
+void pwm_init();
+void pwm_set_duty(BoardSignal sig, uint8_t duty);
 
 #ifdef __cplusplus
 }
