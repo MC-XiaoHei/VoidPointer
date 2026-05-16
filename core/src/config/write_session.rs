@@ -227,7 +227,6 @@ mod tests {
 
     #[test]
     fn reject_commit_validation_fail() {
-        
         let mut invalid = DeviceConfig::default();
         invalid.report.report_hz = 0.0;
         let mut tmp = [0u8; 256];
@@ -243,7 +242,6 @@ mod tests {
 
     #[test]
     fn reject_commit_deserialize_fail() {
-        
         let garbage = [0xDE, 0xAD, 0xBE, 0xEF];
         let crc = crate::config::storage::crc32(&garbage);
         let mut buf = [0u8; MAX_PAYLOAD_SIZE];

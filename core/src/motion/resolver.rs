@@ -151,7 +151,6 @@ mod tests {
         assert!((r - (-0.25)).abs() < 1e-6);
     }
 
-
     fn attitude(roll: f32, pitch: f32, yaw: f32) -> AttitudeData {
         AttitudeData {
             roll,

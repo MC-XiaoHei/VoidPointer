@@ -10,34 +10,34 @@
 static uint8_t ble_hid_task_id = INVALID_TASK_ID;
 
 static uint8_t scan_rsp_data[] = {0x0D,
-                                GAP_ADTYPE_LOCAL_NAME_COMPLETE,
-                                'V',
-                                'o',
-                                'i',
-                                'd',
-                                ' ',
-                                'P',
-                                'o',
-                                'i',
-                                'n',
-                                't',
-                                'e',
-                                'r',
-                                0x05,
-                                GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE,
-                                LO_UINT16(BLE_GAP_POLICY_CONN_INTERVAL_MIN),
-                                HI_UINT16(BLE_GAP_POLICY_CONN_INTERVAL_MIN),
-                                LO_UINT16(BLE_GAP_POLICY_CONN_INTERVAL_MAX),
-                                HI_UINT16(BLE_GAP_POLICY_CONN_INTERVAL_MAX),
-                                0x05,
-                                GAP_ADTYPE_16BIT_MORE,
-                                LO_UINT16(HID_SERV_UUID),
-                                HI_UINT16(HID_SERV_UUID),
-                                LO_UINT16(BATT_SERV_UUID),
-                                HI_UINT16(BATT_SERV_UUID),
-                                0x02,
-                                GAP_ADTYPE_POWER_LEVEL,
-                                0};
+                                  GAP_ADTYPE_LOCAL_NAME_COMPLETE,
+                                  'V',
+                                  'o',
+                                  'i',
+                                  'd',
+                                  ' ',
+                                  'P',
+                                  'o',
+                                  'i',
+                                  'n',
+                                  't',
+                                  'e',
+                                  'r',
+                                  0x05,
+                                  GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE,
+                                  LO_UINT16(BLE_GAP_POLICY_CONN_INTERVAL_MIN),
+                                  HI_UINT16(BLE_GAP_POLICY_CONN_INTERVAL_MIN),
+                                  LO_UINT16(BLE_GAP_POLICY_CONN_INTERVAL_MAX),
+                                  HI_UINT16(BLE_GAP_POLICY_CONN_INTERVAL_MAX),
+                                  0x05,
+                                  GAP_ADTYPE_16BIT_MORE,
+                                  LO_UINT16(HID_SERV_UUID),
+                                  HI_UINT16(HID_SERV_UUID),
+                                  LO_UINT16(BATT_SERV_UUID),
+                                  HI_UINT16(BATT_SERV_UUID),
+                                  0x02,
+                                  GAP_ADTYPE_POWER_LEVEL,
+                                  0};
 
 static uint8_t advert_data[] = {
     0x02,
@@ -51,19 +51,19 @@ static uint8_t advert_data[] = {
 static CONST uint8_t device_name[GAP_DEVICE_NAME_LEN] = "Void Pointer";
 
 static hidDevCfg_t hid_dev_cfg = {BLE_HID_APP_DEFAULT_HID_IDLE_TIMEOUT,
-                                   HID_FEATURE_FLAGS};
+                                  HID_FEATURE_FLAGS};
 
 static void    init_advertising_params(void);
 static void    init_bonding_params(void);
 static void    init_battery_params(void);
 static void    process_tmos_msg(tmos_event_hdr_t* pMsg);
 static uint8_t hid_report_cb(uint8_t id, uint8_t type, uint16_t uuid,
-                              uint8_t oper, uint16_t* pLen, uint8_t* pData);
+                             uint8_t oper, uint16_t* pLen, uint8_t* pData);
 static void    hid_event_cb(uint8_t evt);
-static void gap_state_cb(gapRole_States_t newState, gapRoleEvent_t* pEvent);
+static void    gap_state_cb(gapRole_States_t newState, gapRoleEvent_t* pEvent);
 
 static hidDevCB_t hid_dev_callbacks = {hid_report_cb, hid_event_cb, NULL,
-                                     gap_state_cb};
+                                       gap_state_cb};
 
 void ble_hid_init(void) {
     ble_hid_task_id = TMOS_ProcessEventRegister(ble_hid_process_event);
@@ -108,17 +108,16 @@ uint16_t ble_hid_process_event(uint8_t task_id, uint16_t events) {
     if (events & START_PARAM_UPDATE_EVT) {
         VP_LOG_DEBUG("ble_hid", "conn param update requested");
         GAPRole_PeripheralConnParamUpdateReq(
-            ble_conn_handle(),
-            BLE_GAP_POLICY_CONN_INTERVAL_MIN, BLE_GAP_POLICY_CONN_INTERVAL_MAX,
-            BLE_GAP_POLICY_CONN_LATENCY, BLE_GAP_POLICY_CONN_TIMEOUT,
-            ble_hid_task_id);
+            ble_conn_handle(), BLE_GAP_POLICY_CONN_INTERVAL_MIN,
+            BLE_GAP_POLICY_CONN_INTERVAL_MAX, BLE_GAP_POLICY_CONN_LATENCY,
+            BLE_GAP_POLICY_CONN_TIMEOUT, ble_hid_task_id);
         return events ^ START_PARAM_UPDATE_EVT;
     }
 
     if (events & START_PHY_UPDATE_EVT) {
         VP_LOG_DEBUG("ble_hid", "phy update requested;status=0x%02x",
-            GAPRole_UpdatePHY(ble_conn_handle(), 0,
-                              GAP_PHY_BIT_LE_2M, GAP_PHY_BIT_LE_2M, 0));
+                     GAPRole_UpdatePHY(ble_conn_handle(), 0, GAP_PHY_BIT_LE_2M,
+                                       GAP_PHY_BIT_LE_2M, 0));
         return events ^ START_PHY_UPDATE_EVT;
     }
 
@@ -136,10 +135,10 @@ static void init_advertising_params(void) {
 
 static void init_bonding_params(void) {
     uint32_t passkey = BLE_HID_APP_DEFAULT_PASSCODE;
-    uint8_t  mode    = BLE_HID_APP_DEFAULT_PAIRING_MODE;
-    uint8_t  mitm    = BLE_HID_APP_DEFAULT_MITM_MODE;
-    uint8_t  io      = BLE_HID_APP_DEFAULT_IO_CAPABILITIES;
-    uint8_t  bond    = BLE_HID_APP_DEFAULT_BONDING_MODE;
+    uint8_t  mode = BLE_HID_APP_DEFAULT_PAIRING_MODE;
+    uint8_t  mitm = BLE_HID_APP_DEFAULT_MITM_MODE;
+    uint8_t  io = BLE_HID_APP_DEFAULT_IO_CAPABILITIES;
+    uint8_t  bond = BLE_HID_APP_DEFAULT_BONDING_MODE;
 
     GAPBondMgr_SetParameter(GAPBOND_PERI_DEFAULT_PASSCODE, sizeof(passkey),
                             &passkey);
@@ -162,7 +161,7 @@ static void process_tmos_msg(tmos_event_hdr_t* pMsg) {
 }
 
 static uint8_t hid_report_cb(uint8_t id, uint8_t type, uint16_t uuid,
-                              uint8_t oper, uint16_t* pLen, uint8_t* pData) {
+                             uint8_t oper, uint16_t* pLen, uint8_t* pData) {
     uint8_t status = SUCCESS;
 
     if (oper == HID_DEV_OPER_WRITE) {
@@ -189,7 +188,6 @@ static void hid_event_cb(uint8_t evt) {
     }
 }
 
-static void gap_state_cb(gapRole_States_t newState,
-                             gapRoleEvent_t*  pEvent) {
+static void gap_state_cb(gapRole_States_t newState, gapRoleEvent_t* pEvent) {
     ble_on_state_change(newState, pEvent);
 }

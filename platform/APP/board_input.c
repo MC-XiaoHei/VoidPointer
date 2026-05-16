@@ -91,8 +91,10 @@ static vp_bool_t board_input_dispatch_one(const BoardGpio      gpio,
     vp_gpio_clear_it_flag(gpio);
 
     if (board_input_is_encoder(input_id)) {
-        const vp_bool_t a_level = active_low_gpio_level(board_signal_get(BOARD_SIGNAL_ENC_A));
-        const vp_bool_t b_level = active_low_gpio_level(board_signal_get(BOARD_SIGNAL_ENC_B));
+        const vp_bool_t a_level =
+            active_low_gpio_level(board_signal_get(BOARD_SIGNAL_ENC_A));
+        const vp_bool_t b_level =
+            active_low_gpio_level(board_signal_get(BOARD_SIGNAL_ENC_B));
         vp_gpio_config_next_edge(gpio);
         vp_on_encoder_exti(a_level, b_level, timestamp);
         return 1u;
@@ -122,16 +124,16 @@ vp_bool_t board_input_id_to_gpio(const vp_input_id_t input_id,
     }
 
     static const BoardSignal id_map[] = {
-        [VP_INPUT_LEFT]        = BOARD_SIGNAL_BTN_LEFT,
-        [VP_INPUT_RIGHT]       = BOARD_SIGNAL_BTN_RIGHT,
-        [VP_INPUT_MIDDLE]      = BOARD_SIGNAL_BTN_MIDDLE,
-        [VP_INPUT_ACTION]      = BOARD_SIGNAL_BTN_ACTION,
-        [VP_INPUT_LASER]       = BOARD_SIGNAL_BTN_LASER,
+        [VP_INPUT_LEFT] = BOARD_SIGNAL_BTN_LEFT,
+        [VP_INPUT_RIGHT] = BOARD_SIGNAL_BTN_RIGHT,
+        [VP_INPUT_MIDDLE] = BOARD_SIGNAL_BTN_MIDDLE,
+        [VP_INPUT_ACTION] = BOARD_SIGNAL_BTN_ACTION,
+        [VP_INPUT_LASER] = BOARD_SIGNAL_BTN_LASER,
         [VP_INPUT_MODE_SWITCH] = BOARD_SIGNAL_MODE_SWITCH,
-        [VP_INPUT_ENCODER_A]   = BOARD_SIGNAL_ENC_A,
-        [VP_INPUT_ENCODER_B]   = BOARD_SIGNAL_ENC_B,
-        [VP_INPUT_IMU_INT1]    = BOARD_SIGNAL_IMU_INT1,
-        [VP_INPUT_IMU_INT2]    = BOARD_SIGNAL_IMU_INT2,
+        [VP_INPUT_ENCODER_A] = BOARD_SIGNAL_ENC_A,
+        [VP_INPUT_ENCODER_B] = BOARD_SIGNAL_ENC_B,
+        [VP_INPUT_IMU_INT1] = BOARD_SIGNAL_IMU_INT1,
+        [VP_INPUT_IMU_INT2] = BOARD_SIGNAL_IMU_INT2,
     };
 
     if (input_id >= sizeof(id_map) / sizeof(id_map[0])) {
@@ -152,15 +154,15 @@ vp_status_t board_input_exti_unmask(const vp_input_id_t input_id,
 
     if ((*both_sim_mask & gpio.pin) != 0u) {
         vp_gpio_clear_it_flag_port(gpio.group,
-                                      vp_gpio_read_it_flag_port(gpio.group));
+                                   vp_gpio_read_it_flag_port(gpio.group));
         vp_gpio_config_next_edge(gpio);
     } else {
         vp_button_id_t button_id = 0u;
         if (board_input_id_to_button_id(input_id, &button_id)) {
             vp_gpio_prepare_level_rearm(gpio);
         } else {
-            vp_gpio_clear_it_flag_port(
-                gpio.group, vp_gpio_read_it_flag_port(gpio.group));
+            vp_gpio_clear_it_flag_port(gpio.group,
+                                       vp_gpio_read_it_flag_port(gpio.group));
             vp_gpio_clear_it_flag(gpio);
         }
     }

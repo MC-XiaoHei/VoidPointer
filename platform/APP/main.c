@@ -97,8 +97,7 @@ void core_request_poll_after(const uint32_t ms) {
         return;
     }
 
-    tmos_start_task(runtime_task_id, CORE_POLL_EVT,
-                    MS1_TO_SYSTEM_TIME(ms));
+    tmos_start_task(runtime_task_id, CORE_POLL_EVT, MS1_TO_SYSTEM_TIME(ms));
 }
 
 void debounce_start() {
@@ -109,9 +108,7 @@ void debounce_start() {
     runtime_debounce_next_ms = c_vp_rtc_millis() + 1u;
 }
 
-void debounce_stop() {
-    runtime_debounce_timer_running = 0u;
-}
+void debounce_stop() { runtime_debounce_timer_running = 0u; }
 
 void core_init() {
     runtime_task_id = TMOS_ProcessEventRegister(core_process_event);

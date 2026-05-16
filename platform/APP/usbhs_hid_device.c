@@ -223,9 +223,9 @@ static uint8_t usbhs_interface_valid(uint16_t index) {
 
 static void usbhs_notify_resumed_state(void) {
     if (g_dev_config != 0u) {
-        platform_notify_usb_state_changed(VP_USB_STATE_CONFIGURED);
+        on_usb_state_change(VP_USB_STATE_CONFIGURED);
     } else {
-        platform_notify_usb_state_changed(VP_USB_STATE_ATTACHED);
+        on_usb_state_change(VP_USB_STATE_ATTACHED);
     }
 }
 
@@ -340,9 +340,9 @@ static void usbhs_handle_setup(void) {
             case USB_SET_CONFIGURATION:
                 g_dev_config = (uint8_t)(req->wValue & 0xFFu);
                 if (g_dev_config != 0u) {
-                    platform_notify_usb_state_changed(VP_USB_STATE_CONFIGURED);
+                    on_usb_state_change(VP_USB_STATE_CONFIGURED);
                 } else {
-                    platform_notify_usb_state_changed(VP_USB_STATE_ATTACHED);
+                    on_usb_state_change(VP_USB_STATE_ATTACHED);
                 }
                 reply_len = 0u;
                 R16_U2EP0_T_LEN = reply_len;

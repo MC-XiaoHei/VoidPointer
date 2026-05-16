@@ -1,7 +1,3 @@
-/********************************** (C) COPYRIGHT *******************************
- * File Name          : c_api.c
- * Description        : C platform bindings for Rust core
- *******************************************************************************/
 #include "c_api.h"
 
 #include "HAL.h"  // IWYU pragma: keep
@@ -34,7 +30,8 @@ typedef struct {
 
 #define VP_CONFIG_REGION_SIZE_BYTES (EEPROM_BLOCK_SIZE * 2u)
 #define VP_CONFIG_REGION_END_ADDR   ((uint32_t)BLE_SNV_ADDR)
-#define VP_CONFIG_REGION_BASE_ADDR  (VP_CONFIG_REGION_END_ADDR - VP_CONFIG_REGION_SIZE_BYTES)
+#define VP_CONFIG_REGION_BASE_ADDR \
+    (VP_CONFIG_REGION_END_ADDR - VP_CONFIG_REGION_SIZE_BYTES)
 
 static vp_bool_t flash_config_range_valid(const uint32_t offset,
                                           const uint32_t len) {
@@ -45,8 +42,8 @@ static vp_bool_t flash_config_range_valid(const uint32_t offset,
     return len <= (VP_CONFIG_REGION_SIZE_BYTES - offset) ? 1u : 0u;
 }
 
-static vp_bool_t      debounce_timer_running = 0u;
-static vp_usb_state_t current_usb_state = VP_USB_STATE_DETACHED;
+static vp_bool_t        debounce_timer_running = 0u;
+static vp_usb_state_t   current_usb_state = VP_USB_STATE_DETACHED;
 static vp_wake_source_t enabled_wake_sources = 0u;
 
 static vp_status_t configure_input_wake_source(const vp_input_id_t  input_id,
@@ -67,10 +64,11 @@ static vp_status_t configure_input_wake_source(const vp_input_id_t  input_id,
 static void sync_platform_wake_sources(void) {
     const vp_bool_t gpio_wake_enabled =
         (enabled_wake_sources &
-         (VP_WAKE_SOURCE_BUTTON | VP_WAKE_SOURCE_ENCODER | VP_WAKE_SOURCE_IMU)) != 0u;
+         (VP_WAKE_SOURCE_BUTTON | VP_WAKE_SOURCE_ENCODER |
+          VP_WAKE_SOURCE_IMU)) != 0u;
 
-    PWR_PeriphWakeUpCfg(gpio_wake_enabled ? ENABLE : DISABLE,
-                        RB_SLP_GPIO_WAKE, Short_Delay);
+    PWR_PeriphWakeUpCfg(gpio_wake_enabled ? ENABLE : DISABLE, RB_SLP_GPIO_WAKE,
+                        Short_Delay);
     // 当前 suspend 仍未进入真正 deep-sleep，先不打开全局 GPIO any-edge wake，
     // 避免未来接 Halt 前无意放宽 button/IMU 的边沿语义。
     PWR_PeriphWakeUpCfg(DISABLE, RB_GPIO_EDGE_WAKE, Short_Delay);
@@ -96,7 +94,8 @@ static vp_status_t enable_button_wake_sources(void) {
 
 static vp_status_t enable_encoder_wake_sources(void) {
     const vp_input_id_t inputs[] = {VP_INPUT_ENCODER_A, VP_INPUT_ENCODER_B};
-    for (uint8_t i = 0u; i < (uint8_t)(sizeof(inputs) / sizeof(inputs[0])); i++) {
+    for (uint8_t i = 0u; i < (uint8_t)(sizeof(inputs) / sizeof(inputs[0]));
+         i++) {
         const vp_status_t status =
             configure_input_wake_source(inputs[i], VP_EXTI_EDGE_BOTH);
         if (status != VP_STATUS_OK) {
@@ -109,9 +108,11 @@ static vp_status_t enable_encoder_wake_sources(void) {
 
 static vp_status_t enable_imu_wake_sources(void) {
     const vp_input_id_t inputs[] = {VP_INPUT_IMU_INT1, VP_INPUT_IMU_INT2};
-    for (uint8_t i = 0u; i < (uint8_t)(sizeof(inputs) / sizeof(inputs[0])); i++) {
+    for (uint8_t i = 0u; i < (uint8_t)(sizeof(inputs) / sizeof(inputs[0]));
+         i++) {
         BoardGpio gpio = {0};
-        if (!board_input_id_to_gpio(inputs[i], &gpio) || !vp_gpio_is_valid(gpio)) {
+        if (!board_input_id_to_gpio(inputs[i], &gpio) ||
+            !vp_gpio_is_valid(gpio)) {
             continue;
         }
 
@@ -176,8 +177,7 @@ vp_status_t c_vp_gpio_read_inputs(uint16_t* out_snapshot) {
 vp_status_t c_vp_gpio_write(const vp_output_id_t output_id,
                             const vp_bool_t      level) {
     switch (output_id) {
-        case VP_OUTPUT_LASER:
-        {
+        case VP_OUTPUT_LASER: {
             const BoardGpio gpio = board_signal_get(BOARD_SIGNAL_BTN_LASER);
             if (!vp_gpio_is_valid(gpio)) {
                 return VP_STATUS_UNSUPPORTED;
@@ -237,7 +237,7 @@ vp_status_t c_vp_debounce_timer_start(void) {
         return VP_STATUS_OK;
     }
     debounce_timer_running = 1u;
-    RuntimeTask_StartDebounceTimer();
+    debounce_start();
     return VP_STATUS_OK;
 }
 
@@ -246,7 +246,7 @@ vp_status_t c_vp_debounce_timer_stop(void) {
         return VP_STATUS_OK;
     }
     debounce_timer_running = 0u;
-    RuntimeTask_StopDebounceTimer();
+    debounce_stop();
     return VP_STATUS_OK;
 }
 
@@ -263,10 +263,10 @@ vp_status_t c_vp_rtc_set_wake_after(const uint32_t ms) {
     return VP_STATUS_UNSUPPORTED;
 }
 
-void c_vp_request_core_poll(void) { RuntimeTask_RequestPoll(); }
+void c_vp_request_core_poll(void) { core_request_poll(); }
 
 void c_vp_request_core_poll_after(const uint32_t ms) {
-    RuntimeTask_RequestPollAfter(ms);
+    core_request_poll_after(ms);
 }
 
 void Platform_NotifyUsbStateChanged(const vp_usb_state_t state) {
@@ -280,41 +280,41 @@ void Platform_NotifyUsbStateChanged(const vp_usb_state_t state) {
 
     if (effective_state == VP_USB_STATE_DETACHED &&
         previous_state != VP_USB_STATE_DETACHED) {
-        USBHS_HidDevice_ResetLinkState();
+        usb_hid_reset_link();
     }
 
     current_usb_state = effective_state;
 
     if (effective_state == VP_USB_STATE_CONFIGURED) {
-        (void)BleHidApp_SetAdvertisingEnabled(FALSE);
-        (void)BleHidApp_Disconnect();
+        (void)ble_hid_set_advertising(FALSE);
+        (void)ble_hid_disconnect();
     } else if (previous_state == VP_USB_STATE_CONFIGURED) {
-        (void)BleHidApp_SetAdvertisingEnabled(TRUE);
+        (void)ble_hid_set_advertising(TRUE);
     }
 
     vp_on_usb_state_changed(effective_state, c_vp_rtc_millis());
 }
 
-vp_status_t c_vp_i2c_init(void) { return ImuPlatform_I2cInit(); }
+vp_status_t c_vp_i2c_init(void) { return imu_i2c_init(); }
 
-vp_status_t c_vp_i2c_recover_bus(void) { return ImuPlatform_I2cRecoverBus(); }
+vp_status_t c_vp_i2c_recover_bus(void) { return imu_i2c_recover(); }
 
-vp_status_t c_vp_i2c_abort(void) { return LSM6DSV_AbortAsync(); }
+vp_status_t c_vp_i2c_abort(void) { return lsm6dsv_abort_async(); }
 
 vp_status_t c_vp_imu_config_active(void) {
-    return LSM6DSV_ConfigActive() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
+    return lsm6dsv_set_active() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
 }
 
 vp_status_t c_vp_imu_config_suspend(void) {
-    return LSM6DSV_ConfigSuspend() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
+    return lsm6dsv_set_suspend() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
 }
 
 vp_status_t c_vp_imu_config_sleep(void) {
-    return LSM6DSV_ConfigSleep() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
+    return lsm6dsv_set_sleep() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
 }
 
 vp_status_t c_vp_imu_read_fifo_async(const uint16_t max_samples) {
-    return LSM6DSV_StartAsyncFifoRead(max_samples);
+    return lsm6dsv_start_async_read(max_samples);
 }
 
 vp_status_t c_vp_imu_read_whoami(uint8_t* out_id) {
@@ -322,7 +322,7 @@ vp_status_t c_vp_imu_read_whoami(uint8_t* out_id) {
         return VP_STATUS_INVALID_ARG;
     }
 
-    if (!LSM6DSV_ReadWhoAmI(out_id)) {
+    if (!lsm6dsv_read_id(out_id)) {
         *out_id = 0u;
         return VP_STATUS_IO_ERROR;
     }
@@ -339,7 +339,7 @@ vp_status_t c_vp_imu_read_wake_status(vp_bool_t* out_wake_event,
         return VP_STATUS_INVALID_ARG;
     }
 
-    if (!LSM6DSV_ReadWakeStatus(&status)) {
+    if (!lsm6dsv_read_wake_status(&status)) {
         *out_wake_event = 0u;
         *out_sleep_change = 0u;
         *out_raw = 0u;
@@ -398,7 +398,7 @@ static vp_hid_send_status_t usb_send_mouse_report(const mouse_report_t* rpt) {
         return VP_HID_SEND_NOT_CONNECTED;
     }
 
-    return USBHS_HidDevice_SendMouseReport((const uint8_t*)rpt, sizeof(*rpt))
+    return usb_hid_send_mouse((const uint8_t*)rpt, sizeof(*rpt))
                ? VP_HID_SEND_SENT
                : VP_HID_SEND_RETRY_LATER;
 }
@@ -419,8 +419,8 @@ static vp_hid_send_status_t usb_send_vendor_report(const uint8_t* ptr,
         return VP_HID_SEND_NOT_CONNECTED;
     }
 
-    return USBHS_HidDevice_SendVendorReport(ptr, len) ? VP_HID_SEND_SENT
-                                                      : VP_HID_SEND_RETRY_LATER;
+    return usb_hid_send_vendor(ptr, len) ? VP_HID_SEND_SENT
+                                         : VP_HID_SEND_RETRY_LATER;
 }
 
 vp_bool_t c_vp_hid_route_ready(const vp_hid_route_t route) {
@@ -438,8 +438,7 @@ vp_bool_t c_vp_hid_route_ready(const vp_hid_route_t route) {
 
 vp_hid_send_status_t c_vp_hid_send_mouse(const vp_hid_route_t route,
                                          const uint8_t buttons, const int8_t dx,
-                                         const int8_t dy,
-                                         const int8_t wheel) {
+                                         const int8_t dy, const int8_t wheel) {
     mouse_report_t report = {
         .buttons = buttons,
         .dx = clamp_i8_to_hid_range(dx),
@@ -463,8 +462,8 @@ vp_hid_send_status_t c_vp_hid_send_mouse(const vp_hid_route_t route,
 }
 
 vp_hid_send_status_t c_vp_hid_send_vendor(const vp_hid_route_t route,
-                                          const uint8_t* ptr,
-                                          const uint16_t len) {
+                                          const uint8_t*       ptr,
+                                          const uint16_t       len) {
     switch (route) {
         case VP_HID_ROUTE_USB:
             return usb_send_vendor_report(ptr, len);
@@ -480,7 +479,7 @@ vp_status_t c_vp_hid_route_enable(const vp_hid_route_t route,
                                   const vp_bool_t      enabled) {
     switch (route) {
         case VP_HID_ROUTE_BLE:
-            return BleHidApp_SetAdvertisingEnabled(enabled ? TRUE : FALSE)
+            return ble_hid_set_advertising(enabled ? TRUE : FALSE)
                        ? VP_STATUS_OK
                        : VP_STATUS_IO_ERROR;
         case VP_HID_ROUTE_USB:
@@ -495,9 +494,9 @@ vp_status_t c_vp_hid_route_enable(const vp_hid_route_t route,
 vp_status_t c_vp_hid_route_reset(const vp_hid_route_t route) {
     switch (route) {
         case VP_HID_ROUTE_BLE:
-            return BleHidApp_Disconnect() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
+            return ble_hid_disconnect() ? VP_STATUS_OK : VP_STATUS_IO_ERROR;
         case VP_HID_ROUTE_USB:
-            USBHS_HidDevice_ResetLinkState();
+            usb_hid_reset_link();
             return VP_STATUS_OK;
         case VP_HID_ROUTE_DONGLE_2G4:
             return VP_STATUS_UNSUPPORTED;
@@ -535,7 +534,7 @@ vp_status_t c_vp_power_prepare_sleep(void) {
         return VP_STATUS_IO_ERROR;
     }
 
-    if (!BleHidApp_SetAdvertisingEnabled(FALSE)) {
+    if (!ble_hid_set_advertising(FALSE)) {
         VP_LOG_WARN("power", "sleep prepare failed;step=ble_advertising_off");
         return VP_STATUS_IO_ERROR;
     }
@@ -554,7 +553,7 @@ vp_status_t c_vp_power_restore_from_sleep(void) {
         return VP_STATUS_OK;
     }
 
-    if (!BleHidApp_SetAdvertisingEnabled(TRUE)) {
+    if (!ble_hid_set_advertising(TRUE)) {
         VP_LOG_WARN("power", "sleep restore failed;step=ble_advertising_on");
         return VP_STATUS_IO_ERROR;
     }
@@ -677,21 +676,20 @@ vp_status_t c_vp_platform_reset(const uint32_t reason) {
 #define VP_LED_DMA_BUF_LEN 1024u
 __attribute__((aligned(4))) static uint32_t led_dma_buf[VP_LED_DMA_BUF_LEN];
 
-void c_vp_led_play(const uint8_t led_sig, const uint32_t* ptr, const uint16_t len,
-                   const vp_bool_t is_loop) {
+void c_vp_led_play(const uint8_t led_sig, const uint32_t* ptr,
+                   const uint16_t len, const vp_bool_t is_loop) {
     if ((uint32_t)len > VP_LED_DMA_BUF_LEN) {
         return;
     }
     for (uint16_t i = 0u; i < len; i++) {
         led_dma_buf[i] = ptr[i];
     }
-    LedPlatform_Play((BoardSignal)led_sig, (const uint8_t*)led_dma_buf, (uint16_t)(len * 4u), is_loop);
+    led_play((BoardSignal)led_sig, (const uint8_t*)led_dma_buf,
+             (uint16_t)(len * 4u), is_loop);
 }
 
-void c_vp_led_stop(void) {
-    LedPlatform_Stop();
-}
+void c_vp_led_stop(void) { led_stop(); }
 
 void c_vp_pwm_set_duty(const uint8_t pwm_sig, const uint8_t duty) {
-    PwmPlatform_SetDuty((BoardSignal)pwm_sig, duty);
+    pwm_set_duty((BoardSignal)pwm_sig, duty);
 }

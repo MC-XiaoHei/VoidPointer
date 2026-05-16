@@ -52,8 +52,8 @@ bool lsm6dsv_set_sleep();
 bool lsm6dsv_read_id(uint8_t* out_id);
 bool lsm6dsv_read_wake_status(lsm6dsv_wake_status_t* out_status);
 bool lsm6dsv_read_latest_rotation(sflp_game_rotation_raw_t* raw,
-                                           uint16_t  max_samples,
-                                           uint16_t* out_dropped_count);
+                                  uint16_t                  max_samples,
+                                  uint16_t*                 out_dropped_count);
 bool lsm6dsv_read_rotation(sflp_game_rotation_raw_t* raw);
 
 void        lsm6dsv_async_init();

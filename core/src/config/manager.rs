@@ -1,7 +1,7 @@
 use crate::config::flash_region::{FlashRegionInfo, get_flash_region};
-use crate::config::store::save_persisted_config;
 use crate::config::load::{ActiveSlot, load_persisted_config};
 use crate::config::storage::crc32;
+use crate::config::store::save_persisted_config;
 use crate::config::types::{
     CURRENT_CONFIG_VERSION, CURRENT_STORAGE_VERSION, ConfigError, DeviceConfig, MAX_PAYLOAD_SIZE,
     SLOT_BUF_SIZE, SLOT_COUNT, SaveOutcome,

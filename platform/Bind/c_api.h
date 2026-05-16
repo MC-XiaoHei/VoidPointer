@@ -1,7 +1,3 @@
-/********************************** (C) COPYRIGHT *******************************
- * File Name          : c_api.h
- * Description        : C platform bindings shared with Rust core
- *******************************************************************************/
 #ifndef VOIDPOINTER_C_API_H
 #define VOIDPOINTER_C_API_H
 

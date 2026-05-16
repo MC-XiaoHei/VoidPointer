@@ -10,7 +10,7 @@ void led_init(void) {
 }
 
 void led_play(const BoardSignal sig, const uint8_t* data,
-                       const uint16_t byte_len, const uint8_t is_loop) {
+              const uint16_t byte_len, const uint8_t is_loop) {
     if (data == NULL || byte_len == 0u) {
         return;
     }
@@ -29,7 +29,7 @@ void led_play(const BoardSignal sig, const uint8_t* data,
     vp_tmr_pwm_set_polarity(sig, board_signal_get_polarity(sig));
 
     const uint32_t* frames = (const uint32_t*)data;
-    uint32_t len_words = byte_len / 4u;
+    uint32_t        len_words = byte_len / 4u;
 
     // DMA 启动前先写入第一帧，避免起始瞬间 FIFO=0 导致闪灭
     if (len_words > 0u) {

@@ -16,12 +16,14 @@ static void i2c_release_lines_to_pullup(void) {
 
 static void i2c_drive_scl_low(void) {
     vp_gpio_reset(board_signal_get(BOARD_SIGNAL_I2C_SCL));
-    vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SCL), GPIO_ModeOut_PP_5mA);
+    vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SCL),
+                     GPIO_ModeOut_PP_5mA);
 }
 
 static void i2c_drive_sda_low(void) {
     vp_gpio_reset(board_signal_get(BOARD_SIGNAL_I2C_SDA));
-    vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SDA), GPIO_ModeOut_PP_5mA);
+    vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_I2C_SDA),
+                     GPIO_ModeOut_PP_5mA);
 }
 
 static void imu_i2c_hw_init(void) {
@@ -40,12 +42,14 @@ static void imu_i2c_hw_init(void) {
 void imu_init_pins(void) {
     if (vp_gpio_is_valid(board_signal_get(BOARD_SIGNAL_IMU_INT1))) {
         vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT1), ENABLE);
-        vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT1), GPIO_ModeIN_PU);
+        vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT1),
+                         GPIO_ModeIN_PU);
     }
 
     if (vp_gpio_is_valid(board_signal_get(BOARD_SIGNAL_IMU_INT2))) {
         vp_gpio_digital_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT2), ENABLE);
-        vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT2), GPIO_ModeIN_PU);
+        vp_gpio_mode_cfg(board_signal_get(BOARD_SIGNAL_IMU_INT2),
+                         GPIO_ModeIN_PU);
     }
 }
 
@@ -67,8 +71,7 @@ vp_bool_t imu_i2c_is_idle(void) {
         return 0u;
     }
 
-    return (vp_gpio_read_level(i2c_sda) &&
-            vp_gpio_read_level(i2c_scl) &&
+    return (vp_gpio_read_level(i2c_sda) && vp_gpio_read_level(i2c_scl) &&
             I2C_GetFlagStatus(I2C_FLAG_BUSY) == RESET)
                ? 1u
                : 0u;

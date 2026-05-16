@@ -265,10 +265,8 @@ static bool lsm6dsv_apply_suspend_profile(void) {
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_SFLP_ODR, 0x00, "sflp_odr");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x00,
                          "func_cfg_access_off");
-    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_DUR, 0x29,
-                         "inactivity_dur");
-    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_THS, 0x02,
-                         "inactivity_ths");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_DUR, 0x29, "inactivity_dur");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_THS, 0x02, "inactivity_ths");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_WAKE_UP_THS, 0x02, "wake_up_ths");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_WAKE_UP_DUR, 0x01, "wake_up_dur");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL2, 0x00, "ctrl2");
@@ -304,10 +302,8 @@ static bool lsm6dsv_apply_sleep_profile(void) {
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_SFLP_ODR, 0x00, "sflp_odr");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_FUNC_CFG_ACCESS, 0x00,
                          "func_cfg_access_off");
-    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_DUR, 0x00,
-                         "inactivity_dur");
-    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_THS, 0x04,
-                         "inactivity_ths");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_DUR, 0x00, "inactivity_dur");
+    VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_INACTIVITY_THS, 0x04, "inactivity_ths");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_WAKE_UP_THS, 0x04, "wake_up_ths");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_WAKE_UP_DUR, 0x02, "wake_up_dur");
     VP_IMU_WRITE_OR_FAIL(LSM6DSV_REG_CTRL1, 0x02, "ctrl1");
@@ -546,8 +542,8 @@ bool lsm6dsv_read_wake_status(lsm6dsv_wake_status_t* out_status) {
 }
 
 bool lsm6dsv_read_latest_rotation(sflp_game_rotation_raw_t* raw,
-                                           const uint16_t max_samples,
-                                           uint16_t*      out_dropped_count) {
+                                  const uint16_t            max_samples,
+                                  uint16_t*                 out_dropped_count) {
     if (raw == 0) return false;
 
     uint8_t s1 = 0;
@@ -645,7 +641,8 @@ void I2C_IRQHandler(void) {
             if (event &
                 (RB_I2C_ADDR | RB_I2C_BTF | RB_I2C_TxE | (RB_I2C_TRA << 16))) {
                 if (g_lsm6dsv_async.tx_index < g_lsm6dsv_async.tx_len) {
-                    I2C_SendData(g_lsm6dsv_async.tx_buf[g_lsm6dsv_async.tx_index++]);
+                    I2C_SendData(
+                        g_lsm6dsv_async.tx_buf[g_lsm6dsv_async.tx_index++]);
                     return;
                 }
 
@@ -664,7 +661,8 @@ void I2C_IRQHandler(void) {
             }
 
             if (event & RB_I2C_ADDR) {
-                if (g_lsm6dsv_async.rx_len == 1u && !g_lsm6dsv_async.nack_sent) {
+                if (g_lsm6dsv_async.rx_len == 1u &&
+                    !g_lsm6dsv_async.nack_sent) {
                     I2C_AcknowledgeConfig(DISABLE);
                     I2C_GenerateSTOP(ENABLE);
                     g_lsm6dsv_async.nack_sent = 1u;
@@ -701,7 +699,9 @@ void I2C_IRQHandler(void) {
                     case LSM6DSV_ASYNC_READ_STATUS2_RX: {
                         g_lsm6dsv_async.status2 = g_lsm6dsv_async.rx_buf[0];
                         g_lsm6dsv_async.fifo_total_words =
-                            (uint16_t)((((uint16_t)g_lsm6dsv_async.status2) & 0x01u) << 8) |
+                            (uint16_t)((((uint16_t)g_lsm6dsv_async.status2) &
+                                        0x01u)
+                                       << 8) |
                             g_lsm6dsv_async.status1;
                         if (g_lsm6dsv_async.fifo_total_words == 0u) {
                             lsm6dsv_async_finish(VP_STATUS_NOT_READY);
@@ -714,8 +714,10 @@ void I2C_IRQHandler(void) {
                             g_lsm6dsv_async.fifo_words_remaining >
                                 g_lsm6dsv_async.requested_max_samples) {
                             g_lsm6dsv_async.fifo_words_to_drop =
-                                (uint16_t)(g_lsm6dsv_async.fifo_words_remaining -
-                                           g_lsm6dsv_async.requested_max_samples);
+                                (uint16_t)(g_lsm6dsv_async
+                                               .fifo_words_remaining -
+                                           g_lsm6dsv_async
+                                               .requested_max_samples);
                         }
                         g_lsm6dsv_async.phase = LSM6DSV_ASYNC_READ_FIFO_WORD_TX;
                         lsm6dsv_async_begin_next_phase();

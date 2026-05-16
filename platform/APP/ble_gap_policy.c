@@ -27,8 +27,7 @@ uint8_t ble_set_advertising(uint8_t enabled) {
     VP_LOG_DEBUG(
         "ble_gap",
         "advertising policy changed;allowed=%u,state=%u,started=%u,handle=%u",
-        ble_advert_allowed, ble_gap_state,
-        ble_gap_started, conn_handle);
+        ble_advert_allowed, ble_gap_state, ble_gap_started, conn_handle);
     ble_advert_apply();
     return SUCCESS;
 }
@@ -45,9 +44,7 @@ uint8_t ble_is_connected() {
     return conn_handle != GAP_CONNHANDLE_INIT ? TRUE : FALSE;
 }
 
-uint16_t ble_conn_handle() {
-    return conn_handle;
-}
+uint16_t ble_conn_handle() { return conn_handle; }
 
 void ble_advert_apply() {
     if (!ble_gap_started) {
@@ -55,8 +52,7 @@ void ble_advert_apply() {
     }
 
     if ((ble_gap_state & GAPROLE_STATE_ADV_MASK) == GAPROLE_CONNECTED ||
-        (ble_gap_state & GAPROLE_STATE_ADV_MASK) ==
-            GAPROLE_CONNECTED_ADV) {
+        (ble_gap_state & GAPROLE_STATE_ADV_MASK) == GAPROLE_CONNECTED_ADV) {
         return;
     }
 
@@ -64,8 +60,7 @@ void ble_advert_apply() {
                          &ble_advert_allowed);
 }
 
-void ble_on_state_change(gapRole_States_t newState,
-                                 gapRoleEvent_t*  pEvent) {
+void ble_on_state_change(gapRole_States_t newState, gapRoleEvent_t* pEvent) {
     ble_gap_state = newState;
 
     switch (newState & GAPROLE_STATE_ADV_MASK) {
@@ -87,8 +82,7 @@ void ble_on_state_change(gapRole_States_t newState,
                 gapEstLinkReqEvent_t* event = (gapEstLinkReqEvent_t*)pEvent;
 
                 conn_handle = event->connectionHandle;
-                VP_LOG_INFO("ble_gap", "connected;handle=%u",
-                            conn_handle);
+                VP_LOG_INFO("ble_gap", "connected;handle=%u", conn_handle);
                 vp_on_ble_connected(c_vp_rtc_millis());
 #if BLE_GAP_POLICY_PARAM_UPDATE_ENABLED
                 tmos_start_task(ble_task_id, START_PARAM_UPDATE_EVT,
@@ -124,8 +118,7 @@ void ble_on_state_change(gapRole_States_t newState,
     }
 }
 
-void ble_on_notify_enabled(uint8_t id, uint8_t type,
-                                            uint16_t uuid) {
+void ble_on_notify_enabled(uint8_t id, uint8_t type, uint16_t uuid) {
     if (uuid == GATT_CLIENT_CHAR_CFG_UUID && id == HID_RPT_ID_MOUSE_IN &&
         type == HID_REPORT_TYPE_INPUT) {
         vp_on_ble_input_ready(c_vp_rtc_millis());

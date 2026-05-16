@@ -9,18 +9,32 @@ void vp_pwm_init(BoardSignal sig, uint16_t cycle) {
     uint8_t ch = board_signal_get_channel(sig);
     PWMX_CLKCfg(4u);
     PWMX_CycleCfg(cycle);
-    PWMX_ACTOUT(ch, 0u, board_signal_get_polarity(sig) ? Low_Level : High_Level, ENABLE);
+    PWMX_ACTOUT(ch, 0u, board_signal_get_polarity(sig) ? Low_Level : High_Level,
+                ENABLE);
 }
 
 void vp_pwm_set_duty(BoardSignal sig, uint8_t duty) {
     switch (board_signal_get_channel(sig)) {
-        case 4:  PWM4_ActDataWidth(duty); break;
-        case 5:  PWM5_ActDataWidth(duty); break;
-        case 6:  PWM6_ActDataWidth(duty); break;
-        case 7:  PWM7_ActDataWidth(duty); break;
-        case 8:  PWM8_ActDataWidth(duty); break;
-        case 9:  PWM9_ActDataWidth(duty); break;
-        default: break;
+        case 4:
+            PWM4_ActDataWidth(duty);
+            break;
+        case 5:
+            PWM5_ActDataWidth(duty);
+            break;
+        case 6:
+            PWM6_ActDataWidth(duty);
+            break;
+        case 7:
+            PWM7_ActDataWidth(duty);
+            break;
+        case 8:
+            PWM8_ActDataWidth(duty);
+            break;
+        case 9:
+            PWM9_ActDataWidth(duty);
+            break;
+        default:
+            break;
     }
 }
 
@@ -28,73 +42,135 @@ void vp_pwm_set_duty(BoardSignal sig, uint8_t duty) {
 
 static void tmr_route_pwm_cycle(uint8_t ch, uint32_t cycle) {
     switch (ch) {
-        case 0: TMR0_PWMCycleCfg(cycle); break;
-        case 1: TMR1_PWMCycleCfg(cycle); break;
-        case 2: TMR2_PWMCycleCfg(cycle); break;
-        case 3: TMR3_PWMCycleCfg(cycle); break;
-        default: break;
+        case 0:
+            TMR0_PWMCycleCfg(cycle);
+            break;
+        case 1:
+            TMR1_PWMCycleCfg(cycle);
+            break;
+        case 2:
+            TMR2_PWMCycleCfg(cycle);
+            break;
+        case 3:
+            TMR3_PWMCycleCfg(cycle);
+            break;
+        default:
+            break;
     }
 }
 
 static void tmr_route_pwm_init(uint8_t ch) {
     switch (ch) {
-        case 0: TMR0_PWMInit(High_Level, PWM_Times_1); break;
-        case 1: TMR1_PWMInit(High_Level, PWM_Times_1); break;
-        case 2: TMR2_PWMInit(High_Level, PWM_Times_1); break;
-        case 3: TMR3_PWMInit(High_Level, PWM_Times_1); break;
-        default: break;
+        case 0:
+            TMR0_PWMInit(High_Level, PWM_Times_1);
+            break;
+        case 1:
+            TMR1_PWMInit(High_Level, PWM_Times_1);
+            break;
+        case 2:
+            TMR2_PWMInit(High_Level, PWM_Times_1);
+            break;
+        case 3:
+            TMR3_PWMInit(High_Level, PWM_Times_1);
+            break;
+        default:
+            break;
     }
 }
 
 static void tmr_route_enable(uint8_t ch) {
     switch (ch) {
-        case 0: TMR0_Enable(); break;
-        case 1: TMR1_Enable(); break;
-        case 2: TMR2_Enable(); break;
-        case 3: TMR3_Enable(); break;
-        default: break;
+        case 0:
+            TMR0_Enable();
+            break;
+        case 1:
+            TMR1_Enable();
+            break;
+        case 2:
+            TMR2_Enable();
+            break;
+        case 3:
+            TMR3_Enable();
+            break;
+        default:
+            break;
     }
 }
 
 static void tmr_route_disable(uint8_t ch) {
     switch (ch) {
-        case 0: TMR0_Disable(); break;
-        case 1: TMR1_Disable(); break;
-        case 2: TMR2_Disable(); break;
-        case 3: TMR3_Disable(); break;
-        default: break;
+        case 0:
+            TMR0_Disable();
+            break;
+        case 1:
+            TMR1_Disable();
+            break;
+        case 2:
+            TMR2_Disable();
+            break;
+        case 3:
+            TMR3_Disable();
+            break;
+        default:
+            break;
     }
 }
 
 static void tmr_route_pwm_enable(uint8_t ch) {
     switch (ch) {
-        case 0: TMR0_PWMEnable(); break;
-        case 1: TMR1_PWMEnable(); break;
-        case 2: TMR2_PWMEnable(); break;
-        case 3: TMR3_PWMEnable(); break;
-        default: break;
+        case 0:
+            TMR0_PWMEnable();
+            break;
+        case 1:
+            TMR1_PWMEnable();
+            break;
+        case 2:
+            TMR2_PWMEnable();
+            break;
+        case 3:
+            TMR3_PWMEnable();
+            break;
+        default:
+            break;
     }
 }
 
 static void tmr_route_pwm_disable(uint8_t ch) {
     switch (ch) {
-        case 0: TMR0_PWMDisable(); break;
-        case 1: TMR1_PWMDisable(); break;
-        case 2: TMR2_PWMDisable(); break;
-        case 3: TMR3_PWMDisable(); break;
-        default: break;
+        case 0:
+            TMR0_PWMDisable();
+            break;
+        case 1:
+            TMR1_PWMDisable();
+            break;
+        case 2:
+            TMR2_PWMDisable();
+            break;
+        case 3:
+            TMR3_PWMDisable();
+            break;
+        default:
+            break;
     }
 }
 
-static void tmr_route_dma_cfg(uint8_t ch, uint8_t s,
-                              uint32_t start_addr, uint32_t end_addr,
-                              DMAModeTypeDef mode) {
+static void tmr_route_dma_cfg(uint8_t ch, uint8_t s, uint32_t start_addr,
+                              uint32_t end_addr, DMAModeTypeDef mode) {
     switch (ch) {
-        case 0: TMR0_DMACfg(s, start_addr, end_addr, mode); break;
-        case 1: TMR1_DMACfg(s, start_addr, end_addr, mode); break;
-        case 2: TMR2_DMACfg(s, start_addr, end_addr, mode); break;
-        case 3: TMR3_DMACfg(s, start_addr, end_addr, mode); break;
-        default: break;
+        case 0:
+            TMR0_DMACfg(s, start_addr, end_addr, mode);
+            break;
+        case 1:
+            TMR1_DMACfg(s, start_addr, end_addr, mode);
+            break;
+        case 2:
+            TMR2_DMACfg(s, start_addr, end_addr, mode);
+            break;
+        case 3:
+            TMR3_DMACfg(s, start_addr, end_addr, mode);
+            break;
+        default:
+            break;
     }
 }
 
@@ -116,8 +192,8 @@ void vp_tmr_pwm_disable(BoardSignal sig) {
     tmr_route_disable(ch);
 }
 
-void vp_tmr_pwm_dma_cfg(BoardSignal sig, uint32_t start_addr,
-                        uint32_t end_addr, uint8_t loop) {
+void vp_tmr_pwm_dma_cfg(BoardSignal sig, uint32_t start_addr, uint32_t end_addr,
+                        uint8_t loop) {
     uint8_t ch = board_signal_get_channel(sig);
     tmr_route_dma_cfg(ch, ENABLE, start_addr, end_addr,
                       loop ? Mode_LOOP : Mode_Single);
@@ -130,36 +206,63 @@ void vp_tmr_pwm_dma_stop(BoardSignal sig) {
 
 void vp_tmr_reset(BoardSignal sig) {
     switch (board_signal_get_channel(sig)) {
-        case 0: R8_TMR0_CTRL_MOD = RB_TMR_ALL_CLEAR; break;
-        case 1: R8_TMR1_CTRL_MOD = RB_TMR_ALL_CLEAR; break;
-        case 2: R8_TMR2_CTRL_MOD = RB_TMR_ALL_CLEAR; break;
-        case 3: R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR; break;
-        default: break;
+        case 0:
+            R8_TMR0_CTRL_MOD = RB_TMR_ALL_CLEAR;
+            break;
+        case 1:
+            R8_TMR1_CTRL_MOD = RB_TMR_ALL_CLEAR;
+            break;
+        case 2:
+            R8_TMR2_CTRL_MOD = RB_TMR_ALL_CLEAR;
+            break;
+        case 3:
+            R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
+            break;
+        default:
+            break;
     }
 }
 
 void vp_tmr_pwm_set_polarity(BoardSignal sig, uint8_t active_low) {
     uint8_t ch = board_signal_get_channel(sig);
     switch (ch) {
-        case 0: R8_TMR0_CTRL_MOD = RB_TMR_ALL_CLEAR;
-                R8_TMR0_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6); break;
-        case 1: R8_TMR1_CTRL_MOD = RB_TMR_ALL_CLEAR;
-                R8_TMR1_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6); break;
-        case 2: R8_TMR2_CTRL_MOD = RB_TMR_ALL_CLEAR;
-                R8_TMR2_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6); break;
-        case 3: R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
-                R8_TMR3_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6); break;
-        default: break;
+        case 0:
+            R8_TMR0_CTRL_MOD = RB_TMR_ALL_CLEAR;
+            R8_TMR0_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6);
+            break;
+        case 1:
+            R8_TMR1_CTRL_MOD = RB_TMR_ALL_CLEAR;
+            R8_TMR1_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6);
+            break;
+        case 2:
+            R8_TMR2_CTRL_MOD = RB_TMR_ALL_CLEAR;
+            R8_TMR2_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6);
+            break;
+        case 3:
+            R8_TMR3_CTRL_MOD = RB_TMR_ALL_CLEAR;
+            R8_TMR3_CTRL_MOD = (active_low << 4) | (PWM_Times_1 << 6);
+            break;
+        default:
+            break;
     }
 }
 
 void vp_tmr_pwm_load_fifo(BoardSignal sig, uint32_t value) {
     switch (board_signal_get_channel(sig)) {
-        case 0: TMR0_PWMActDataWidth(value); break;
-        case 1: TMR1_PWMActDataWidth(value); break;
-        case 2: TMR2_PWMActDataWidth(value); break;
-        case 3: TMR3_PWMActDataWidth(value); break;
-        default: break;
+        case 0:
+            TMR0_PWMActDataWidth(value);
+            break;
+        case 1:
+            TMR1_PWMActDataWidth(value);
+            break;
+        case 2:
+            TMR2_PWMActDataWidth(value);
+            break;
+        case 3:
+            TMR3_PWMActDataWidth(value);
+            break;
+        default:
+            break;
     }
 }
 
@@ -261,9 +364,9 @@ void vp_gpio_digital_cfg(const BoardGpio gpio, const FunctionalState enable) {
     }
 }
 
-void vp_gpio_digital_cfg_mask(const BoardGpioGroup group,
+void vp_gpio_digital_cfg_mask(const BoardGpioGroup  group,
                               const FunctionalState enable,
-                              const uint32_t pins) {
+                              const uint32_t        pins) {
     switch (group) {
         case BOARD_GPIO_GROUP_A:
             GPIOADigitalCfg(enable, pins);
@@ -290,9 +393,8 @@ void vp_gpio_it_mode_cfg(const BoardGpio gpio, const GPIOITModeTpDef mode) {
 }
 
 void vp_gpio_config_next_edge(const BoardGpio gpio) {
-    vp_gpio_it_mode_cfg(gpio, vp_gpio_read_level(gpio)
-                                  ? GPIO_ITMode_FallEdge
-                                  : GPIO_ITMode_RiseEdge);
+    vp_gpio_it_mode_cfg(gpio, vp_gpio_read_level(gpio) ? GPIO_ITMode_FallEdge
+                                                       : GPIO_ITMode_RiseEdge);
 }
 
 void vp_gpio_clear_it_flag(const BoardGpio gpio) {
@@ -320,7 +422,7 @@ uint16_t vp_gpio_read_it_flag_port(const BoardGpioGroup group) {
 }
 
 void vp_gpio_clear_it_flag_port(const BoardGpioGroup group,
-                                const uint16_t flags) {
+                                const uint16_t       flags) {
     switch (group) {
         case BOARD_GPIO_GROUP_A:
             GPIOA_ClearITFlagBit(flags);
