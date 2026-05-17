@@ -9,7 +9,7 @@ pub fn voidpointer_board() -> Vec<Def> {
     vec![
         Def {
             name: "btn_left",
-            pin: (A, 9),
+            pin: (B, 4),
             func: In {
                 pull: PullUp,
                 digital: true,
@@ -17,7 +17,7 @@ pub fn voidpointer_board() -> Vec<Def> {
         },
         Def {
             name: "btn_right",
-            pin: (A, 8),
+            pin: (B, 3),
             func: In {
                 pull: PullUp,
                 digital: true,
@@ -25,7 +25,7 @@ pub fn voidpointer_board() -> Vec<Def> {
         },
         Def {
             name: "btn_middle",
-            pin: (A, 5),
+            pin: (B, 6),
             func: In {
                 pull: PullUp,
                 digital: true,
@@ -33,7 +33,7 @@ pub fn voidpointer_board() -> Vec<Def> {
         },
         Def {
             name: "btn_action",
-            pin: (A, 10),
+            pin: (B, 0),
             func: In {
                 pull: PullUp,
                 digital: true,
@@ -41,7 +41,7 @@ pub fn voidpointer_board() -> Vec<Def> {
         },
         Def {
             name: "btn_laser",
-            pin: (A, 7),
+            pin: (B, 2),
             func: In {
                 pull: PullUp,
                 digital: true,
@@ -49,15 +49,15 @@ pub fn voidpointer_board() -> Vec<Def> {
         },
         Def {
             name: "mode_switch",
-            pin: (A, 0),
-            func: Out {
-                drive: PP5mA,
-                init: Some(Low),
+            pin: (B, 11),
+            func: In {
+                pull: PullUp,
+                digital: true,
             },
         },
         Def {
             name: "enc_a",
-            pin: (A, 4),
+            pin: (B, 5),
             func: In {
                 pull: PullUp,
                 digital: true,
@@ -65,15 +65,23 @@ pub fn voidpointer_board() -> Vec<Def> {
         },
         Def {
             name: "enc_b",
-            pin: (A, 6),
+            pin: (B, 7),
             func: In {
                 pull: PullUp,
                 digital: true,
             },
         },
         Def {
+            name: "enc_vcc",
+            pin: (B, 10),
+            func: Out {
+                drive: PP5mA,
+                init: Some(High),
+            },
+        },
+        Def {
             name: "imu_int1",
-            pin: (A, 11),
+            pin: (B, 17),
             func: In {
                 pull: PullUp,
                 digital: true,
@@ -81,7 +89,7 @@ pub fn voidpointer_board() -> Vec<Def> {
         },
         Def {
             name: "imu_int2",
-            pin: (A, 12),
+            pin: (B, 8),
             func: In {
                 pull: PullUp,
                 digital: true,
@@ -112,6 +120,16 @@ pub fn voidpointer_board() -> Vec<Def> {
             name: "i2c_scl",
             pin: (B, 21),
             func: I2c,
+        },
+        Def {
+            name: "charge_stat",
+            pin: (A, 5),
+            func: Adc(1),
+        },
+        Def {
+            name: "batt",
+            pin: (A, 12),
+            func: Adc(2),
         },
         Def {
             name: "debug_tx",
