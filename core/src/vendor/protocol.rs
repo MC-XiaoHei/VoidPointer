@@ -560,8 +560,7 @@ mod tests {
         buf[1] = CUSTOM_PROTOCOL_VERSION;
         buf[2] = CUSTOM_FLAG_REQUEST;
         buf[3] = 1;
-        // cmd = Ping (0x0000), status=0, offset=0, total_len=0, payload_len=0
-        // 这些字段已经在 buf 中初始化为 0
+        // 未显式赋值字段已由 `[0u8; 64]` 初始化为 0
         let result = parse_frame(&buf);
         assert!(result.is_ok());
         let frame = result.unwrap();
@@ -779,5 +778,137 @@ mod tests {
         assert_eq!(payload.len(), 14);
         assert_eq!(payload[0], 1);
         assert_eq!(payload[2], 2);
+    }
+
+    #[test]
+    fn encode_frame_empty_payload_success() {
+        let header = CustomFrameHeader {
+            flags: CUSTOM_FLAG_RESPONSE,
+            sequence: 1,
+            command: 0x0100,
+            status: CUSTOM_STATUS_OK,
+            offset: 0,
+            total_len: 0,
+        };
+        let mut out = CustomReport {
+            data: [0u8; 64],
+            len: 0,
+        };
+        let result = encode_frame(header, &[], &mut out);
+        assert!(result.is_ok());
+        assert_eq!(out.data[0], CUSTOM_PROTOCOL_MAGIC);
+        assert_eq!(out.data[1], CUSTOM_PROTOCOL_VERSION);
+        assert_eq!(out.data[2], CUSTOM_FLAG_RESPONSE);
+        assert_eq!(out.data[3], 1);
+        // 协议头字段：command / status / offset / total_len / payload_len 均为 0
+        assert_eq!(out.data[4], 0x00);
+        assert_eq!(out.data[5], 0x01);
+        assert_eq!(out.data[6], 0x00);
+        assert_eq!(out.data[7], 0x00);
+        assert_eq!(out.data[8], 0x00);
+        assert_eq!(out.data[9], 0x00);
+        assert_eq!(out.data[10], 0x00);
+        assert_eq!(out.data[11], 0x00);
+        assert_eq!(out.data[12], 0x00);
+        assert_eq!(out.data[13], 0x00);
+        assert_eq!(out.data[14], 0x00);
+        assert_eq!(out.data[15], 0x00);
+        // 末尾填充到 64 字节（USB report 大小）
+        assert_eq!(out.len, 64);
+        for i in 16..64 {
+            assert_eq!(out.data[i], 0);
+        }
+    }
+
+    #[test]
+    fn encode_frame_with_payload_success() {
+        let header = CustomFrameHeader {
+            flags: CUSTOM_FLAG_RESPONSE,
+            sequence: 2,
+            command: 0x0001,
+            status: CUSTOM_STATUS_OK,
+            offset: 0,
+            total_len: 4,
+        };
+        let payload = [0xDE, 0xAD, 0xBE, 0xEF];
+        let mut out = CustomReport {
+            data: [0u8; 64],
+            len: 0,
+        };
+        let result = encode_frame(header, &payload, &mut out);
+        assert!(result.is_ok());
+        assert_eq!(out.data[16], 0xDE);
+        assert_eq!(out.data[17], 0xAD);
+        assert_eq!(out.data[18], 0xBE);
+        assert_eq!(out.data[19], 0xEF);
+        assert_eq!(out.data[10], 0x04);
+        assert_eq!(out.data[11], 0x00);
+        assert_eq!(out.data[14], 0x04);
+        assert_eq!(out.data[15], 0x00);
+    }
+
+    #[test]
+    fn encode_response_empty_payload() {
+        let mut out = CustomReport {
+            data: [0u8; 64],
+            len: 0,
+        };
+        let result = encode_response(0x0201, 7, CUSTOM_STATUS_OK, &[], &mut out);
+        assert!(result.is_ok());
+        assert_eq!(out.data[3], 7);
+        assert_eq!(out.data[0], CUSTOM_PROTOCOL_MAGIC);
+        assert_eq!(out.data[2], CUSTOM_FLAG_RESPONSE);
+    }
+
+    #[test]
+    fn build_protocol_info_format() {
+        let p = build_protocol_info_payload();
+        assert_eq!(p[0], CUSTOM_PROTOCOL_VERSION);
+        assert_eq!(p[1] as usize, CUSTOM_PROTOCOL_HEADER_LEN);
+        assert_eq!(p[2] as usize, CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN);
+        assert_eq!(p[3], 0);
+    }
+
+    #[test]
+    fn build_route_state_payload_detailed() {
+        let mut router = crate::route::HidRouter::new();
+        router.set_usb_state(crate::route::UsbState::Configured);
+        let payload = build_route_state_payload(&router);
+        assert_eq!(payload[0], router.preferred_mouse_route().as_ffi());
+        assert_eq!(payload[3], 1);
+    }
+
+    #[test]
+    fn encode_error_response_format() {
+        let mut out = CustomReport {
+            data: [0u8; 64],
+            len: 0,
+        };
+        let result = encode_error_response(0x0100, 9, CUSTOM_STATUS_INVALID_ARGUMENT, &mut out);
+        assert!(result.is_ok());
+        assert_eq!(out.data[3], 9);
+        let status = u16::from_le_bytes([out.data[6], out.data[7]]);
+        assert_eq!(status, CUSTOM_STATUS_INVALID_ARGUMENT);
+    }
+
+    #[test]
+    fn encode_frame_huge_payload_fails() {
+        let header = CustomFrameHeader {
+            flags: CUSTOM_FLAG_RESPONSE,
+            sequence: 0,
+            command: 0,
+            status: 0,
+            offset: 0,
+            total_len: 0,
+        };
+        let big = [0u8; CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN + 1];
+        let mut out = CustomReport {
+            data: [0u8; 64],
+            len: 0,
+        };
+        assert_eq!(
+            encode_frame(header, &big, &mut out),
+            Err(ParseError::PayloadTooLarge)
+        );
     }
 }

@@ -259,6 +259,66 @@ mod tests {
         assert!(delay.is_some());
         assert!(delay.unwrap() <= 5000);
     }
+
+    #[test]
+    fn pm_next_recheck_usb_configured_returns_none() {
+        let pm = PowerManager::new();
+        let mut router = crate::route::HidRouter::new();
+        router.set_usb_state(crate::route::UsbState::Configured);
+        assert!(pm.next_recheck_delay_ms(100, 0, false, &router).is_none());
+    }
+
+    #[test]
+    fn pm_next_recheck_already_suspend_returns_none() {
+        let mut pm = PowerManager::new();
+        pm.apply_request_result(PowerState::Suspend, true);
+        let mut router = crate::route::HidRouter::new();
+        router.set_ble_connected(true);
+        router.set_ble_input_ready(true);
+        assert!(pm.next_recheck_delay_ms(100, 0, false, &router).is_none());
+    }
+
+    #[test]
+    fn pm_next_recheck_already_sleep_returns_none() {
+        let mut pm = PowerManager::new();
+        pm.apply_request_result(PowerState::Sleep, true);
+        let router = crate::route::HidRouter::new();
+        assert!(pm.next_recheck_delay_ms(100, 0, false, &router).is_none());
+    }
+
+    #[test]
+    fn pm_next_recheck_sleep_path_returns_delay() {
+        let pm = PowerManager::new();
+        let router = crate::route::HidRouter::new();
+        let delay = pm.next_recheck_delay_ms(100, 0, false, &router);
+        assert!(delay.is_some());
+        assert!(delay.unwrap() <= 60000);
+    }
+
+    #[test]
+    fn pm_next_recheck_config_dirty_blocks_sleep() {
+        let pm = PowerManager::new();
+        let router = crate::route::HidRouter::new();
+        assert!(pm.next_recheck_delay_ms(100, 0, true, &router).is_none());
+    }
+
+    #[test]
+    fn pm_request_state_same_state_returns_none() {
+        let mut pm = PowerManager::new();
+        // Active -> Active should return None
+        let pm2 = PowerManager::new();
+        let result = pm.poll(100, 50, false, &crate::route::HidRouter::new());
+        assert!(result.is_none());
+        assert_eq!(pm.state(), PowerState::Active);
+        _ = pm2;
+    }
+
+    #[test]
+    fn pm_apply_request_active_sets_state() {
+        let mut pm = PowerManager::new();
+        pm.apply_request_result(PowerState::Active, true);
+        assert_eq!(pm.state(), PowerState::Active);
+    }
 }
 
 impl Default for PowerManager {

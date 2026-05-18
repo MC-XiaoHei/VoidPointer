@@ -144,4 +144,58 @@ mod tests {
         m.poll(350);
         assert!(m.transient_end_ms.is_none());
     }
+
+    #[test]
+    fn clear_tick_scheduled_works() {
+        let mut m = LedManager::new();
+        m.clear_tick_scheduled();
+        assert!(!m.tick_scheduled);
+    }
+
+    #[test]
+    fn set_persistent_same_state_noop() {
+        let mut m = LedManager::new();
+        m.set_persistent(Some(PersistentState::Charging));
+        m.set_persistent(Some(PersistentState::Charging));
+        assert_eq!(m.persistent, Some(PersistentState::Charging));
+    }
+
+    #[test]
+    fn poll_no_transient_returns_false() {
+        let mut m = LedManager::new();
+        assert!(!m.poll(100));
+    }
+
+    #[test]
+    fn poll_transient_active_needs_schedule() {
+        let mut m = LedManager::new();
+        m.begin_transient(100, 0);
+        assert!(m.poll(TICK_MS as u32));
+    }
+
+    #[test]
+    fn poll_transient_not_yet_due() {
+        let mut m = LedManager::new();
+        m.begin_transient(100, 0);
+        assert!(m.poll(TICK_MS as u32));
+    }
+
+    #[test]
+    fn poll_transient_expired_no_persistent() {
+        let mut m = LedManager::new();
+        m.begin_transient(100, 0);
+        let result = m.poll(200);
+        assert!(!result);
+        assert!(m.transient_end_ms.is_none());
+    }
+
+    #[test]
+    fn transient_expired_triggers_persistent_apply() {
+        let mut m = LedManager::new();
+        m.set_persistent(Some(PersistentState::Charging));
+        m.begin_transient(100, 0);
+        m.poll(200);
+        assert!(m.transient_end_ms.is_none());
+        assert_eq!(m.persistent, Some(PersistentState::Charging));
+    }
 }
