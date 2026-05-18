@@ -1,5 +1,6 @@
 use crate::ffi::bindings::*;
 use crate::ffi::bindings::{VP_WAKE_SOURCE_BUTTON, VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU};
+use crate::hid::api::HidApi;
 use crate::hid::types::{CustomReport, HidSendStatus, MouseReport};
 use crate::power::PowerState;
 
@@ -46,30 +47,19 @@ impl RuntimeCommand {
     pub fn execute(self) -> RuntimeCommandResult {
         match self {
             Self::SendMouse { route, report } => {
-                let status = unsafe {
-                    c_vp_hid_send_mouse(
-                        route,
-                        report.buttons.pack(),
-                        report.dx,
-                        report.dy,
-                        report.wheel,
-                    )
-                };
-
+                let status = HidApi::send_mouse(route, report);
                 RuntimeCommandResult::MouseSent {
                     route,
                     report,
-                    status: map_hid_status(status),
+                    status,
                 }
             }
             Self::SendVendor { route, report } => {
-                let status =
-                    unsafe { c_vp_hid_send_vendor(route, report.data.as_ptr(), report.len) };
-
+                let status = HidApi::send_vendor(route, &report);
                 RuntimeCommandResult::VendorSent {
                     route,
                     report,
-                    status: map_hid_status(status),
+                    status,
                 }
             }
             Self::RequestPowerState { target } => RuntimeCommandResult::PowerStateRequestDone {
@@ -131,16 +121,4 @@ fn enable_low_power_resume_sources(enabled: bool) -> bool {
     }
 
     true
-}
-
-#[allow(non_upper_case_globals)]
-pub fn map_hid_status(status: vp_hid_send_status_t) -> HidSendStatus {
-    // 未识别状态一律按 fatal 处理，避免在未知返回值上乐观重试
-    match status {
-        x if x == VP_HID_SEND_SENT as u8 => HidSendStatus::Sent,
-        x if x == VP_HID_SEND_RETRY_LATER as u8 => HidSendStatus::RetryLater,
-        x if x == VP_HID_SEND_NOT_CONNECTED as u8 => HidSendStatus::NotConnected,
-        x if x == VP_HID_SEND_FATAL as u8 => HidSendStatus::Fatal,
-        _ => HidSendStatus::Fatal,
-    }
 }

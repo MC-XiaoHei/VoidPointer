@@ -1,35 +1,30 @@
 pub mod commands;
+pub mod event_handler;
 pub mod events;
+pub mod hid_send;
+pub mod power_coord;
 pub mod report_runtime;
 
+use crate::attitude::clear_current_attitude;
 use crate::attitude::types::SflpGameRotationRaw;
-use crate::attitude::{
-    clear_current_attitude, get_current_attitude, update_current_attitude_from_raw,
-};
 use crate::config::ConfigManager;
 use crate::ffi::bindings::{
-    VP_INPUT_IMU_INT1, VP_INPUT_IMU_INT2, VP_STATUS_NOT_READY, VP_STATUS_OK, VP_WAKE_SOURCE_BUTTON,
-    VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU, c_vp_exti_clear_pending, c_vp_exti_unmask,
-    c_vp_hid_route_ready, c_vp_imu_config_active, c_vp_power_restore_from_sleep,
-    c_vp_request_core_poll, c_vp_request_core_poll_after, c_vp_rtc_millis, c_vp_wake_source_enable,
-    vp_hid_route_t,
+    VP_WAKE_SOURCE_BUTTON, VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU, c_vp_request_core_poll,
+    c_vp_request_core_poll_after, c_vp_wake_source_enable,
 };
-use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::input::types::{InputManager, InputStatus};
-use crate::led::LedProfile;
-use crate::led::TICK_MS;
-use crate::led::patterns::{CONNECTED, DISCONNECTED, MODE_2G4, MODE_BLE};
 use crate::led::runtime::LedManager;
 use crate::motion::session::MotionSession;
-use crate::power::{PowerManager, PowerState};
+use crate::power::PowerManager;
 use crate::report::config::ReportConfig;
 use crate::report::state::ReportState;
-use crate::route::{HidRoute, HidRouter, UsbState};
-use crate::runtime::commands::{RuntimeCommand, RuntimeCommandResult};
-use crate::runtime::events::{EventQueue, RuntimeEvent};
+use crate::route::UsbState;
+use crate::runtime::commands::RuntimeCommand;
+use crate::runtime::events::EventQueue;
 use crate::runtime::report_runtime::MouseReportRuntime;
+use crate::utils::clock::RTC;
 use crate::utils::global::MainLoopGlobal;
-use crate::vendor::{PendingVendorTx, VendorRuntime};
+use crate::vendor::VendorRuntime;
 use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 const HID_RETRY_DELAY_MS: u32 = 8;
@@ -90,7 +85,7 @@ pub struct LatestImuSample {
 }
 
 pub struct Runtime {
-    pub router: HidRouter,
+    pub router: crate::route::HidRouter,
     pub power: PowerManager,
     pub config: ConfigManager,
     pub vendor: VendorRuntime,
@@ -111,7 +106,7 @@ pub struct Runtime {
 
 impl Runtime {
     pub fn new() -> Self {
-        let now = unsafe { c_vp_rtc_millis() };
+        let now = RTC::millis().ticks();
         let mut input = InputManager::new();
         let initial_input = input.sync_snapshot();
         clear_current_attitude();
@@ -120,7 +115,7 @@ impl Runtime {
         let motion_cfg = config.current_config().motion;
 
         Self {
-            router: HidRouter::new(),
+            router: crate::route::HidRouter::new(),
             power: PowerManager::new(),
             config,
             vendor: VendorRuntime::new(),
@@ -168,23 +163,12 @@ impl Runtime {
     pub fn sync_motion_config(&mut self) {
         let motion_cfg = self.config.current_config().motion;
         self.motion_session.reconfigure(motion_cfg);
-        self.motion_report_deadline_ms = Some(unsafe { c_vp_rtc_millis() });
+        self.motion_report_deadline_ms = Some(RTC::millis().ticks());
         self.report_state.reset_all();
     }
 
-    fn play_transient_led<const N: usize>(
-        &mut self,
-        profile: &'static LedProfile<N>,
-        timestamp: u32,
-    ) {
-        profile.play(crate::ffi::board_map::BoardSignal::STATUS_LED);
-        self.led_manager
-            .begin_transient(profile.playback_ms(), timestamp);
-        Self::request_poll_after(TICK_MS as u32);
-    }
-
     fn imu_poll_enabled(&self) -> bool {
-        self.power.state() == PowerState::Active
+        self.power.state() == crate::power::PowerState::Active
     }
 
     fn schedule_next_imu_poll(&mut self, base_timestamp_ms: u32) {
@@ -198,7 +182,7 @@ impl Runtime {
         Self::request_poll_after(IMU_POLL_ACTIVE_MS);
     }
 
-    fn maybe_start_imu_poll(&mut self) -> Option<RuntimeCommand> {
+    pub fn maybe_start_imu_poll(&mut self) -> Option<RuntimeCommand> {
         if !self.imu_poll_enabled() {
             self.imu_poll_deadline_ms = None;
             return None;
@@ -208,7 +192,7 @@ impl Runtime {
             return None;
         }
 
-        let now = unsafe { c_vp_rtc_millis() };
+        let now = RTC::millis().ticks();
         let deadline = self.imu_poll_deadline_ms.unwrap_or(now);
         if !deadline_due(now, deadline) {
             Self::request_poll_after(deadline_remaining_ms(now, deadline));
@@ -223,7 +207,6 @@ impl Runtime {
     }
 
     pub fn poll(&mut self) -> Option<RuntimeCommand> {
-        // 单次 poll 允许短暂追平级联状态，但要限制 pass 数避免主循环长时间自旋
         const MAX_PASSES: usize = 4;
         let mut passes = 0;
 
@@ -247,94 +230,8 @@ impl Runtime {
         None
     }
 
-    fn schedule_hid_retry(&mut self) {
-        self.pending.hid_retry = true;
-        Self::request_poll_after(HID_RETRY_DELAY_MS);
-    }
-
-    fn handle_hid_send_status(&mut self, status: HidSendStatus) {
-        match status {
-            HidSendStatus::Sent | HidSendStatus::NotConnected | HidSendStatus::Fatal => {
-                self.pending.hid_retry = false;
-            }
-            HidSendStatus::RetryLater => {
-                self.schedule_hid_retry();
-            }
-        }
-    }
-
-    fn apply_mouse_send_status(&mut self, report: MouseReport, status: HidSendStatus) {
-        self.mouse_report
-            .apply_send_status(report, status, &mut self.report_state);
-        self.dirty.report = false;
-        self.handle_hid_send_status(status);
-    }
-
-    fn apply_vendor_send_status(
-        &mut self,
-        route: vp_hid_route_t,
-        report: crate::hid::types::CustomReport,
-        status: HidSendStatus,
-    ) {
-        match status {
-            HidSendStatus::RetryLater => {
-                self.vendor
-                    .requeue_pending_tx(PendingVendorTx { route, report });
-            }
-            _ => {}
-        }
-        self.handle_hid_send_status(status);
-    }
-
-    pub fn apply_command_result(&mut self, result: RuntimeCommandResult) {
-        match result {
-            RuntimeCommandResult::MouseSent {
-                route: _,
-                report,
-                status,
-            } => {
-                self.apply_mouse_send_status(report, status);
-            }
-            RuntimeCommandResult::VendorSent {
-                route,
-                report,
-                status,
-            } => {
-                self.apply_vendor_send_status(route, report, status);
-            }
-            RuntimeCommandResult::PowerStateRequestDone { target, accepted } => {
-                self.power_recheck_deadline_ms = None;
-                self.power.apply_request_result(target, accepted);
-                self.pending.power_recheck = false;
-                self.dirty.power = false;
-            }
-            RuntimeCommandResult::ImuFifoReadRequested { status } => {
-                if status != VP_STATUS_OK as u8 {
-                    self.pending.imu_fifo_read = false;
-                    let now = unsafe { c_vp_rtc_millis() };
-                    self.schedule_next_imu_poll(now);
-                }
-            }
-        }
-
-        if !self.pending.hid_retry {
-            self.reschedule_power_recheck_deadline();
-        }
-
-        if self.pending.events
-            || self.pending.hid_retry
-            || self.pending.imu_fifo_read
-            || self.pending.vendor_rx
-            || self.pending.config_save
-            || self.pending.power_recheck
-            || self.dirty.any()
-        {
-            Self::request_poll();
-        }
-    }
-
     fn process_once(&mut self) -> Option<RuntimeCommand> {
-        let now = unsafe { c_vp_rtc_millis() };
+        let now = RTC::millis().ticks();
         self.led_manager.clear_tick_scheduled();
         if self.led_manager.poll(now) {
             Self::request_poll_after(10);
@@ -398,403 +295,15 @@ impl Runtime {
 
         None
     }
+}
 
-    fn reschedule_power_recheck_deadline(&mut self) {
-        if !ENABLE_POWER_MANAGER {
-            return;
-        }
-
-        let now = unsafe { c_vp_rtc_millis() };
-        let Some(deadline) = self.power_recheck_deadline_ms else {
-            return;
-        };
-
-        let delay_ms = deadline_remaining_ms(now, deadline);
-        Self::request_poll_after(delay_ms);
-    }
-
-    fn poll_power(&mut self) -> Option<RuntimeCommand> {
-        let now = unsafe { c_vp_rtc_millis() };
-
-        if let Some(deadline) = self.power_recheck_deadline_ms {
-            if !deadline_due(now, deadline) {
-                let delay_ms = deadline_remaining_ms(now, deadline);
-                Self::request_poll_after(delay_ms);
-                return None;
-            }
-        }
-
-        self.power_recheck_deadline_ms = None;
-        self.pending.power_recheck = false;
-        self.dirty.power = false;
-
-        let config_dirty = self.pending.config_save || self.dirty.config || self.config.is_dirty();
-        let effective_config_dirty = config_dirty || !ENABLE_SLEEP_POWER_STATE;
-        let previous_state = self.power.state();
-
-        if self.power_has_blockers() {
-            if self.power.state() != PowerState::Active {
-                self.power.apply_request_result(PowerState::Active, true);
-                self.restore_active_runtime_state(previous_state);
-            }
-            self.arm_power_recheck_deadline(now, effective_config_dirty);
-            return None;
-        }
-
-        let transition = self.power.poll(
-            now,
-            self.last_activity_ms.load(Ordering::Acquire),
-            effective_config_dirty,
-            &self.router,
-        );
-        let current_state = self.power.state();
-        if previous_state != current_state {
-            if current_state == PowerState::Active {
-                self.restore_active_runtime_state(previous_state);
-            }
-        }
-
-        self.arm_power_recheck_deadline(now, effective_config_dirty);
-        transition.map(|t| RuntimeCommand::RequestPowerState { target: t.target })
-    }
-
-    fn power_has_blockers(&self) -> bool {
-        let buttons_pressed = self.last_input_status.left
-            || self.last_input_status.right
-            || self.last_input_status.middle
-            || self.last_input_status.action;
-        let packed_buttons = MouseButtons {
-            left: self.last_input_status.left,
-            right: self.last_input_status.right,
-            middle: self.last_input_status.middle,
-        }
-        .pack();
-
-        self.pending.events
-            || self.pending.hid_retry
-            || self.pending.imu_fifo_read
-            || self.pending.vendor_rx
-            || self.vendor.has_pending_tx()
-            || self.pending.config_save
-            || self.config.is_dirty()
-            || self.dirty.input
-            || self.dirty.report
-            || self.motion_session.is_active()
-            || buttons_pressed
-            || self.report_state.has_pending()
-            || self.mouse_report.send_needed(
-                self.report_state.peek_report(),
-                packed_buttons,
-                self.pending.hid_retry,
-                self.dirty.report,
-            )
-    }
-
-    fn arm_power_recheck_deadline(&mut self, now: u32, effective_config_dirty: bool) {
-        let next_delay = self.power.next_recheck_delay_ms(
-            now,
-            self.last_activity_ms.load(Ordering::Acquire),
-            effective_config_dirty,
-            &self.router,
-        );
-
-        if let Some(delay_ms) = next_delay {
-            self.power_recheck_deadline_ms = Some(now.wrapping_add(delay_ms));
-            Self::request_poll_after(delay_ms);
-        } else {
-            self.power_recheck_deadline_ms = None;
-        }
-    }
-
-    fn restore_active_runtime_state(&mut self, previous_state: PowerState) {
-        if previous_state == PowerState::Sleep {
-            let status = unsafe { c_vp_power_restore_from_sleep() };
-            if status != VP_STATUS_OK as u8 {
-                log::warn!("sleep restore failed;status={}", status);
-            }
-        }
-
-        clear_suspend_resume_sources();
-        clear_current_attitude();
-        self.latest_imu_sample = LatestImuSample::default();
-        self.report_state.reset_all();
-        self.motion_session.reset();
-        self.mouse_report.reset_all();
-
-        let status = unsafe { c_vp_imu_config_active() };
-        if status != VP_STATUS_OK as u8 {
-            log::warn!("imu active restore failed;status={}", status);
-        }
-        let now = unsafe { c_vp_rtc_millis() };
-        self.motion_report_deadline_ms = Some(now);
-        self.imu_poll_deadline_ms = Some(now);
-    }
-
-    fn drain_events(&mut self) {
-        // 事件队列单次只排一小段，避免事件风暴长期霸占主循环
-        const MAX_EVENTS_PER_PASS: usize = 8;
-        let mut drained = 0;
-
-        while drained < MAX_EVENTS_PER_PASS {
-            let Some(event) = EVENT_QUEUE.pop() else {
-                self.pending.events = false;
-                return;
-            };
-
-            drained += 1;
-            self.apply_event(event);
-        }
-
-        self.pending.events = !EVENT_QUEUE.is_empty();
-        if self.pending.events {
-            Self::request_poll();
-        }
-    }
-
-    fn apply_event(&mut self, event: RuntimeEvent) {
-        match event {
-            RuntimeEvent::BleConnected { timestamp } => {
-                self.router.set_ble_connected(true);
-                self.router.set_ble_input_ready(false);
-                self.mark_activity(timestamp);
-                self.play_transient_led(&CONNECTED, timestamp);
-            }
-            RuntimeEvent::BleInputReady { timestamp } => {
-                self.router.set_ble_input_ready(true);
-                self.mark_activity(timestamp);
-                self.dirty.report = true;
-            }
-            RuntimeEvent::BleDisconnected { timestamp, .. } => {
-                self.router.set_ble_input_ready(false);
-                self.router.set_ble_connected(false);
-                self.play_transient_led(&DISCONNECTED, timestamp);
-                self.mark_activity(timestamp);
-                self.dirty.report = true;
-            }
-            RuntimeEvent::DongleConnected { timestamp } => {
-                self.router.set_dongle_connected(true);
-                self.mark_activity(timestamp);
-                self.dirty.report = true;
-                self.play_transient_led(&CONNECTED, timestamp);
-            }
-            RuntimeEvent::DongleDisconnected { timestamp, .. } => {
-                self.router.set_dongle_connected(false);
-                self.mark_activity(timestamp);
-                self.play_transient_led(&DISCONNECTED, timestamp);
-                self.dirty.report = true;
-            }
-            RuntimeEvent::UsbStateChanged { state, timestamp } => {
-                let usb_state = UsbState::from(state);
-                self.router.set_usb_state(usb_state);
-                self.mark_activity(timestamp);
-                log::debug!(
-                    "usb state changed;state={},wired_active={}",
-                    usb_state_log_name(usb_state),
-                    matches!(usb_state, UsbState::Configured)
-                );
-                if matches!(usb_state, UsbState::Configured) {
-                    self.play_transient_led(&CONNECTED, timestamp);
-                } else if matches!(usb_state, UsbState::Detached) {
-                    self.play_transient_led(&DISCONNECTED, timestamp);
-                }
-                self.dirty.report = true;
-            }
-            RuntimeEvent::ButtonExti {
-                button_id,
-                level,
-                timestamp,
-            } => {
-                self.mark_activity(timestamp);
-                if self.input.on_button_exti(button_id, level != 0) {
-                    self.dirty.input = true;
-                }
-            }
-            RuntimeEvent::ModeSwitchExti { level, timestamp } => {
-                self.mark_activity(timestamp);
-                self.dirty.input = true;
-                if level != 0 {
-                    self.play_transient_led(&MODE_2G4, timestamp);
-                } else {
-                    self.play_transient_led(&MODE_BLE, timestamp);
-                }
-            }
-            RuntimeEvent::DebounceTick { timestamp } => {
-                self.mark_activity(timestamp);
-                if self.input.on_debounce_tick() {
-                    self.dirty.input = true;
-                    self.dirty.report = true;
-                }
-            }
-            RuntimeEvent::EncoderExti {
-                a_level,
-                b_level,
-                timestamp,
-            } => {
-                self.mark_activity(timestamp);
-                if self.input.on_encoder_exti(a_level != 0, b_level != 0) {
-                    self.dirty.input = true;
-                    self.dirty.report = true;
-                }
-            }
-            RuntimeEvent::ImuInt { timestamp } => {
-                self.mark_activity(timestamp);
-                rearm_imu_interrupts();
-
-                self.pending.imu_fifo_read = false;
-                self.imu_poll_deadline_ms = Some(timestamp);
-                self.dirty.power = true;
-            }
-            RuntimeEvent::ImuSample {
-                raw_x,
-                raw_y,
-                raw_z,
-                timestamp,
-            } => {
-                self.mark_activity(timestamp);
-                let raw = SflpGameRotationRaw {
-                    x: raw_x,
-                    y: raw_y,
-                    z: raw_z,
-                };
-                let _ = update_current_attitude_from_raw(raw);
-                self.latest_imu_sample = LatestImuSample {
-                    raw,
-                    timestamp_ms: timestamp,
-                    valid: true,
-                };
-                self.dirty.motion = true;
-                self.dirty.report = true;
-            }
-            RuntimeEvent::ImuFifoDone {
-                status,
-                timestamp,
-                dropped_count: _,
-            } => {
-                self.mark_activity(timestamp);
-                self.pending.imu_fifo_read = false;
-                if status != VP_STATUS_OK as u8 {
-                    if status != VP_STATUS_NOT_READY as u8 {
-                        log::warn!("imu fifo read failed;status={},ts={}", status, timestamp);
-                    }
-                    self.latest_imu_sample.valid = false;
-                    clear_current_attitude();
-                }
-                self.schedule_next_imu_poll(timestamp);
-            }
-            RuntimeEvent::HidSendDone { timestamp, .. } => {
-                self.mark_activity(timestamp);
-                self.pending.hid_retry = true;
-            }
-            RuntimeEvent::VendorReportRx { timestamp, .. } => {
-                self.mark_activity(timestamp);
-                self.vendor.mark_rx_pending();
-                self.pending.vendor_rx = true;
-            }
-        }
-    }
-
-    fn route_ready(&self, route: vp_hid_route_t) -> bool {
-        unsafe { c_vp_hid_route_ready(route) != 0 }
-    }
-
-    fn clear_unsent_motion_output(&mut self) {
-        self.report_state.reset_all();
-        self.motion_report_deadline_ms = Some(unsafe { c_vp_rtc_millis() });
-    }
-
-    /// 路由不可用时不累计失效 motion，避免恢复后回放旧移动
-    /// 后续由 BLE ready、USB 状态变化或新输入活动再次唤醒
-    fn defer_report_until_route_event(&mut self) -> Option<RuntimeCommand> {
-        // route 不可用时不累计失效 motion，避免恢复后回放旧移动。
-        self.clear_unsent_motion_output();
-        self.mouse_report.reset_all();
-        self.pending.hid_retry = false;
-        self.dirty.report = false;
-        None
-    }
-
-    fn defer_vendor_until_route_event(&mut self, tx: PendingVendorTx) -> Option<RuntimeCommand> {
-        self.vendor.requeue_pending_tx(tx);
-        self.pending.hid_retry = false;
-        None
-    }
-
-    fn poll_input_and_hid(&mut self) -> Option<RuntimeCommand> {
-        let input = self.input.get_current_input();
-        self.last_input_status = input;
-        self.dirty.input = false;
-        let buttons = MouseButtons {
-            left: input.left,
-            right: input.right,
-            middle: input.middle,
-        };
-        let packed_buttons = buttons.pack();
-
-        let motion_active = self
-            .motion_session
-            .update_trigger(input.action, input.middle);
-
-        if self.motion_session.should_process_sample(
-            self.latest_imu_sample.timestamp_ms,
-            self.latest_imu_sample.valid,
-        ) {
-            if let Some(attitude) = get_current_attitude() {
-                self.motion_session
-                    .update_attitude(&attitude, self.latest_imu_sample.timestamp_ms);
-            }
-        }
-
-        let now = unsafe { c_vp_rtc_millis() };
-        let motion_report_deadline = self.motion_report_deadline_ms.unwrap_or(now);
-        if motion_active && deadline_due(now, motion_report_deadline) {
-            self.report_state
-                .ingest_motion(self.motion_session.output());
-            self.motion_report_deadline_ms = Some(now.wrapping_add(MOTION_REPORT_MS));
-            Self::request_poll_after(MOTION_REPORT_MS);
-        }
-        let motion_delta = self.report_state.peek_report();
-
-        self.mouse_report.ingest_wheel_delta(input.wheel_delta);
-
-        let button_changed = self.mouse_report.buttons_changed(packed_buttons);
-        let wheel_changed = input.wheel_delta != 0;
-        if wheel_changed || button_changed {
-            self.mark_activity(now);
-            self.dirty.report = true;
-        }
-
-        if motion_active && !deadline_due(now, motion_report_deadline) {
-            Self::request_poll_after(deadline_remaining_ms(now, motion_report_deadline));
-        }
-
-        if !self.mouse_report.send_needed(
-            motion_delta,
-            packed_buttons,
-            self.pending.hid_retry,
-            self.dirty.report,
-        ) {
-            return None;
-        }
-
-        let route = self.router.preferred_mouse_route();
-        if route == HidRoute::None {
-            return self.defer_report_until_route_event();
-        }
-
-        if !self.route_ready(route.as_ffi()) {
-            return self.defer_report_until_route_event();
-        }
-
-        let report = self.mouse_report.build_report(buttons, motion_delta);
-
-        Some(RuntimeCommand::SendMouse {
-            route: route.as_ffi(),
-            report,
-        })
+impl Default for Runtime {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-fn usb_state_log_name(state: UsbState) -> &'static str {
+pub fn usb_state_log_name(state: UsbState) -> &'static str {
     match state {
         UsbState::Detached => "detached",
         UsbState::Attached => "attached",
@@ -804,13 +313,11 @@ fn usb_state_log_name(state: UsbState) -> &'static str {
     }
 }
 
-fn deadline_due(now: u32, deadline: u32) -> bool {
-    // 用 wrapping 比较处理 rtc 回绕，避免简单大小比较在回绕点失真
+pub fn deadline_due(now: u32, deadline: u32) -> bool {
     now.wrapping_sub(deadline) < 0x8000_0000
 }
 
-fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
-    // 已到期时仍返回 1ms，让调度路径尽快重新进入而不是返回 0
+pub fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
     if deadline_due(now, deadline) {
         1
     } else {
@@ -818,26 +325,12 @@ fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
     }
 }
 
-fn clear_suspend_resume_sources() {
-    // Suspend 期间启用的唤醒源在恢复后不再需要。
+pub fn clear_suspend_resume_sources() {
     for source in [
         VP_WAKE_SOURCE_BUTTON,
         VP_WAKE_SOURCE_ENCODER,
         VP_WAKE_SOURCE_IMU,
     ] {
         let _ = unsafe { c_vp_wake_source_enable(source, 0) };
-    }
-}
-
-fn rearm_imu_interrupts() {
-    for input_id in [VP_INPUT_IMU_INT1 as u8, VP_INPUT_IMU_INT2 as u8] {
-        let _ = unsafe { c_vp_exti_clear_pending(input_id) };
-        let _ = unsafe { c_vp_exti_unmask(input_id) };
-    }
-}
-
-impl Default for Runtime {
-    fn default() -> Self {
-        Self::new()
     }
 }
