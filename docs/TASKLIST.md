@@ -126,9 +126,7 @@
 - [ ] 版本迁移（migration）
 - [ ] 配置写入运行时通用 `apply_to` 机制
 
-### LED / PWM — 🟡 进行中
-
-**已完成**
+### LED / PWM — ✅ 已完成
 
 - [x] `LedProfile<N>` 编译期定义（loop / once）
 - [x] `LedSequenceBuilder`：`Segment::Level`（固定亮度）、`Segment::Fade`（匀加速淡入淡出）
@@ -140,10 +138,7 @@
 - [x] Rust LedManager 运行时播放器：持续态（充电/低电量）与瞬态（连接/断开/模式切换）调度，已接入 `Runtime::process_once()` 每轮 poll 驱动
 - [x] 预置 Profile：`CONNECTED`、`DISCONNECTED`、`CHARGING`、`LOW_BATTERY`、`MODE_BLE`、`MODE_2G4`
 - [x] 事件联动：BleConnected / BleDisconnected / UsbStateChanged / ModeSwitchExti 触发瞬态播放
-
-**未完成**
-
-- [ ] LED / PWM 与电源状态联动（低功耗时停止动画、关闭激光）
+- [x] LED / PWM 与电源状态联动（低功耗时停止动画，醒来后由 led_manager.poll 恢复）
 
 ### Vendor / WebHID — 🟡 进行中
 

@@ -63,6 +63,11 @@ impl Runtime {
             }
         }
 
+        if let Some(ref t) = transition {
+            if t.target != PowerState::Active {
+                crate::led::stop_playback();
+            }
+        }
         self.arm_power_recheck_deadline(now, effective_config_dirty);
         transition.map(|t| RuntimeCommand::RequestPowerState { target: t.target })
     }
