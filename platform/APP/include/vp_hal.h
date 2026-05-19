@@ -10,11 +10,9 @@
 extern "C" {
 #endif
 
-// PWMX
 void vp_pwm_init(BoardSignal sig, uint16_t cycle);
 void vp_pwm_set_duty(BoardSignal sig, uint8_t duty);
 
-// TMR PWM（用于 LED）
 void vp_tmr_pwm_init(BoardSignal sig, uint32_t cycle);
 void vp_tmr_pwm_enable(BoardSignal sig);
 void vp_tmr_pwm_disable(BoardSignal sig);
@@ -25,10 +23,8 @@ void vp_tmr_reset(BoardSignal sig);
 void vp_tmr_pwm_set_polarity(BoardSignal sig, uint8_t active_low);
 void vp_tmr_pwm_load_fifo(BoardSignal sig, uint32_t value);
 
-// 外设常量（隔离 CH58x HAL 类型）
 #define VP_PWMX_CYCLE_256 ((uint16_t)256)
 
-// GPIO 运行时操作
 vp_bool_t vp_gpio_is_valid(BoardGpio gpio);
 vp_bool_t vp_gpio_read_level(BoardGpio gpio);
 uint32_t  vp_gpio_read_port(BoardGpioGroup group);

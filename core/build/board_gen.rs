@@ -773,7 +773,8 @@ fn gen_board_signal_get_channel(defs: &[Def]) -> String {
 }
 
 fn gen_polarity_array(defs: &[Def]) -> String {
-    defs.iter()
+    let body: String = defs
+        .iter()
         .map(|d| {
             format!(
                 "    [{}] = {},",
@@ -782,7 +783,13 @@ fn gen_polarity_array(defs: &[Def]) -> String {
             )
         })
         .collect::<Vec<_>>()
-        .join("\n")
+        .join("\n");
+    format!(
+        "static const uint8_t BOARD_SIGNAL_POLARITY[BOARD_SIGNAL_COUNT] = {{ \
+         {}\
+         }};\n\n",
+        body
+    )
 }
 
 fn check_remap_conflicts(defs: &[Def]) {

@@ -69,12 +69,9 @@ static void sync_platform_wake_sources(void) {
 
     PWR_PeriphWakeUpCfg(gpio_wake_enabled ? ENABLE : DISABLE, RB_SLP_GPIO_WAKE,
                         Short_Delay);
-    // 当前 suspend 仍未进入真正 deep-sleep，先不打开全局 GPIO any-edge wake，
-    // 避免未来接 Halt 前无意放宽 button/IMU 的边沿语义。
+    // GPIO any-edge wake 暂不启用
     PWR_PeriphWakeUpCfg(DISABLE, RB_GPIO_EDGE_WAKE, Short_Delay);
-
-    // USB configured 时项目语义必须保持 Active，
-    // 当前不把 USB 作为 Suspend wake-source 主线的一部分。
+    // USB wake 暂不启用
     PWR_PeriphWakeUpCfg(DISABLE, RB_SLP_USB2_WAKE, Short_Delay);
     R8_USB2_WAKE_CTRL = 0u;
 }
@@ -519,8 +516,7 @@ vp_status_t c_vp_power_prepare_suspend(void) {
 }
 
 vp_status_t c_vp_power_enter_suspend(void) {
-    // 当前保持项目级 Suspend：进入前已收敛恢复源与 profile，
-    // 这里暂不切到芯片 deep-sleep。
+    // 暂不切到芯片 deep-sleep
     return VP_STATUS_OK;
 }
 
@@ -543,8 +539,7 @@ vp_status_t c_vp_power_prepare_sleep(void) {
 }
 
 vp_status_t c_vp_power_enter_sleep(void) {
-    // 当前仍保持项目级 Sleep：进入前先切 profile 并关闭 BLE advertising，
-    // 这里暂不直接切到 CH585 deep-sleep。
+    // 暂不切到芯片 deep-sleep
     return VP_STATUS_OK;
 }
 
