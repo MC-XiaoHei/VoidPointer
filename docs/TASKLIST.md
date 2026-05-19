@@ -16,9 +16,7 @@
 - [x] Rust→C API 调用上下文在 `c_api.h` 标注（ISR-safe / bottom-half only）
 - [x] 长耗时路径已拆分，避免持有 Runtime 可变借用跨越慢调用
 
-### Input — 🟡 进行中
-
-**已完成**
+### Input — ✅ 已完成
 
 - [x] 按键 low-active EXTI + debounce 主链路
 - [x] 编码器 EXTI + Rust lookup + wheel 事件主链路
@@ -28,10 +26,7 @@
 - [x] `InputSnapshot` 覆盖 left/right/middle/action/laser/wheel
 - [x] `DebouncedTwoStateInput` 可复用核心 + `InputManager` policy
 - [x] ModeSwitch：PB11 物理引脚已定义，EXTI 全链路已通，触发 `ModeSwitchExti` 事件并播放 `MODE_BLE`/`MODE_2G4` LED 动画
-
-**未完成**
-
-- [ ] Laser 按键接入：`button_id_to_input_id()` 未映射 `VP_BUTTON_LASER`（ID=4），EXTI 事件被静默丢弃。需加入 debounce 管线，稳定后调用 `pwm::set_laser_duty()`。
+- [x] Laser 按键接入：加入 debounce 管线，`input.laser` 稳定后在 `poll_input_and_hid` 中调用 `pwm::set_laser_duty()`
 
 ### IMU / I2C — 🟡 进行中
 

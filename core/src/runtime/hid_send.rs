@@ -154,6 +154,12 @@ impl Runtime {
             Self::request_poll_after(MOTION_REPORT_MS);
         }
 
+        if input.laser {
+            crate::pwm::set_laser_duty(255);
+        } else {
+            crate::pwm::set_laser_duty(0);
+        }
+
         self.report.ingest_wheel_delta(input.wheel_delta);
 
         let button_changed = self.report.send_needed(packed_buttons, false, false);

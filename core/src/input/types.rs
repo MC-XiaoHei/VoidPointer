@@ -1,13 +1,25 @@
 use crate::ffi::bindings::{
     VP_EXTI_EDGE_BOTH, VP_EXTI_EDGE_FALLING, VP_EXTI_EDGE_RISING, VP_INPUT_ACTION,
-    VP_INPUT_ENCODER_A, VP_INPUT_ENCODER_B, VP_INPUT_LEFT, VP_INPUT_MIDDLE, VP_INPUT_RIGHT,
-    VP_STATUS_OK, c_vp_debounce_timer_start, c_vp_debounce_timer_stop, c_vp_exti_set_edge,
-    c_vp_gpio_read,
+    VP_INPUT_ENCODER_A, VP_INPUT_ENCODER_B, VP_INPUT_LASER, VP_INPUT_LEFT, VP_INPUT_MIDDLE,
+    VP_INPUT_RIGHT, VP_STATUS_OK, c_vp_debounce_timer_start, c_vp_debounce_timer_stop,
+    c_vp_exti_set_edge, c_vp_gpio_read,
 };
 use crate::input::encoder::RotaryEncoder;
 
 const DEBOUNCE_STABLE_TICKS: u8 = 5;
-const DEBOUNCED_TWO_STATE_INPUTS: usize = 4;
+
+const BUTTON_IDS: [u8; 5] = [
+    VP_INPUT_LEFT as u8,
+    VP_INPUT_RIGHT as u8,
+    VP_INPUT_MIDDLE as u8,
+    VP_INPUT_ACTION as u8,
+    VP_INPUT_LASER as u8,
+];
+const BUTTON_COUNT: usize = BUTTON_IDS.len();
+
+fn button_id_to_input_id(button_id: u8) -> Option<u8> {
+    BUTTON_IDS.get(button_id as usize).copied()
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct InputStatus {
@@ -15,6 +27,7 @@ pub struct InputStatus {
     pub right: bool,
     pub middle: bool,
     pub action: bool,
+    pub laser: bool,
     pub wheel_delta: i8,
 }
 
@@ -112,7 +125,7 @@ enum DebounceTickOutcome {
 
 pub struct InputManager {
     encoder: RotaryEncoder,
-    two_state_inputs: [DebouncedTwoStateInput; DEBOUNCED_TWO_STATE_INPUTS],
+    two_state_inputs: [DebouncedTwoStateInput; BUTTON_COUNT],
     pending_wheel: i8,
 }
 
@@ -120,12 +133,16 @@ impl InputManager {
     pub fn new() -> Self {
         Self {
             encoder: RotaryEncoder::new(),
-            two_state_inputs: [
-                DebouncedTwoStateInput::new(VP_INPUT_LEFT as u8),
-                DebouncedTwoStateInput::new(VP_INPUT_RIGHT as u8),
-                DebouncedTwoStateInput::new(VP_INPUT_MIDDLE as u8),
-                DebouncedTwoStateInput::new(VP_INPUT_ACTION as u8),
-            ],
+            two_state_inputs: {
+                const INIT: DebouncedTwoStateInput = DebouncedTwoStateInput::new(0);
+                let mut arr = [INIT; BUTTON_COUNT];
+                let mut i = 0;
+                while i < BUTTON_COUNT {
+                    arr[i].input_id = BUTTON_IDS[i];
+                    i += 1;
+                }
+                arr
+            },
             pending_wheel: 0,
         }
     }
@@ -210,21 +227,20 @@ impl InputManager {
     }
 
     fn current_status(&self, wheel_delta: i8) -> InputStatus {
+        fn stable_at(inputs: &[DebouncedTwoStateInput; BUTTON_COUNT], id: u8) -> bool {
+            inputs
+                .iter()
+                .find(|input| input.input_id == id)
+                .map_or(false, |input| input.stable_active)
+        }
         InputStatus {
-            left: self.stable_active_level(VP_INPUT_LEFT as u8),
-            right: self.stable_active_level(VP_INPUT_RIGHT as u8),
-            middle: self.stable_active_level(VP_INPUT_MIDDLE as u8),
-            action: self.stable_active_level(VP_INPUT_ACTION as u8),
+            left: stable_at(&self.two_state_inputs, VP_INPUT_LEFT as u8),
+            right: stable_at(&self.two_state_inputs, VP_INPUT_RIGHT as u8),
+            middle: stable_at(&self.two_state_inputs, VP_INPUT_MIDDLE as u8),
+            action: stable_at(&self.two_state_inputs, VP_INPUT_ACTION as u8),
+            laser: stable_at(&self.two_state_inputs, VP_INPUT_LASER as u8),
             wheel_delta,
         }
-    }
-
-    fn stable_active_level(&self, input_id: u8) -> bool {
-        self.two_state_inputs
-            .iter()
-            .find(|input| input.input_id == input_id)
-            .map(|input| input.stable_active)
-            .unwrap_or(false)
     }
 
     fn two_state_input_mut(&mut self, input_id: u8) -> Option<&mut DebouncedTwoStateInput> {
@@ -270,21 +286,13 @@ fn stop_debounce_timer() {
 }
 
 fn log_button_change(input_id: u8, pressed: bool) {
-    if input_id == VP_INPUT_ACTION as u8 {
-        info_action_state(pressed);
-    }
-}
-
-fn info_action_state(pressed: bool) {
-    log::debug!("button state changed;button=action,pressed={}", pressed);
-}
-
-fn button_id_to_input_id(button_id: u8) -> Option<u8> {
-    match button_id {
-        0 => Some(VP_INPUT_LEFT as u8),
-        1 => Some(VP_INPUT_RIGHT as u8),
-        2 => Some(VP_INPUT_MIDDLE as u8),
-        3 => Some(VP_INPUT_ACTION as u8),
-        _ => None,
-    }
+    let name = match input_id as u32 {
+        VP_INPUT_LEFT => "left",
+        VP_INPUT_RIGHT => "right",
+        VP_INPUT_MIDDLE => "middle",
+        VP_INPUT_ACTION => "action",
+        VP_INPUT_LASER => "laser",
+        _ => return,
+    };
+    log::debug!("button state changed;button={},pressed={}", name, pressed);
 }
