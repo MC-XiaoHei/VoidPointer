@@ -78,7 +78,6 @@ impl<const N: usize> LedSequenceBuilder<N> {
         (self.pos, self.data)
     }
 
-    /// 不追加终止 0，用于循环播放
     pub const fn finish_loop(self) -> (usize, [u32; N]) {
         (self.pos, self.data)
     }

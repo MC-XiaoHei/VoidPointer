@@ -4,7 +4,6 @@ use crate::report::config::ReportConfig;
 use crate::report::state::ReportState;
 use crate::report::types::ReportDelta;
 
-/// Wheel/button 暂存与发送决策
 struct MouseReportRuntime {
     pending_wheel: i16,
     last_sent_buttons: u8,
@@ -67,7 +66,6 @@ impl MouseReportRuntime {
     }
 }
 
-/// 统一报告运行时，封装 motion 累积与 wheel/button 暂存
 pub struct ReportRuntime {
     mouse: MouseReportRuntime,
     state: ReportState,
@@ -81,17 +79,14 @@ impl ReportRuntime {
         }
     }
 
-    /// 输入 motion 采样，累积为 dx/dy
     pub fn ingest_motion(&mut self, motion: MotionState) {
         self.state.ingest_motion(motion);
     }
 
-    /// 输入滚轮步进
     pub fn ingest_wheel_delta(&mut self, delta: i8) {
         self.mouse.ingest_wheel_delta(delta);
     }
 
-    /// 检查是否需要发送（motion / wheel / button / retry / dirty 任一条件）
     pub fn send_needed(&self, packed_buttons: u8, hid_retry: bool, report_dirty: bool) -> bool {
         self.state.peek_report().is_some()
             || self.mouse.pending_wheel != 0
@@ -100,12 +95,10 @@ impl ReportRuntime {
             || report_dirty
     }
 
-    /// 构建 mouse report，含 motion dx/dy + wheel
     pub fn build_report(&self, buttons: MouseButtons) -> MouseReport {
         self.mouse.build_report(buttons, self.state.peek_report())
     }
 
-    /// 处理发送结果：Sent 提交 wheel/button/motion，其余不变
     pub fn apply_send_status(&mut self, report: MouseReport, status: HidSendStatus) {
         if status != HidSendStatus::Sent {
             return;
@@ -117,7 +110,6 @@ impl ReportRuntime {
         });
     }
 
-    /// 重置所有累积状态
     pub fn reset_all(&mut self) {
         self.mouse.reset_all();
         self.state.reset_all();
@@ -128,7 +120,6 @@ impl ReportRuntime {
         self.mouse.reset_route_sync();
     }
 
-    /// 是否有未发送的 motion 或 wheel
     pub fn has_pending(&self) -> bool {
         self.state.has_pending() || self.mouse.pending_wheel != 0
     }
@@ -270,7 +261,6 @@ mod tests {
         let report = r.build_report(buttons);
         r.apply_send_status(report, HidSendStatus::Sent);
         r.reset_route_sync();
-        // 重置后 buttons_changed 应返回 true
         assert!(r.send_needed(1, false, false));
     }
 

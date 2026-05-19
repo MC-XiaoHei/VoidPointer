@@ -1,7 +1,6 @@
 use crate::config::types::{ConfigError, SLOT_COUNT};
 use crate::ffi::bindings::{VP_STATUS_OK, c_vp_flash_config_region, vp_flash_region_t};
 
-/// 平台报告的 DataFlash 配置区域信息
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct FlashRegionInfo {
     pub(crate) offset: u32,
@@ -23,7 +22,6 @@ impl FlashRegionInfo {
     }
 }
 
-/// 查询平台配置区域信息，校验基础合法性
 pub(crate) fn get_flash_region() -> Result<FlashRegionInfo, ConfigError> {
     let mut region = vp_flash_region_t {
         offset: 0,

@@ -195,9 +195,6 @@ impl ConfigManager {
         self.flash.length != 0 && self.slot_size as usize == self.slot_buf.as_slice().len()
     }
 
-    pub fn poll(&mut self) {}
-
-    /// 将当前 `DeviceConfig` 重新编码为 payload，更新 `payload_len` 和 `payload_crc32`
     fn reencode_payload(&mut self) -> Result<(), ConfigError> {
         let payload = postcard::to_slice(&self.current, self.payload_buf.as_mut_slice())
             .map_err(|_| ConfigError::EncodeFailed)?;

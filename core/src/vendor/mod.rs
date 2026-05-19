@@ -298,7 +298,6 @@ mod tests {
                 q.copy_from_ptr(3, buf.as_ptr(), 4, 0);
             }
         }
-        // next push fails
         assert!(!unsafe { q.copy_from_ptr(3, buf.as_ptr(), 4, 0) });
         assert!(q.stats().dropped > 0);
     }
@@ -313,28 +312,25 @@ mod tests {
             }
         }
         assert!(q.pop().is_some());
-        // now one slot free
         assert!(unsafe { q.copy_from_ptr(1, buf.as_ptr(), 4, 0) });
     }
 
     #[test]
     fn stats_separates_dropped_and_too_large() {
         let q = VendorRxQueue::new();
-        // 超长数据递增 too_large
         unsafe {
             q.copy_from_ptr(1, core::ptr::null(), 4, 0);
         }
         assert_eq!(q.stats().too_large, 1);
         assert_eq!(q.stats().dropped, 0);
 
-        // fill queue (SPSC 预留一个空位，所以最多 cap-1 个)
         let buf = [0u8; 4];
         for _ in 0..VENDOR_RX_QUEUE_CAPACITY - 1 {
             unsafe {
                 q.copy_from_ptr(1, buf.as_ptr(), 4, 0);
             }
         }
-        // 再入队一次触发 dropped
+        // 满队列后再入队触发 dropped
         unsafe {
             q.copy_from_ptr(1, buf.as_ptr(), 4, 0);
         }

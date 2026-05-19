@@ -7,7 +7,6 @@ use crate::config::types::{
 use crate::config::validate::validate_config;
 use crate::ffi::bindings::{VP_STATUS_OK, c_vp_flash_read};
 
-/// 当前哪个 slot 被选为活动槽
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ActiveSlot {
     A,
@@ -23,7 +22,6 @@ impl ActiveSlot {
         }
     }
 
-    /// 返回当前活动槽的"另一槽"索引，用于保存目标选择
     pub(crate) fn inactive_index(self) -> usize {
         match self {
             Self::A => SLOT_B_INDEX,
@@ -32,7 +30,6 @@ impl ActiveSlot {
     }
 }
 
-/// 从 flash 成功加载的持久化配置
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct PersistedConfig {
     pub(crate) active_slot: ActiveSlot,
@@ -48,7 +45,6 @@ struct ValidSlot {
     config: DeviceConfig,
 }
 
-/// 扫描双 slot，选择有效的最新配置加载
 pub(crate) fn load_persisted_config(
     flash: FlashRegionInfo,
     slot_size: u32,
@@ -66,7 +62,6 @@ pub(crate) fn load_persisted_config(
     })
 }
 
-/// 从 flash 读取一个 slot 并走完完整验证链
 fn read_and_validate_slot(
     flash: FlashRegionInfo,
     slot_size: u32,
@@ -110,7 +105,6 @@ fn read_and_validate_slot(
     })
 }
 
-/// 校验 SlotHeader 中的元信息字段（magic / version / payload_len / header_crc32）
 fn validate_slot_header(header: SlotHeader, slot_size: u32) -> Result<(), ConfigError> {
     if header.magic != SLOT_MAGIC {
         return Err(ConfigError::InvalidMagic);

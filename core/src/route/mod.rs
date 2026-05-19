@@ -1,8 +1,3 @@
-/**
- * HID 路由策略只回答两个问题：现在该走哪条路，由这条路发出的报告是否真的能成功送达
- *
- * 对 BLE 来说，链路连上不等于输入路径已经可用，因此必须把 connected 和 input-ready 分开建模
- */
 use crate::ffi::bindings::{
     VP_HID_ROUTE_BLE, VP_HID_ROUTE_DONGLE_2G4, VP_HID_ROUTE_NONE, VP_HID_ROUTE_USB,
     VP_USB_STATE_ATTACHED, VP_USB_STATE_CONFIGURED, VP_USB_STATE_ERROR, VP_USB_STATE_SUSPENDED,
@@ -115,11 +110,7 @@ impl HidRouter {
     }
 
     fn preferred_wireless_route(&self) -> HidRoute {
-        // TODO
-        // 当前硬件没有 mode switch，2.4G 协议栈也还未接入，
-        // 所以在 USB 之外临时固定只选择 BLE，不对 dongle 做 fallback。
-        // 后续如果新板加入 mode switch，或 2.4G 路由开始落地，
-        // 这里要恢复为“根据 mode switch / policy 在 BLE 与 2.4G 间选择”。
+        // 2.4G 尚未实现，无线固定选择 BLE
         if self.is_ble_input_ready() {
             HidRoute::Ble
         } else {

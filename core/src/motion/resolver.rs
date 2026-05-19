@@ -184,8 +184,8 @@ mod tests {
     fn solver_calibrate_sets_center() {
         let mut s = TiltMotionSolver::new(MotionConfig::default());
         s.calibrate(attitude(0.5, -0.3, 0.0));
-        assert!((s.center_x_rad - (-0.0)).abs() < 1e-6); // yaw=0 inverted = 0
-        assert!((s.center_y_rad - (-0.3)).abs() < 1e-6); // pitch=-0.3
+        assert!((s.center_x_rad - (-0.0)).abs() < 1e-6);
+        assert!((s.center_y_rad - (-0.3)).abs() < 1e-6);
     }
 
     #[test]

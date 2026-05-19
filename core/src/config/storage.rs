@@ -26,7 +26,6 @@ pub fn slot_header_decode(bytes: &[u8; SlotHeader::ENCODED_LEN]) -> SlotHeader {
     }
 }
 
-/// 将 header 各字段按 0 填充自身 CRC 字段后计算 CRC32
 pub fn compute_header_crc32(header: SlotHeader) -> u32 {
     let mut bytes = [0u8; SlotHeader::ENCODED_LEN];
     let mut header_no_crc = header;
@@ -35,7 +34,6 @@ pub fn compute_header_crc32(header: SlotHeader) -> u32 {
     crc32(&bytes)
 }
 
-/// 填入 header_crc32 并返回"已封口"的 header
 pub fn seal_header(mut header: SlotHeader) -> SlotHeader {
     header.header_crc32 = 0;
     header.header_crc32 = compute_header_crc32(header);

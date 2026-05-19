@@ -7,7 +7,6 @@ use crate::config::types::{
 };
 use crate::ffi::bindings::{VP_STATUS_OK, c_vp_flash_erase, c_vp_flash_read, c_vp_flash_write};
 
-/// 将 payload 写入非活跃 slot，含擦除、写入、回读验证
 pub(crate) fn save_persisted_config(
     flash: FlashRegionInfo,
     slot_size: u32,
@@ -51,7 +50,6 @@ pub(crate) fn save_persisted_config(
         return Err(ConfigError::FlashWriteFailed);
     }
 
-    // 回读验证：header 完全一致，payload CRC 一致
     if unsafe { c_vp_flash_read(offset, slot_buf.as_mut_ptr(), slot_size) } != VP_STATUS_OK as u8 {
         return Err(ConfigError::ReadbackVerifyFailed);
     }

@@ -53,7 +53,7 @@ impl LedManager {
             return false;
         };
 
-        if now.wrapping_sub(end) >= 0x8000_0000 {
+        if now.wrapping_sub(end) >= crate::runtime::WRAP_HALF {
             if self.last_frame_ms.is_none() {
                 self.last_frame_ms = Some(now);
                 self.tick_scheduled = false;

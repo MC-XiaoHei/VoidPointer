@@ -26,7 +26,7 @@ impl<T: Copy, const CAP: usize> SpscQueue<T, CAP> {
         }
     }
 
-    /// 生产者入队。返回 false 表示缓冲区满
+    /// 返回 false 表示缓冲区满
     pub fn push(&self, value: T) -> bool {
         let buf = unsafe { &mut *self.buf.get() };
         let head = unsafe { *self.head.get() };
@@ -44,7 +44,6 @@ impl<T: Copy, const CAP: usize> SpscQueue<T, CAP> {
         true
     }
 
-    /// 消费者出队
     pub fn pop(&self) -> Option<T> {
         let buf = unsafe { &*self.buf.get() };
         let head = unsafe { *self.head.get() };
@@ -66,19 +65,15 @@ impl<T: Copy, const CAP: usize> SpscQueue<T, CAP> {
         head == tail
     }
 
-    /// 队列满导致的丢弃数
     pub fn dropped(&self) -> u32 {
         unsafe { *self.dropped.get() }
     }
 
-    /// 其他原因导致的丢弃/拒绝计数（生产者写入）
-    ///
-    /// 入参 `n` 会加到累计值上。用于记录不经过 push 的拒绝（如数据超长）
+    /// 记录不经过 push 的拒绝（如数据超长）
     pub fn mark_drop_detail(&self, n: u32) {
         unsafe { *self.drop_detail.get() += n };
     }
 
-    /// 获取额外丢弃计数
     pub fn drop_detail(&self) -> u32 {
         unsafe { *self.drop_detail.get() }
     }
@@ -160,18 +155,14 @@ mod tests {
     #[test]
     fn wrap_around() {
         let q = filled::<4>();
-        // 填到 cap-1，预留一个空位区分空/满
         q.push(1);
         q.push(2);
         q.push(3);
-        // 全部弹出让 tail 追上 head
         assert_eq!(q.pop(), Some(1));
         assert_eq!(q.pop(), Some(2));
         assert_eq!(q.pop(), Some(3));
-        // head == tail == 3，下一个入队写到 buf[3]
         assert!(q.push(10));
         assert_eq!(q.pop(), Some(10));
-        // head == tail == 0，回绕到 buf[0]
         assert!(q.push(20));
         assert_eq!(q.pop(), Some(20));
     }
@@ -302,14 +293,12 @@ mod tests {
     #[test]
     fn dropped_and_drop_detail_independent() {
         let q = filled::<4>();
-        // 填满队列触发 dropped
         q.push(1);
         q.push(2);
         q.push(3);
         q.push(4);
         assert_eq!(q.dropped(), 1);
         assert_eq!(q.drop_detail(), 0);
-        // 额外计数
         q.mark_drop_detail(2);
         assert_eq!(q.dropped(), 1);
         assert_eq!(q.drop_detail(), 2);

@@ -30,12 +30,12 @@ impl AttitudeData {
             && self.x.is_finite()
             && self.y.is_finite()
             && self.z.is_finite();
-        if !all_finite {
-            return false;
+        if all_finite {
+            let norm_sq = self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z;
+            norm_sq >= QUAT_NORM_SQ_MIN && norm_sq <= QUAT_NORM_SQ_MAX
+        } else {
+            false
         }
-
-        let norm_sq = self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z;
-        norm_sq >= QUAT_NORM_SQ_MIN && norm_sq <= QUAT_NORM_SQ_MAX
     }
 }
 

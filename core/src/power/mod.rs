@@ -66,14 +66,17 @@ impl PowerManager {
         let wireless_connected = router.has_wireless_connection();
         let usb_allows_sleep = router.usb_state() == UsbState::Detached;
 
-        let target = if !wireless_connected
+        let target = if wireless_connected {
+            if idle_ms >= self.config.suspend_timeout_ms {
+                PowerState::Suspend
+            } else {
+                PowerState::Active
+            }
+        } else if idle_ms >= self.config.disconnect_sleep_timeout_ms
             && usb_allows_sleep
             && !config_dirty
-            && idle_ms >= self.config.disconnect_sleep_timeout_ms
         {
             PowerState::Sleep
-        } else if wireless_connected && idle_ms >= self.config.suspend_timeout_ms {
-            PowerState::Suspend
         } else {
             PowerState::Active
         };
@@ -305,12 +308,9 @@ mod tests {
     #[test]
     fn pm_request_state_same_state_returns_none() {
         let mut pm = PowerManager::new();
-        // Active -> Active should return None
-        let pm2 = PowerManager::new();
         let result = pm.poll(100, 50, false, &crate::route::HidRouter::new());
         assert!(result.is_none());
         assert_eq!(pm.state(), PowerState::Active);
-        _ = pm2;
     }
 
     #[test]

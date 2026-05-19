@@ -176,7 +176,6 @@ mod tests {
         for i in 0..15 {
             assert_eq!(q.pop(), Some(event(i as u32)));
         }
-        // 清空后重新入队，验证回绕
         for i in 100..114 {
             assert!(q.push(event(i)));
         }
