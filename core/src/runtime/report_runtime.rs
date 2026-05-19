@@ -1,59 +1,48 @@
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
+use crate::motion::state::MotionState;
+use crate::report::config::ReportConfig;
 use crate::report::state::ReportState;
 use crate::report::types::ReportDelta;
 
-pub struct MouseReportRuntime {
+/// Wheel/button 暂存与发送决策
+struct MouseReportRuntime {
     pending_wheel: i16,
     last_sent_buttons: u8,
 }
 
 impl MouseReportRuntime {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             pending_wheel: 0,
             last_sent_buttons: 0,
         }
     }
 
-    pub fn reset_pending_output(&mut self) {
+    fn reset_pending_output(&mut self) {
         self.pending_wheel = 0;
     }
 
-    pub fn reset_route_sync(&mut self) {
+    fn reset_route_sync(&mut self) {
         self.last_sent_buttons = 0;
     }
 
-    pub fn reset_all(&mut self) {
+    fn reset_all(&mut self) {
         self.reset_pending_output();
         self.reset_route_sync();
     }
 
-    pub fn ingest_wheel_delta(&mut self, wheel_delta: i8) {
+    fn ingest_wheel_delta(&mut self, wheel_delta: i8) {
         self.pending_wheel = self
             .pending_wheel
             .saturating_add(wheel_delta as i16)
             .clamp(i8::MIN as i16, i8::MAX as i16);
     }
 
-    pub fn buttons_changed(&self, packed_buttons: u8) -> bool {
+    fn buttons_changed(&self, packed_buttons: u8) -> bool {
         packed_buttons != self.last_sent_buttons
     }
 
-    pub fn send_needed(
-        &self,
-        motion_delta: Option<ReportDelta>,
-        packed_buttons: u8,
-        hid_retry: bool,
-        report_dirty: bool,
-    ) -> bool {
-        motion_delta.is_some()
-            || self.pending_wheel != 0
-            || self.buttons_changed(packed_buttons)
-            || hid_retry
-            || report_dirty
-    }
-
-    pub fn build_report(
+    fn build_report(
         &self,
         buttons: MouseButtons,
         motion_delta: Option<ReportDelta>,
@@ -72,28 +61,76 @@ impl MouseReportRuntime {
         }
     }
 
-    pub fn apply_send_status(
-        &mut self,
-        report: MouseReport,
-        status: HidSendStatus,
-        report_state: &mut ReportState,
-    ) {
+    fn commit_send(&mut self, report: &MouseReport) {
+        self.pending_wheel = self.pending_wheel.saturating_sub(report.wheel as i16);
+        self.last_sent_buttons = report.buttons.pack();
+    }
+}
+
+/// 统一报告运行时，封装 motion 累积与 wheel/button 暂存
+pub struct ReportRuntime {
+    mouse: MouseReportRuntime,
+    state: ReportState,
+}
+
+impl ReportRuntime {
+    pub fn new(cfg: ReportConfig) -> Self {
+        Self {
+            mouse: MouseReportRuntime::new(),
+            state: ReportState::new(cfg),
+        }
+    }
+
+    /// 输入 motion 采样，累积为 dx/dy
+    pub fn ingest_motion(&mut self, motion: MotionState) {
+        self.state.ingest_motion(motion);
+    }
+
+    /// 输入滚轮步进
+    pub fn ingest_wheel_delta(&mut self, delta: i8) {
+        self.mouse.ingest_wheel_delta(delta);
+    }
+
+    /// 检查是否需要发送（motion / wheel / button / retry / dirty 任一条件）
+    pub fn send_needed(&self, packed_buttons: u8, hid_retry: bool, report_dirty: bool) -> bool {
+        self.state.peek_report().is_some()
+            || self.mouse.pending_wheel != 0
+            || self.mouse.buttons_changed(packed_buttons)
+            || hid_retry
+            || report_dirty
+    }
+
+    /// 构建 mouse report，含 motion dx/dy + wheel
+    pub fn build_report(&self, buttons: MouseButtons) -> MouseReport {
+        self.mouse.build_report(buttons, self.state.peek_report())
+    }
+
+    /// 处理发送结果：Sent 提交 wheel/button/motion，其余不变
+    pub fn apply_send_status(&mut self, report: MouseReport, status: HidSendStatus) {
         if status != HidSendStatus::Sent {
             return;
         }
-
-        self.pending_wheel = self.pending_wheel.saturating_sub(report.wheel as i16);
-        self.last_sent_buttons = report.buttons.pack();
-        report_state.commit_sent(ReportDelta {
+        self.mouse.commit_send(&report);
+        self.state.commit_sent(ReportDelta {
             dx: report.dx,
             dy: report.dy,
         });
     }
-}
 
-impl Default for MouseReportRuntime {
-    fn default() -> Self {
-        Self::new()
+    /// 重置所有累积状态
+    pub fn reset_all(&mut self) {
+        self.mouse.reset_all();
+        self.state.reset_all();
+    }
+
+    /// 清除 route sync 基线（断连后重置 button sync）
+    pub fn reset_route_sync(&mut self) {
+        self.mouse.reset_route_sync();
+    }
+
+    /// 是否有未发送的 motion 或 wheel
+    pub fn has_pending(&self) -> bool {
+        self.state.has_pending() || self.mouse.pending_wheel != 0
     }
 }
 
@@ -101,277 +138,162 @@ impl Default for MouseReportRuntime {
 #[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
-    use crate::report::config::ReportConfig;
+    use crate::motion::state::MotionState;
 
-    fn make_state() -> ReportState {
-        ReportState::new(ReportConfig { report_hz: 1000.0 })
+    fn cfg() -> ReportConfig {
+        ReportConfig { report_hz: 1000.0 }
+    }
+
+    fn make_motion(vx: f32, vy: f32) -> MotionState {
+        MotionState {
+            vx,
+            vy,
+            valid: true,
+        }
     }
 
     #[test]
-    fn new_has_zero_state() {
-        let r = MouseReportRuntime::new();
-        assert_eq!(r.pending_wheel, 0);
-        assert_eq!(r.last_sent_buttons, 0);
+    fn new_has_no_pending() {
+        let r = ReportRuntime::new(cfg());
+        assert!(!r.has_pending());
+        assert!(!r.send_needed(0, false, false));
     }
 
     #[test]
-    fn default_equals_new() {
-        assert_eq!(
-            MouseReportRuntime::default().pending_wheel,
-            MouseReportRuntime::new().pending_wheel
-        );
+    fn motion_accumulates_to_send_needed() {
+        let mut r = ReportRuntime::new(cfg());
+        r.ingest_motion(make_motion(1500.0, 0.0));
+        assert!(r.send_needed(0, false, false));
     }
 
     #[test]
-    fn reset_pending_output_clears_wheel() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(3);
-        assert!(r.pending_wheel != 0);
-        r.reset_pending_output();
-        assert_eq!(r.pending_wheel, 0);
-    }
-
-    #[test]
-    fn reset_route_sync_clears_buttons() {
-        let mut r = MouseReportRuntime::new();
-        let report = MouseReport {
-            buttons: MouseButtons {
-                left: true,
-                middle: false,
-                right: false,
-            },
-            dx: 0,
-            dy: 0,
-            wheel: 0,
-        };
-        let mut state = make_state();
-        r.apply_send_status(report, HidSendStatus::Sent, &mut state);
-        assert!(r.buttons_changed(0));
-        r.reset_route_sync();
-        assert!(!r.buttons_changed(0));
-    }
-
-    #[test]
-    fn reset_all_clears_everything() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(5);
-        let report = MouseReport {
-            buttons: MouseButtons {
-                left: true,
-                middle: false,
-                right: false,
-            },
-            dx: 0,
-            dy: 0,
-            wheel: 0,
-        };
-        let mut state = make_state();
-        r.apply_send_status(report, HidSendStatus::Sent, &mut state);
-        r.reset_all();
-        assert_eq!(r.pending_wheel, 0);
-        assert_eq!(r.last_sent_buttons, 0);
-    }
-
-    #[test]
-    fn ingest_wheel_accumulates() {
-        let mut r = MouseReportRuntime::new();
+    fn wheel_triggers_send_needed() {
+        let mut r = ReportRuntime::new(cfg());
         r.ingest_wheel_delta(1);
-        r.ingest_wheel_delta(2);
-        assert_eq!(r.pending_wheel, 3);
+        assert!(r.send_needed(0, false, false));
     }
 
     #[test]
-    fn ingest_wheel_clamps_positive() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(127);
-        r.ingest_wheel_delta(127);
-        assert_eq!(r.pending_wheel, 127);
+    fn button_change_triggers_send_needed() {
+        let r = ReportRuntime::new(cfg());
+        assert!(r.send_needed(1, false, false));
     }
 
     #[test]
-    fn ingest_wheel_clamps_negative() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(-128);
-        r.ingest_wheel_delta(-128);
-        assert_eq!(r.pending_wheel, -128);
+    fn hid_retry_triggers_send_needed() {
+        let r = ReportRuntime::new(cfg());
+        assert!(r.send_needed(0, true, false));
     }
 
     #[test]
-    fn buttons_changed_initial() {
-        let r = MouseReportRuntime::new();
-        assert!(r.buttons_changed(1));
-    }
-
-    #[test]
-    fn buttons_unchanged_after_sent() {
-        let mut r = MouseReportRuntime::new();
-        let report = MouseReport {
-            buttons: MouseButtons {
-                left: true,
-                middle: false,
-                right: false,
-            },
-            dx: 0,
-            dy: 0,
-            wheel: 0,
-        };
-        let mut state = make_state();
-        r.apply_send_status(report, HidSendStatus::Sent, &mut state);
-        assert!(!r.buttons_changed(report.buttons.pack()));
-    }
-
-    #[test]
-    fn send_needed_motion_delta() {
-        let r = MouseReportRuntime::new();
-        assert!(r.send_needed(Some(ReportDelta { dx: 1, dy: 0 }), 0, false, false));
-    }
-
-    #[test]
-    fn send_needed_wheel() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(1);
-        assert!(r.send_needed(None, 0, false, false));
-    }
-
-    #[test]
-    fn send_needed_button_change() {
-        let r = MouseReportRuntime::new();
-        assert!(r.send_needed(None, 1, false, false));
-    }
-
-    #[test]
-    fn send_needed_hid_retry() {
-        let r = MouseReportRuntime::new();
-        assert!(r.send_needed(None, 0, true, false));
-    }
-
-    #[test]
-    fn send_needed_report_dirty() {
-        let r = MouseReportRuntime::new();
-        assert!(r.send_needed(None, 0, false, true));
-    }
-
-    #[test]
-    fn send_needed_none_when_clean() {
-        let r = MouseReportRuntime::new();
-        assert!(!r.send_needed(None, 0, false, false));
+    fn report_dirty_triggers_send_needed() {
+        let r = ReportRuntime::new(cfg());
+        assert!(r.send_needed(0, false, true));
     }
 
     #[test]
     fn build_report_with_motion() {
-        let r = MouseReportRuntime::new();
+        let mut r = ReportRuntime::new(cfg());
+        r.ingest_motion(make_motion(1500.0, 500.0));
         let buttons = MouseButtons {
             left: true,
             middle: false,
             right: false,
         };
-        let report = r.build_report(buttons, Some(ReportDelta { dx: 10, dy: -5 }));
-        assert_eq!(report.dx, 10);
-        assert_eq!(report.dy, -5);
-        assert_eq!(report.wheel, 0);
+        let report = r.build_report(buttons);
+        assert_eq!(report.dx, 1);
+        assert_eq!(report.dy, 0);
         assert!(report.buttons.left);
     }
 
     #[test]
-    fn build_report_without_motion() {
-        let r = MouseReportRuntime::new();
-        let buttons = MouseButtons {
-            left: false,
-            middle: true,
-            right: false,
-        };
-        let report = r.build_report(buttons, None);
-        assert_eq!(report.dx, 0);
-        assert_eq!(report.dy, 0);
-        assert_eq!(report.wheel, 0);
-        assert!(report.buttons.middle);
-    }
-
-    #[test]
     fn build_report_with_wheel() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(42);
+        let mut r = ReportRuntime::new(cfg());
+        r.ingest_wheel_delta(3);
         let buttons = MouseButtons::default();
-        let report = r.build_report(buttons, None);
-        assert_eq!(report.wheel, 42);
+        let report = r.build_report(buttons);
+        assert_eq!(report.wheel, 3);
     }
 
     #[test]
-    fn build_report_clamps_wheel() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(127);
-        r.ingest_wheel_delta(127);
-        let buttons = MouseButtons::default();
-        let report = r.build_report(buttons, None);
-        assert_eq!(report.wheel, 127);
-    }
-
-    #[test]
-    fn apply_send_status_sent_updates_wheel_and_buttons() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(10);
+    fn apply_send_commits_wheel_and_buttons() {
+        let mut r = ReportRuntime::new(cfg());
+        r.ingest_wheel_delta(5);
         let buttons = MouseButtons {
             left: true,
             middle: false,
             right: false,
         };
-        let report = r.build_report(buttons, None);
-        let mut state = make_state();
-        r.apply_send_status(report, HidSendStatus::Sent, &mut state);
-        assert_eq!(r.pending_wheel, 0);
-        assert!(!r.buttons_changed(buttons.pack()));
+        let report = r.build_report(buttons);
+        r.apply_send_status(report, HidSendStatus::Sent);
+        assert!(!r.has_pending());
     }
 
     #[test]
-    fn apply_send_status_retry_later_does_not_update() {
-        let mut r = MouseReportRuntime::new();
-        r.ingest_wheel_delta(10);
-        let buttons = MouseButtons {
-            left: true,
-            middle: false,
-            right: false,
-        };
-        let report = r.build_report(buttons, Some(ReportDelta { dx: 3, dy: 0 }));
-        let mut state = make_state();
-        r.apply_send_status(report, HidSendStatus::RetryLater, &mut state);
-        assert_eq!(r.pending_wheel, 10);
-        assert!(r.buttons_changed(1));
-    }
-
-    #[test]
-    fn apply_send_status_not_connected_does_not_update() {
-        let mut r = MouseReportRuntime::new();
+    fn apply_send_retry_does_not_commit() {
+        let mut r = ReportRuntime::new(cfg());
         r.ingest_wheel_delta(5);
         let buttons = MouseButtons::default();
-        let report = r.build_report(buttons, None);
-        let mut state = make_state();
-        r.apply_send_status(report, HidSendStatus::NotConnected, &mut state);
-        assert_eq!(r.pending_wheel, 5);
+        let report = r.build_report(buttons);
+        r.apply_send_status(report, HidSendStatus::RetryLater);
+        assert!(r.has_pending());
     }
 
     #[test]
-    fn apply_send_status_fatal_does_not_update() {
-        let mut r = MouseReportRuntime::new();
+    fn apply_send_not_connected_does_not_commit() {
+        let mut r = ReportRuntime::new(cfg());
         r.ingest_wheel_delta(3);
         let buttons = MouseButtons::default();
-        let report = r.build_report(buttons, None);
-        let mut state = make_state();
-        r.apply_send_status(report, HidSendStatus::Fatal, &mut state);
-        assert_eq!(r.pending_wheel, 3);
+        let report = r.build_report(buttons);
+        r.apply_send_status(report, HidSendStatus::NotConnected);
+        assert!(r.has_pending());
     }
 
     #[test]
-    fn multiple_wheel_delta_roundtrip() {
-        let mut r = MouseReportRuntime::new();
+    fn reset_all_clears_everything() {
+        let mut r = ReportRuntime::new(cfg());
+        r.ingest_motion(make_motion(3000.0, 0.0));
+        r.ingest_wheel_delta(5);
+        r.reset_all();
+        assert!(!r.has_pending());
+        assert!(!r.send_needed(0, false, false));
+    }
+
+    #[test]
+    fn reset_route_sync_clears_buttons() {
+        let mut r = ReportRuntime::new(cfg());
+        let buttons = MouseButtons {
+            left: true,
+            middle: false,
+            right: false,
+        };
+        let report = r.build_report(buttons);
+        r.apply_send_status(report, HidSendStatus::Sent);
+        r.reset_route_sync();
+        // 重置后 buttons_changed 应返回 true
+        assert!(r.send_needed(1, false, false));
+    }
+
+    #[test]
+    fn motion_and_wheel_roundtrip() {
+        let mut r = ReportRuntime::new(cfg());
+        r.ingest_motion(make_motion(1500.0, 1000.0));
         r.ingest_wheel_delta(3);
         r.ingest_wheel_delta(-1);
-        r.ingest_wheel_delta(2);
-        assert_eq!(r.pending_wheel, 4);
+
         let buttons = MouseButtons::default();
-        let report = r.build_report(buttons, None);
-        assert_eq!(report.wheel, 4);
-        let mut state = make_state();
-        r.apply_send_status(report, HidSendStatus::Sent, &mut state);
-        assert_eq!(r.pending_wheel, 0);
+        let report = r.build_report(buttons);
+        assert_eq!(report.dx, 1);
+        assert_eq!(report.dy, 1);
+        assert_eq!(report.wheel, 2);
+
+        r.apply_send_status(report, HidSendStatus::Sent);
+        assert!(!r.has_pending());
+    }
+
+    #[test]
+    fn send_needed_false_when_clean() {
+        let r = ReportRuntime::new(cfg());
+        assert!(!r.send_needed(0, false, false));
     }
 }

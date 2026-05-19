@@ -1,4 +1,4 @@
-use super::{HID_RETRY_DELAY_MS, Runtime};
+use super::{HID_RETRY_DELAY_MS, MOTION_REPORT_MS, Runtime, deadline_due, deadline_remaining_ms};
 use crate::ffi::bindings::{VP_STATUS_OK, c_vp_hid_route_ready, vp_hid_route_t};
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
 use crate::runtime::commands::{RuntimeCommand, RuntimeCommandResult};
@@ -23,8 +23,7 @@ impl Runtime {
     }
 
     fn apply_mouse_send_status(&mut self, report: MouseReport, status: HidSendStatus) {
-        self.mouse_report
-            .apply_send_status(report, status, &mut self.report_state);
+        self.report.apply_send_status(report, status);
         self.dirty.report = false;
         self.handle_hid_send_status(status);
     }
@@ -97,14 +96,14 @@ impl Runtime {
     }
 
     fn clear_unsent_motion_output(&mut self) {
-        self.report_state.reset_all();
+        self.report.reset_all();
         self.motion_report_deadline_ms = Some(RTC::millis().ticks());
     }
 
     /// 路由不可用时不累计失效 motion，避免恢复后回放旧移动
     fn defer_report_until_route_event(&mut self) -> Option<RuntimeCommand> {
         self.clear_unsent_motion_output();
-        self.mouse_report.reset_all();
+        self.report.reset_route_sync();
         self.pending.hid_retry = false;
         self.dirty.report = false;
         None
@@ -149,33 +148,29 @@ impl Runtime {
 
         let now = RTC::millis().ticks();
         let motion_report_deadline = self.motion_report_deadline_ms.unwrap_or(now);
-        if motion_active && super::deadline_due(now, motion_report_deadline) {
-            self.report_state
-                .ingest_motion(self.motion_session.output());
-            self.motion_report_deadline_ms = Some(now.wrapping_add(super::MOTION_REPORT_MS));
-            Self::request_poll_after(super::MOTION_REPORT_MS);
+        if motion_active && deadline_due(now, motion_report_deadline) {
+            self.report.ingest_motion(self.motion_session.output());
+            self.motion_report_deadline_ms = Some(now.wrapping_add(MOTION_REPORT_MS));
+            Self::request_poll_after(MOTION_REPORT_MS);
         }
-        let motion_delta = self.report_state.peek_report();
 
-        self.mouse_report.ingest_wheel_delta(input.wheel_delta);
+        self.report.ingest_wheel_delta(input.wheel_delta);
 
-        let button_changed = self.mouse_report.buttons_changed(packed_buttons);
+        let button_changed = self.report.send_needed(packed_buttons, false, false);
         let wheel_changed = input.wheel_delta != 0;
         if wheel_changed || button_changed {
             self.mark_activity(now);
             self.dirty.report = true;
         }
 
-        if motion_active && !super::deadline_due(now, motion_report_deadline) {
-            Self::request_poll_after(super::deadline_remaining_ms(now, motion_report_deadline));
+        if motion_active && !deadline_due(now, motion_report_deadline) {
+            Self::request_poll_after(deadline_remaining_ms(now, motion_report_deadline));
         }
 
-        if !self.mouse_report.send_needed(
-            motion_delta,
-            packed_buttons,
-            self.pending.hid_retry,
-            self.dirty.report,
-        ) {
+        if !self
+            .report
+            .send_needed(packed_buttons, self.pending.hid_retry, self.dirty.report)
+        {
             return None;
         }
 
@@ -188,7 +183,7 @@ impl Runtime {
             return self.defer_report_until_route_event();
         }
 
-        let report = self.mouse_report.build_report(buttons, motion_delta);
+        let report = self.report.build_report(buttons);
 
         Some(RuntimeCommand::SendMouse {
             route: route.as_ffi(),

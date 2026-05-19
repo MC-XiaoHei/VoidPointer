@@ -82,11 +82,10 @@
 - [x] route 不可用时丢弃未发送 motion 累积，清理 wheel 暂存，重置 button sync 基线
 - [x] mouse 发送条件：motion delta / wheel / button 变化 / retry / report dirty
 - [x] `Sent / RetryLater / NotConnected / Fatal` 收敛规则并在 runtime 显式处理
-- [x] `MouseReportRuntime`：抽出 wheel/button/send-decision/send-commit 逻辑
+- [x] 统一 `ReportRuntime`：合并 `MouseReportRuntime` 与 `ReportState`，封装 motion/wheel/button 集成接口
 
 **未完成**
 
-- [ ] 统一 `ReportRuntime` 结构
 - [ ] route error recovery
 - [ ] `usb_mouse_policy` 配置化
 

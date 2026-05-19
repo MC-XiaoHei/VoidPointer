@@ -17,11 +17,10 @@ use crate::led::runtime::LedManager;
 use crate::motion::session::MotionSession;
 use crate::power::PowerManager;
 use crate::report::config::ReportConfig;
-use crate::report::state::ReportState;
 use crate::route::UsbState;
 use crate::runtime::commands::RuntimeCommand;
 use crate::runtime::events::EventQueue;
-use crate::runtime::report_runtime::MouseReportRuntime;
+use crate::runtime::report_runtime::ReportRuntime;
 use crate::utils::clock::RTC;
 use crate::utils::global::MainLoopGlobal;
 use crate::vendor::VendorRuntime;
@@ -93,14 +92,13 @@ pub struct Runtime {
     pub last_input_status: InputStatus,
     pub dirty: DirtyFlags,
     pub pending: PendingFlags,
-    pub mouse_report: MouseReportRuntime,
+    pub report: ReportRuntime,
     pub last_activity_ms: AtomicU32,
     pub power_recheck_deadline_ms: Option<u32>,
     pub imu_poll_deadline_ms: Option<u32>,
     pub latest_imu_sample: LatestImuSample,
     pub motion_report_deadline_ms: Option<u32>,
     pub motion_session: MotionSession,
-    pub report_state: ReportState,
     pub led_manager: LedManager,
 }
 
@@ -123,16 +121,15 @@ impl Runtime {
             last_input_status: initial_input,
             dirty: DirtyFlags::default(),
             pending: PendingFlags::default(),
-            mouse_report: MouseReportRuntime::new(),
+            report: ReportRuntime::new(ReportConfig {
+                report_hz: 1000.0 / MOTION_REPORT_MS as f32,
+            }),
             last_activity_ms: AtomicU32::new(now),
             power_recheck_deadline_ms: None,
             imu_poll_deadline_ms: Some(now),
             latest_imu_sample: LatestImuSample::default(),
             motion_report_deadline_ms: Some(now),
             motion_session: MotionSession::new(motion_cfg),
-            report_state: ReportState::new(ReportConfig {
-                report_hz: 1000.0 / MOTION_REPORT_MS as f32,
-            }),
             led_manager: LedManager::new(),
         }
     }
@@ -164,7 +161,7 @@ impl Runtime {
         let motion_cfg = self.config.current_config().motion;
         self.motion_session.reconfigure(motion_cfg);
         self.motion_report_deadline_ms = Some(RTC::millis().ticks());
-        self.report_state.reset_all();
+        self.report.reset_all();
     }
 
     fn imu_poll_enabled(&self) -> bool {

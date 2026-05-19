@@ -90,13 +90,10 @@ impl Runtime {
             || self.dirty.report
             || self.motion_session.is_active()
             || buttons_pressed
-            || self.report_state.has_pending()
-            || self.mouse_report.send_needed(
-                self.report_state.peek_report(),
-                packed_buttons,
-                self.pending.hid_retry,
-                self.dirty.report,
-            )
+            || self.report.has_pending()
+            || self
+                .report
+                .send_needed(packed_buttons, self.pending.hid_retry, self.dirty.report)
     }
 
     fn arm_power_recheck_deadline(&mut self, now: u32, effective_config_dirty: bool) {
@@ -127,9 +124,8 @@ impl Runtime {
         super::clear_suspend_resume_sources();
         clear_current_attitude();
         self.latest_imu_sample = super::LatestImuSample::default();
-        self.report_state.reset_all();
+        self.report.reset_all();
         self.motion_session.reset();
-        self.mouse_report.reset_all();
 
         let status = unsafe { c_vp_imu_config_active() };
         if status != VP_STATUS_OK as u8 {
