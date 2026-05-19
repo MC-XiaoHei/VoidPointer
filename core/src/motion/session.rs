@@ -82,9 +82,7 @@ impl MotionSession {
             SessionState::Active => {
                 self.current_output = self.solver.update(*attitude);
             }
-            SessionState::Idle => {
-                self.current_output = MotionState::default();
-            }
+            SessionState::Idle => {}
         }
 
         self.current_output

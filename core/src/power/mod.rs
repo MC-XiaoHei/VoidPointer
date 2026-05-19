@@ -320,9 +320,3 @@ mod tests {
         assert_eq!(pm.state(), PowerState::Active);
     }
 }
-
-impl Default for PowerManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}

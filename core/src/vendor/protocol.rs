@@ -500,6 +500,52 @@ mod tests {
     }
 
     #[test]
+    fn parse_frame_fragment_not_supported() {
+        let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN];
+        buf[0] = CUSTOM_PROTOCOL_MAGIC;
+        buf[1] = CUSTOM_PROTOCOL_VERSION;
+        buf[2] = CUSTOM_FLAG_FRAGMENT;
+        assert_eq!(parse_frame(&buf), Err(ParseError::FragmentNotSupported));
+    }
+
+    #[test]
+    fn parse_frame_payload_too_large() {
+        let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN + 2];
+        buf[0] = CUSTOM_PROTOCOL_MAGIC;
+        buf[1] = CUSTOM_PROTOCOL_VERSION;
+        let max_plus_one = (CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN + 1) as u16;
+        buf[14..16].copy_from_slice(&max_plus_one.to_le_bytes());
+        assert_eq!(parse_frame(&buf), Err(ParseError::PayloadTooLarge));
+    }
+
+    #[test]
+    fn parse_frame_length_mismatch() {
+        let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN];
+        buf[0] = CUSTOM_PROTOCOL_MAGIC;
+        buf[1] = CUSTOM_PROTOCOL_VERSION;
+        buf[14] = 10;
+        assert_eq!(parse_frame(&buf), Err(ParseError::LengthMismatch));
+    }
+
+    #[test]
+    fn parse_frame_non_zero_offset() {
+        let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN];
+        buf[0] = CUSTOM_PROTOCOL_MAGIC;
+        buf[1] = CUSTOM_PROTOCOL_VERSION;
+        buf[8] = 1;
+        assert_eq!(parse_frame(&buf), Err(ParseError::NonZeroOffset));
+    }
+
+    #[test]
+    fn parse_frame_total_len_mismatch() {
+        let mut buf = [0u8; CUSTOM_PROTOCOL_HEADER_LEN];
+        buf[0] = CUSTOM_PROTOCOL_MAGIC;
+        buf[1] = CUSTOM_PROTOCOL_VERSION;
+        buf[10] = 5;
+        assert_eq!(parse_frame(&buf), Err(ParseError::TotalLengthMismatch));
+    }
+
+    #[test]
     fn encode_frame_payload_too_large() {
         let header = CustomFrameHeader {
             flags: CUSTOM_FLAG_RESPONSE,
