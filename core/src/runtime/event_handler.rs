@@ -23,7 +23,6 @@ impl Runtime {
     }
 
     pub(crate) fn drain_events(&mut self) {
-        // 事件队列单次只排一小段，避免事件风暴长期霸占主循环
         const MAX_EVENTS_PER_PASS: usize = 8;
         let mut drained = 0;
 
@@ -45,144 +44,177 @@ impl Runtime {
 
     fn apply_event(&mut self, event: RuntimeEvent) {
         match event {
-            RuntimeEvent::BleConnected { timestamp } => {
-                self.router.set_ble_connected(true);
-                self.router.set_ble_input_ready(false);
-                self.mark_activity(timestamp);
-                self.play_transient_led(&CONNECTED, timestamp);
-            }
-            RuntimeEvent::BleInputReady { timestamp } => {
-                self.router.set_ble_input_ready(true);
-                self.mark_activity(timestamp);
-                self.dirty.report = true;
-            }
-            RuntimeEvent::BleDisconnected { timestamp, .. } => {
-                self.router.set_ble_input_ready(false);
-                self.router.set_ble_connected(false);
-                self.play_transient_led(&DISCONNECTED, timestamp);
-                self.mark_activity(timestamp);
-                self.dirty.report = true;
-            }
-            RuntimeEvent::DongleConnected { timestamp } => {
-                self.router.set_dongle_connected(true);
-                self.mark_activity(timestamp);
-                self.dirty.report = true;
-                self.play_transient_led(&CONNECTED, timestamp);
-            }
+            RuntimeEvent::BleConnected { timestamp } => self.on_ble_connected(timestamp),
+            RuntimeEvent::BleInputReady { timestamp } => self.on_ble_input_ready(timestamp),
+            RuntimeEvent::BleDisconnected { timestamp, .. } => self.on_ble_disconnected(timestamp),
+            RuntimeEvent::DongleConnected { timestamp } => self.on_dongle_connected(timestamp),
             RuntimeEvent::DongleDisconnected { timestamp, .. } => {
-                self.router.set_dongle_connected(false);
-                self.mark_activity(timestamp);
-                self.play_transient_led(&DISCONNECTED, timestamp);
-                self.dirty.report = true;
+                self.on_dongle_disconnected(timestamp)
             }
             RuntimeEvent::UsbStateChanged { state, timestamp } => {
-                let usb_state = UsbState::from(state);
-                self.router.set_usb_state(usb_state);
-                self.mark_activity(timestamp);
-                log::debug!(
-                    "usb state changed;state={},wired_active={}",
-                    super::usb_state_log_name(usb_state),
-                    matches!(usb_state, UsbState::Configured)
-                );
-                if matches!(usb_state, UsbState::Configured) {
-                    self.play_transient_led(&CONNECTED, timestamp);
-                } else if matches!(usb_state, UsbState::Detached) {
-                    self.play_transient_led(&DISCONNECTED, timestamp);
-                }
-                self.dirty.report = true;
+                self.on_usb_state_changed(state, timestamp)
             }
             RuntimeEvent::ButtonExti {
                 button_id,
                 level,
                 timestamp,
-            } => {
-                self.mark_activity(timestamp);
-                if self.input.on_button_exti(button_id, level != 0) {
-                    self.dirty.input = true;
-                }
-            }
+            } => self.on_button_exti(button_id, level, timestamp),
             RuntimeEvent::ModeSwitchExti { level, timestamp } => {
-                self.mark_activity(timestamp);
-                self.dirty.input = true;
-                if level != 0 {
-                    self.play_transient_led(&MODE_2G4, timestamp);
-                } else {
-                    self.play_transient_led(&MODE_BLE, timestamp);
-                }
+                self.on_mode_switch_exti(level, timestamp)
             }
-            RuntimeEvent::DebounceTick { timestamp } => {
-                self.mark_activity(timestamp);
-                if self.input.on_debounce_tick() {
-                    self.dirty.input = true;
-                    self.dirty.report = true;
-                }
-            }
+            RuntimeEvent::DebounceTick { timestamp } => self.on_debounce_tick(timestamp),
             RuntimeEvent::EncoderExti {
                 a_level,
                 b_level,
                 timestamp,
-            } => {
-                self.mark_activity(timestamp);
-                if self.input.on_encoder_exti(a_level != 0, b_level != 0) {
-                    self.dirty.input = true;
-                    self.dirty.report = true;
-                }
-            }
-            RuntimeEvent::ImuInt { timestamp } => {
-                self.mark_activity(timestamp);
-                rearm_imu_interrupts();
-
-                self.pending.imu_fifo_read = false;
-                self.imu_poll_deadline_ms = Some(timestamp);
-                self.dirty.power = true;
-            }
+            } => self.on_encoder_exti(a_level, b_level, timestamp),
+            RuntimeEvent::ImuInt { timestamp } => self.on_imu_int(timestamp),
             RuntimeEvent::ImuSample {
                 raw_x,
                 raw_y,
                 raw_z,
                 timestamp,
-            } => {
-                self.mark_activity(timestamp);
-                let raw = SflpGameRotationRaw {
-                    x: raw_x,
-                    y: raw_y,
-                    z: raw_z,
-                };
-                let _ = update_current_attitude_from_raw(raw);
-                self.latest_imu_sample = crate::runtime::LatestImuSample {
-                    raw,
-                    timestamp_ms: timestamp,
-                    valid: true,
-                };
-                self.dirty.motion = true;
-                self.dirty.report = true;
-            }
+            } => self.on_imu_sample(raw_x, raw_y, raw_z, timestamp),
             RuntimeEvent::ImuFifoDone {
-                status,
-                timestamp,
-                dropped_count: _,
-            } => {
-                self.mark_activity(timestamp);
-                self.pending.imu_fifo_read = false;
-                if status != VP_STATUS_OK as u8 {
-                    if status != VP_STATUS_NOT_READY as u8 {
-                        log::warn!("imu fifo read failed;status={},ts={}", status, timestamp);
-                    }
-                    self.latest_imu_sample.valid = false;
-                    clear_current_attitude();
-                }
-                self.schedule_next_imu_poll(timestamp);
-            }
-            RuntimeEvent::HidSendDone { timestamp, .. } => {
-                self.mark_activity(timestamp);
-                self.pending.hid_retry = true;
-            }
-            RuntimeEvent::VendorReportRx { timestamp, .. } => {
-                self.mark_activity(timestamp);
-                self.vendor.mark_rx_pending();
-                self.pending.vendor_rx = true;
-            }
+                status, timestamp, ..
+            } => self.on_imu_fifo_done(status, timestamp),
+            RuntimeEvent::HidSendDone { timestamp, .. } => self.on_hid_send_done(timestamp),
+            RuntimeEvent::VendorReportRx { timestamp, .. } => self.on_vendor_report_rx(timestamp),
         }
+    }
+
+    fn on_ble_connected(&mut self, timestamp: u32) {
+        self.router.set_ble_connected(true);
+        self.router.set_ble_input_ready(false);
+        self.mark_activity(timestamp);
+        self.play_transient_led(&CONNECTED, timestamp);
+    }
+
+    fn on_ble_input_ready(&mut self, timestamp: u32) {
+        self.router.set_ble_input_ready(true);
+        self.mark_activity(timestamp);
+        self.dirty.report = true;
+    }
+
+    fn on_ble_disconnected(&mut self, timestamp: u32) {
+        self.router.set_ble_input_ready(false);
+        self.router.set_ble_connected(false);
+        self.play_transient_led(&DISCONNECTED, timestamp);
+        self.mark_activity(timestamp);
+        self.dirty.report = true;
+    }
+
+    fn on_dongle_connected(&mut self, timestamp: u32) {
+        self.router.set_dongle_connected(true);
+        self.mark_activity(timestamp);
+        self.dirty.report = true;
+        self.play_transient_led(&CONNECTED, timestamp);
+    }
+
+    fn on_dongle_disconnected(&mut self, timestamp: u32) {
+        self.router.set_dongle_connected(false);
+        self.mark_activity(timestamp);
+        self.play_transient_led(&DISCONNECTED, timestamp);
+        self.dirty.report = true;
+    }
+
+    fn on_usb_state_changed(&mut self, state: u8, timestamp: u32) {
+        let usb_state = UsbState::from(state);
+        self.router.set_usb_state(usb_state);
+        self.mark_activity(timestamp);
+        log::debug!(
+            "usb state changed;state={},wired_active={}",
+            super::usb_state_log_name(usb_state),
+            matches!(usb_state, UsbState::Configured)
+        );
+        if matches!(usb_state, UsbState::Configured) {
+            self.play_transient_led(&CONNECTED, timestamp);
+        } else if matches!(usb_state, UsbState::Detached) {
+            self.play_transient_led(&DISCONNECTED, timestamp);
+        }
+        self.dirty.report = true;
+    }
+
+    fn on_button_exti(&mut self, button_id: u8, level: u8, timestamp: u32) {
+        self.mark_activity(timestamp);
+        if self.input.on_button_exti(button_id, level != 0) {
+            self.dirty.input = true;
+        }
+    }
+
+    fn on_mode_switch_exti(&mut self, level: u8, timestamp: u32) {
+        self.mark_activity(timestamp);
+        self.dirty.input = true;
+        if level != 0 {
+            self.play_transient_led(&MODE_2G4, timestamp);
+        } else {
+            self.play_transient_led(&MODE_BLE, timestamp);
+        }
+    }
+
+    fn on_debounce_tick(&mut self, timestamp: u32) {
+        self.mark_activity(timestamp);
+        if self.input.on_debounce_tick() {
+            self.dirty.input = true;
+            self.dirty.report = true;
+        }
+    }
+
+    fn on_encoder_exti(&mut self, a_level: u8, b_level: u8, timestamp: u32) {
+        self.mark_activity(timestamp);
+        if self.input.on_encoder_exti(a_level != 0, b_level != 0) {
+            self.dirty.input = true;
+            self.dirty.report = true;
+        }
+    }
+
+    fn on_imu_int(&mut self, timestamp: u32) {
+        self.mark_activity(timestamp);
+        rearm_imu_interrupts();
+        self.pending.imu_fifo_read = false;
+        self.imu_poll_deadline_ms = Some(timestamp);
+        self.dirty.power = true;
+    }
+
+    fn on_imu_sample(&mut self, raw_x: u16, raw_y: u16, raw_z: u16, timestamp: u32) {
+        self.mark_activity(timestamp);
+        let raw = SflpGameRotationRaw {
+            x: raw_x,
+            y: raw_y,
+            z: raw_z,
+        };
+        update_current_attitude_from_raw(raw);
+        self.latest_imu_sample = crate::runtime::LatestImuSample {
+            raw,
+            timestamp_ms: timestamp,
+            valid: true,
+        };
+        self.dirty.motion = true;
+        self.dirty.report = true;
+    }
+
+    fn on_imu_fifo_done(&mut self, status: u8, timestamp: u32) {
+        self.mark_activity(timestamp);
+        self.pending.imu_fifo_read = false;
+        if status != VP_STATUS_OK as u8 {
+            if status != VP_STATUS_NOT_READY as u8 {
+                log::warn!("imu fifo read failed;status={},ts={}", status, timestamp);
+            }
+            self.latest_imu_sample.valid = false;
+            clear_current_attitude();
+        }
+        self.schedule_next_imu_poll(timestamp);
+    }
+
+    fn on_hid_send_done(&mut self, timestamp: u32) {
+        self.mark_activity(timestamp);
+        self.pending.hid_retry = true;
+    }
+
+    fn on_vendor_report_rx(&mut self, timestamp: u32) {
+        self.mark_activity(timestamp);
+        self.vendor.mark_rx_pending();
+        self.pending.vendor_rx = true;
     }
 }
 

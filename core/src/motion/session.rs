@@ -3,6 +3,12 @@ use crate::motion::config::MotionConfig;
 use crate::motion::resolver::TiltMotionSolver;
 use crate::motion::state::MotionState;
 
+#[derive(Clone, Copy)]
+pub struct TriggerButtons {
+    pub action: bool,
+    pub middle: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SessionState {
     Idle,
@@ -36,8 +42,8 @@ impl MotionSession {
     }
 
     /// 必须先于 `update_attitude` 调用
-    pub fn update_trigger(&mut self, action_pressed: bool, middle_pressed: bool) -> bool {
-        let active = action_pressed || (middle_pressed && self.cfg.middle_triggers_motion);
+    pub fn update_trigger(&mut self, buttons: TriggerButtons) -> bool {
+        let active = buttons.action || (buttons.middle && self.cfg.middle_triggers_motion);
 
         match (self.state, active) {
             (SessionState::Idle, true) => {
@@ -127,7 +133,10 @@ mod tests {
     #[test]
     fn trigger_activates_on_action() {
         let mut s = MotionSession::new(MotionConfig::default());
-        assert!(s.update_trigger(true, false));
+        assert!(s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false
+        }));
         assert!(s.is_active());
     }
 
@@ -138,7 +147,10 @@ mod tests {
             ..MotionConfig::default()
         };
         let mut s = MotionSession::new(cfg);
-        assert!(s.update_trigger(false, true));
+        assert!(s.update_trigger(TriggerButtons {
+            action: false,
+            middle: true
+        }));
         assert!(s.is_active());
     }
 
@@ -149,7 +161,10 @@ mod tests {
             ..MotionConfig::default()
         };
         let mut s = MotionSession::new(cfg);
-        assert!(s.update_trigger(true, true));
+        assert!(s.update_trigger(TriggerButtons {
+            action: true,
+            middle: true
+        }));
         assert!(s.is_active());
     }
 
@@ -160,7 +175,10 @@ mod tests {
             ..MotionConfig::default()
         };
         let mut s = MotionSession::new(cfg);
-        assert!(!s.update_trigger(false, true));
+        assert!(!s.update_trigger(TriggerButtons {
+            action: false,
+            middle: true
+        }));
         assert!(!s.is_active());
     }
 
@@ -171,15 +189,24 @@ mod tests {
             ..MotionConfig::default()
         };
         let mut s = MotionSession::new(cfg);
-        assert!(s.update_trigger(true, false));
+        assert!(s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false
+        }));
         assert!(s.is_active());
     }
 
     #[test]
     fn trigger_deactivates_on_release() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
-        assert!(!s.update_trigger(false, false));
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
+        assert!(!s.update_trigger(TriggerButtons {
+            action: false,
+            middle: false
+        }));
         assert!(!s.is_active());
     }
 
@@ -192,14 +219,20 @@ mod tests {
     #[test]
     fn should_process_when_active_with_new_sample() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
         assert!(s.should_process_sample(100, true));
     }
 
     #[test]
     fn should_not_process_duplicate_ts() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
         let raw = crate::attitude::types::SflpGameRotationRaw { x: 0, y: 0, z: 0 };
         let attitude = AttitudeData::from(raw);
         s.update_attitude(&attitude, 100);
@@ -209,14 +242,20 @@ mod tests {
     #[test]
     fn should_not_process_invalid_sample() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
         assert!(!s.should_process_sample(100, false));
     }
 
     #[test]
     fn first_update_calibrates_then_second_updates() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
 
         let raw = crate::attitude::types::SflpGameRotationRaw { x: 0, y: 0, z: 0 };
         let att = AttitudeData::from(raw);
@@ -232,7 +271,10 @@ mod tests {
     #[test]
     fn invalid_attitude_returns_zero() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
 
         let bad = AttitudeData {
             roll: f32::NAN,
@@ -246,7 +288,10 @@ mod tests {
     #[test]
     fn reconfigure_resets_state() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
         assert!(s.is_active());
 
         s.reconfigure(MotionConfig::default());
@@ -256,7 +301,10 @@ mod tests {
     #[test]
     fn reset_clears_state() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
         let raw = crate::attitude::types::SflpGameRotationRaw { x: 0, y: 0, z: 0 };
         let att = AttitudeData::from(raw);
         s.update_attitude(&att, 100);
@@ -271,10 +319,16 @@ mod tests {
     #[test]
     fn release_during_calibrating_goes_idle() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
         assert!(s.is_active());
 
-        s.update_trigger(false, false);
+        s.update_trigger(TriggerButtons {
+            action: false,
+            middle: false,
+        });
         assert!(!s.is_active());
         assert!(!s.should_process_sample(100, true));
     }
@@ -282,14 +336,23 @@ mod tests {
     #[test]
     fn re_trigger_after_release_restarts() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
         let raw = crate::attitude::types::SflpGameRotationRaw { x: 0, y: 0, z: 0 };
         let att = AttitudeData::from(raw);
         s.update_attitude(&att, 100);
 
-        s.update_trigger(false, false);
+        s.update_trigger(TriggerButtons {
+            action: false,
+            middle: false,
+        });
 
-        assert!(s.update_trigger(true, false));
+        assert!(s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false
+        }));
 
         let att_cal = attitude(0.5, 0.0, 0.0);
         let result = s.update_attitude(&att_cal, 200);
@@ -303,7 +366,10 @@ mod tests {
     #[test]
     fn output_returns_last_result() {
         let mut s = MotionSession::new(MotionConfig::default());
-        s.update_trigger(true, false);
+        s.update_trigger(TriggerButtons {
+            action: true,
+            middle: false,
+        });
         let raw = crate::attitude::types::SflpGameRotationRaw { x: 0, y: 0, z: 0 };
         let att = AttitudeData::from(raw);
         s.update_attitude(&att, 100);

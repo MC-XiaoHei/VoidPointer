@@ -1,4 +1,4 @@
-use crate::config::{ConfigManager, SaveOutcome};
+use crate::config::ConfigManager;
 use crate::hid::types::{CUSTOM_REPORT_PAYLOAD_CAPACITY, CustomReport};
 use crate::power::{PowerManager, PowerState};
 use crate::route::{HidRoute, HidRouter, UsbState};
@@ -316,6 +316,15 @@ pub fn build_diagnostics_payload(
     payload
 }
 
+fn reply_ok(command: u16, sequence: u8, payload: &[u8], out: &mut CustomReport) -> Result<(), u16> {
+    encode_response(command, sequence, CUSTOM_STATUS_OK, payload, out)
+        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+}
+
+fn reply_err(command: u16, sequence: u8, status: u16, out: &mut CustomReport) -> Result<(), u16> {
+    encode_error_response(command, sequence, status, out).map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+}
+
 pub fn handle_request(
     frame: CustomFrameView<'_>,
     router: &HidRouter,
@@ -326,180 +335,101 @@ pub fn handle_request(
     out: &mut CustomReport,
 ) -> Result<(), u16> {
     if (frame.flags & CUSTOM_FLAG_REQUEST) == 0 || (frame.flags & CUSTOM_FLAG_RESPONSE) != 0 {
-        return encode_error_response(
+        return reply_err(
             frame.command,
             frame.sequence,
             CUSTOM_STATUS_INVALID_ARGUMENT,
             out,
-        )
-        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR);
+        );
     }
 
     match frame.command {
-        CUSTOM_CMD_PING => encode_response(
-            frame.command,
-            frame.sequence,
-            CUSTOM_STATUS_OK,
-            frame.payload,
-            out,
-        )
-        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+        CUSTOM_CMD_PING => reply_ok(frame.command, frame.sequence, frame.payload, out),
         CUSTOM_CMD_GET_PROTOCOL_INFO => {
-            let payload = build_protocol_info_payload();
-            encode_response(
-                frame.command,
-                frame.sequence,
-                CUSTOM_STATUS_OK,
-                &payload,
-                out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+            let p = build_protocol_info_payload();
+            reply_ok(frame.command, frame.sequence, &p, out)
         }
-        CUSTOM_CMD_GET_DEVICE_INFO => {
-            let payload = b"VoidPointer";
-            encode_response(
-                frame.command,
-                frame.sequence,
-                CUSTOM_STATUS_OK,
-                payload,
-                out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
-        }
+        CUSTOM_CMD_GET_DEVICE_INFO => reply_ok(frame.command, frame.sequence, b"VoidPointer", out),
         CUSTOM_CMD_GET_CONFIG_INFO => {
-            let payload = build_config_info_payload(config);
-            encode_response(
-                frame.command,
-                frame.sequence,
-                CUSTOM_STATUS_OK,
-                &payload,
-                out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+            let p = build_config_info_payload(config);
+            reply_ok(frame.command, frame.sequence, &p, out)
         }
-        CUSTOM_CMD_READ_CONFIG => encode_response(
-            frame.command,
-            frame.sequence,
-            CUSTOM_STATUS_OK,
-            config.current_payload(),
-            out,
-        )
-        .map_err(|err| match err {
-            ParseError::PayloadTooLarge => CUSTOM_STATUS_BAD_LENGTH,
-            _ => CUSTOM_STATUS_INTERNAL_ERROR,
-        }),
+        CUSTOM_CMD_READ_CONFIG => {
+            reply_ok(frame.command, frame.sequence, config.current_payload(), out)
+        }
         CUSTOM_CMD_WRITE_CONFIG_BEGIN => {
             let (total_len, crc32) = parse_write_begin_payload(frame.payload)?;
             match config.begin_write(total_len, crc32) {
-                Ok(()) => {
-                    encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
-                        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
-                }
-                Err(err) => encode_error_response(
+                Ok(()) => reply_ok(frame.command, frame.sequence, &[], out),
+                Err(err) => reply_err(
                     frame.command,
                     frame.sequence,
                     map_config_error_to_status(err),
                     out,
-                )
-                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+                ),
             }
         }
         CUSTOM_CMD_WRITE_CONFIG_CHUNK => {
             let (offset, chunk) = parse_write_chunk_payload(frame.payload)?;
             match config.write_chunk(offset, chunk) {
-                Ok(()) => {
-                    encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
-                        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
-                }
-                Err(err) => encode_error_response(
+                Ok(()) => reply_ok(frame.command, frame.sequence, &[], out),
+                Err(err) => reply_err(
                     frame.command,
                     frame.sequence,
                     map_config_error_to_status(err),
                     out,
-                )
-                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+                ),
             }
         }
         CUSTOM_CMD_WRITE_CONFIG_COMMIT => match config.commit_write() {
-            Ok(()) => encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
-                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
-            Err(err) => encode_error_response(
+            Ok(()) => reply_ok(frame.command, frame.sequence, &[], out),
+            Err(err) => reply_err(
                 frame.command,
                 frame.sequence,
                 map_config_error_to_status(err),
                 out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+            ),
         },
         CUSTOM_CMD_WRITE_CONFIG_ABORT => {
             config.abort_write();
-            encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
-                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+            reply_ok(frame.command, frame.sequence, &[], out)
         }
         CUSTOM_CMD_SAVE_CONFIG => match config.save() {
-            Ok(SaveOutcome::Noop) | Ok(SaveOutcome::Saved) => {
-                encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
-                    .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
-            }
-            Err(_) => encode_error_response(
+            Ok(_) => reply_ok(frame.command, frame.sequence, &[], out),
+            Err(_) => reply_err(
                 frame.command,
                 frame.sequence,
                 CUSTOM_STATUS_STORAGE_ERROR,
                 out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+            ),
         },
         CUSTOM_CMD_RESTORE_DEFAULTS => match config.restore_defaults() {
-            Ok(()) => encode_response(frame.command, frame.sequence, CUSTOM_STATUS_OK, &[], out)
-                .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
-            Err(_) => encode_error_response(
+            Ok(()) => reply_ok(frame.command, frame.sequence, &[], out),
+            Err(_) => reply_err(
                 frame.command,
                 frame.sequence,
                 CUSTOM_STATUS_INTERNAL_ERROR,
                 out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+            ),
         },
         CUSTOM_CMD_GET_ROUTE_STATE => {
-            let payload = build_route_state_payload(router);
-            encode_response(
-                frame.command,
-                frame.sequence,
-                CUSTOM_STATUS_OK,
-                &payload,
-                out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+            let p = build_route_state_payload(router);
+            reply_ok(frame.command, frame.sequence, &p, out)
         }
         CUSTOM_CMD_GET_POWER_STATE => {
-            let payload = build_power_state_payload(power, router, config);
-            encode_response(
-                frame.command,
-                frame.sequence,
-                CUSTOM_STATUS_OK,
-                &payload,
-                out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+            let p = build_power_state_payload(power, router, config);
+            reply_ok(frame.command, frame.sequence, &p, out)
         }
         CUSTOM_CMD_GET_DIAGNOSTICS => {
-            let payload = build_diagnostics_payload(protocol_stats, vendor_rx_stats);
-            encode_response(
-                frame.command,
-                frame.sequence,
-                CUSTOM_STATUS_OK,
-                &payload,
-                out,
-            )
-            .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
+            let p = build_diagnostics_payload(protocol_stats, vendor_rx_stats);
+            reply_ok(frame.command, frame.sequence, &p, out)
         }
-        _ => encode_error_response(
+        _ => reply_err(
             frame.command,
             frame.sequence,
             CUSTOM_STATUS_INVALID_COMMAND,
             out,
-        )
-        .map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR),
+        ),
     }
 }
 
@@ -560,7 +490,6 @@ mod tests {
         buf[1] = CUSTOM_PROTOCOL_VERSION;
         buf[2] = CUSTOM_FLAG_REQUEST;
         buf[3] = 1;
-        // 未显式赋值字段已由 `[0u8; 64]` 初始化为 0
         let result = parse_frame(&buf);
         assert!(result.is_ok());
         let frame = result.unwrap();
@@ -800,7 +729,6 @@ mod tests {
         assert_eq!(out.data[1], CUSTOM_PROTOCOL_VERSION);
         assert_eq!(out.data[2], CUSTOM_FLAG_RESPONSE);
         assert_eq!(out.data[3], 1);
-        // 协议头字段：command / status / offset / total_len / payload_len 均为 0
         assert_eq!(out.data[4], 0x00);
         assert_eq!(out.data[5], 0x01);
         assert_eq!(out.data[6], 0x00);

@@ -119,69 +119,110 @@ impl Runtime {
     }
 
     pub(crate) fn poll_input_and_hid(&mut self) -> Option<RuntimeCommand> {
+        let input = self.step_input();
+        let now = RTC::millis().ticks();
+        self.step_laser(input.laser);
+        self.step_wheel_button(
+            input.wheel_delta,
+            input.left,
+            input.right,
+            input.middle,
+            now,
+        );
+        self.step_motion(now);
+
+        if !self.report.send_needed(
+            MouseButtons {
+                left: input.left,
+                right: input.right,
+                middle: input.middle,
+            }
+            .pack(),
+            self.pending.hid_retry,
+            self.dirty.report,
+        ) {
+            return None;
+        }
+
+        self.try_send_mouse(input.left, input.right, input.middle)
+    }
+
+    fn step_input(&mut self) -> crate::input::types::InputStatus {
         use crate::attitude::get_current_attitude;
-        use crate::route::HidRoute;
 
         let input = self.input.get_current_input();
         self.last_input_status = input;
         self.dirty.input = false;
-        let buttons = MouseButtons {
-            left: input.left,
-            right: input.right,
-            middle: input.middle,
-        };
-        let packed_buttons = buttons.pack();
 
-        let motion_active = self
-            .motion_session
-            .update_trigger(input.action, input.middle);
+        let motion_active =
+            self.motion_session
+                .update_trigger(crate::motion::session::TriggerButtons {
+                    action: input.action,
+                    middle: input.middle,
+                });
 
-        if self.motion_session.should_process_sample(
-            self.latest_imu_sample.timestamp_ms,
-            self.latest_imu_sample.valid,
-        ) {
+        if motion_active
+            && self.motion_session.should_process_sample(
+                self.latest_imu_sample.timestamp_ms,
+                self.latest_imu_sample.valid,
+            )
+        {
             if let Some(attitude) = get_current_attitude() {
                 self.motion_session
                     .update_attitude(&attitude, self.latest_imu_sample.timestamp_ms);
             }
         }
 
-        let now = RTC::millis().ticks();
-        let motion_report_deadline = self.motion_report_deadline_ms.unwrap_or(now);
-        if motion_active && deadline_due(now, motion_report_deadline) {
-            self.report.ingest_motion(self.motion_session.output());
-            self.motion_report_deadline_ms = Some(now.wrapping_add(MOTION_REPORT_MS));
-            Self::request_poll_after(MOTION_REPORT_MS);
-        }
+        input
+    }
 
-        if input.laser {
+    fn step_laser(&mut self, laser: bool) {
+        if laser {
             crate::pwm::set_laser_duty(255);
         } else {
             crate::pwm::set_laser_duty(0);
         }
+    }
 
-        self.report.ingest_wheel_delta(input.wheel_delta);
+    fn step_wheel_button(
+        &mut self,
+        wheel_delta: i8,
+        left: bool,
+        right: bool,
+        middle: bool,
+        now: u32,
+    ) {
+        self.report.ingest_wheel_delta(wheel_delta);
 
+        let packed_buttons = MouseButtons {
+            left,
+            right,
+            middle,
+        }
+        .pack();
         let button_changed = self.report.send_needed(packed_buttons, false, false);
-        let wheel_changed = input.wheel_delta != 0;
-        if wheel_changed || button_changed {
+        if wheel_delta != 0 || button_changed {
             self.mark_activity(now);
             self.dirty.report = true;
         }
+    }
 
-        if motion_active && !deadline_due(now, motion_report_deadline) {
+    fn step_motion(&mut self, now: u32) {
+        let motion_active = self.motion_session.is_active();
+        let motion_report_deadline = self.motion_report_deadline_ms.unwrap_or(now);
+
+        if motion_active && deadline_due(now, motion_report_deadline) {
+            self.report.ingest_motion(self.motion_session.output());
+            self.motion_report_deadline_ms = Some(now.wrapping_add(MOTION_REPORT_MS));
+            Self::request_poll_after(MOTION_REPORT_MS);
+        } else if motion_active {
             Self::request_poll_after(deadline_remaining_ms(now, motion_report_deadline));
         }
+    }
 
-        if !self
-            .report
-            .send_needed(packed_buttons, self.pending.hid_retry, self.dirty.report)
-        {
-            return None;
-        }
-
+    fn try_send_mouse(&mut self, left: bool, right: bool, middle: bool) -> Option<RuntimeCommand> {
         let route = self.router.preferred_mouse_route();
-        if route == HidRoute::None {
+        if route == crate::route::HidRoute::None {
             return self.defer_report_until_route_event();
         }
 
@@ -189,11 +230,14 @@ impl Runtime {
             return self.defer_report_until_route_event();
         }
 
-        let report = self.report.build_report(buttons);
-
+        let buttons = MouseButtons {
+            left,
+            right,
+            middle,
+        };
         Some(RuntimeCommand::SendMouse {
             route: route.as_ffi(),
-            report,
+            report: self.report.build_report(buttons),
         })
     }
 }

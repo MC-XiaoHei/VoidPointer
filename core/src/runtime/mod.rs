@@ -281,7 +281,6 @@ impl Runtime {
         }
 
         if self.pending.config_save || self.dirty.config {
-            self.config.poll();
             self.pending.config_save = false;
             self.dirty.config = false;
         }
@@ -310,8 +309,10 @@ pub fn usb_state_log_name(state: UsbState) -> &'static str {
     }
 }
 
+pub(crate) const WRAP_HALF: u32 = 1u32 << 31;
+
 pub fn deadline_due(now: u32, deadline: u32) -> bool {
-    now.wrapping_sub(deadline) < 0x8000_0000
+    now.wrapping_sub(deadline) < WRAP_HALF
 }
 
 pub fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
