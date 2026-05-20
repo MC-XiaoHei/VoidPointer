@@ -10,10 +10,6 @@ use crate::utils::clock::RTC;
 
 impl Runtime {
     pub fn reschedule_power_recheck_deadline(&mut self) {
-        if !super::ENABLE_POWER_MANAGER {
-            return;
-        }
-
         let now = RTC::millis().ticks();
         let Some(deadline) = self.power_recheck_deadline_ms else {
             return;
@@ -39,7 +35,8 @@ impl Runtime {
         self.dirty.power = false;
 
         let config_dirty = self.pending.config_save || self.dirty.config || self.config.is_dirty();
-        let effective_config_dirty = config_dirty || !super::ENABLE_SLEEP_POWER_STATE;
+        // TODO: 待 Sleep 状态就绪后改为 `config_dirty`，让电源管理器自行决策
+        let effective_config_dirty = config_dirty || true;
         let previous_state = self.power.state();
 
         if self.power_has_blockers() {

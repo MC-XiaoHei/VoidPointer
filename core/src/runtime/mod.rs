@@ -30,8 +30,6 @@ const HID_RETRY_DELAY_MS: u32 = 8;
 const IMU_POLL_ACTIVE_MS: u32 = 30;
 const IMU_FIFO_MAX_SAMPLES: u16 = 8;
 const MOTION_REPORT_MS: u32 = 10;
-const ENABLE_POWER_MANAGER: bool = true;
-const ENABLE_SLEEP_POWER_STATE: bool = false;
 
 pub static RUNTIME: MainLoopGlobal<Runtime> = MainLoopGlobal::new();
 
@@ -152,11 +150,9 @@ impl Runtime {
 
     pub fn mark_activity(&mut self, timestamp_ms: u32) {
         self.last_activity_ms.store(timestamp_ms, Ordering::Release);
-        if ENABLE_POWER_MANAGER {
-            self.power_recheck_deadline_ms = None;
-            self.dirty.power = true;
-            self.pending.power_recheck = true;
-        }
+        self.power_recheck_deadline_ms = None;
+        self.dirty.power = true;
+        self.pending.power_recheck = true;
     }
 
     pub fn sync_motion_config(&mut self) {
