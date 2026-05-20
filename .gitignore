@@ -5,6 +5,7 @@
 # 操作系统元数据
 .DS_Store
 Thumbs.db
+nul
 
 # CMake 构建产物
 cmake-build**/
