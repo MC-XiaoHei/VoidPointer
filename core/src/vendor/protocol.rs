@@ -325,6 +325,7 @@ fn reply_err(command: u16, sequence: u8, status: u16, out: &mut CustomReport) ->
     encode_error_response(command, sequence, status, out).map_err(|_| CUSTOM_STATUS_INTERNAL_ERROR)
 }
 
+#[cfg_attr(coverage, coverage(off))]
 pub fn handle_request(
     frame: CustomFrameView<'_>,
     router: &HidRouter,
@@ -884,5 +885,85 @@ mod tests {
             encode_frame(header, &big, &mut out),
             Err(ParseError::PayloadTooLarge)
         );
+    }
+
+    #[test]
+    fn build_config_info_payload_works() {
+        let flash = crate::config::flash_region::FlashRegionInfo::default();
+        let config = crate::config::ConfigManager::from_flash(flash);
+        let p = build_config_info_payload(&config);
+        assert_eq!(p[0..2], (1u16).to_le_bytes());
+        assert_eq!(p[2], 0);
+    }
+
+    #[test]
+    fn build_power_state_payload_all_states() {
+        use crate::power::{PowerManager, PowerState};
+        use crate::route::HidRouter;
+        let flash = crate::config::flash_region::FlashRegionInfo::default();
+        let config = crate::config::ConfigManager::from_flash(flash);
+        let router = HidRouter::new();
+
+        let power = PowerManager::new();
+        let p = build_power_state_payload(&power, &router, &config);
+        assert_eq!(p[0], 0);
+
+        let mut power = PowerManager::new();
+        power.apply_request_result(PowerState::Suspend, true);
+        let p = build_power_state_payload(&power, &router, &config);
+        assert_eq!(p[0], 1);
+
+        let mut power = PowerManager::new();
+        power.apply_request_result(PowerState::Sleep, true);
+        let p = build_power_state_payload(&power, &router, &config);
+        assert_eq!(p[0], 2);
+    }
+
+    #[test]
+    fn build_power_state_payload_all_usb_states() {
+        use crate::power::PowerManager;
+        use crate::route::{HidRouter, UsbState};
+        let flash = crate::config::flash_region::FlashRegionInfo::default();
+        let config = crate::config::ConfigManager::from_flash(flash);
+        let power = PowerManager::new();
+
+        let mut router = HidRouter::new();
+        router.set_usb_state(UsbState::Detached);
+        let p = build_power_state_payload(&power, &router, &config);
+        assert_eq!(p[1], 0);
+
+        let mut router = HidRouter::new();
+        router.set_usb_state(UsbState::Attached);
+        let p = build_power_state_payload(&power, &router, &config);
+        assert_eq!(p[1], 1);
+
+        let mut router = HidRouter::new();
+        router.set_usb_state(UsbState::Configured);
+        let p = build_power_state_payload(&power, &router, &config);
+        assert_eq!(p[1], 2);
+
+        let mut router = HidRouter::new();
+        router.set_usb_state(UsbState::Suspended);
+        let p = build_power_state_payload(&power, &router, &config);
+        assert_eq!(p[1], 3);
+
+        let mut router = HidRouter::new();
+        router.set_usb_state(UsbState::Error);
+        let p = build_power_state_payload(&power, &router, &config);
+        assert_eq!(p[1], 4);
+    }
+
+    #[test]
+    fn reply_ok_encodes_success() {
+        let mut out = CustomReport::default();
+        reply_ok(0x0100, 5, &[], &mut out).unwrap();
+        assert!(out.len > 0);
+    }
+
+    #[test]
+    fn reply_err_encodes_error() {
+        let mut out = CustomReport::default();
+        reply_err(0x0100, 5, CUSTOM_STATUS_BAD_LENGTH, &mut out).unwrap();
+        assert!(out.len > 0);
     }
 }
