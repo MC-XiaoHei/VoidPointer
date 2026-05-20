@@ -90,7 +90,7 @@
   {
     "label": "test project with coverage",
     "command": "python",
-    "args": ["tools/dev-task.py", "coverage"],
+    "args": ["tools/dev-task.py", "coverage", "--open"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
