@@ -312,6 +312,7 @@ fn stop_debounce_timer() {
     let _ = unsafe { c_vp_debounce_timer_stop() };
 }
 
+// TODO: 后续移除，现有测试价值低，暂不测
 #[cfg_attr(coverage, coverage(off))]
 fn log_button_change(input_id: u8, pressed: bool) {
     let name = match input_id as u32 {
