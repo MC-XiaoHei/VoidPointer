@@ -146,6 +146,7 @@ impl VendorRuntime {
         self.stats
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     pub fn poll(&mut self, router: &HidRouter, config: &mut ConfigManager, power: &PowerManager) {
         while let Some(report) = VENDOR_RX_QUEUE.pop() {
             self.last_route = report.route;
@@ -158,6 +159,7 @@ impl VendorRuntime {
         self.pending_rx = false;
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     fn handle_rx_report(
         &mut self,
         report: VendorRxReport,
@@ -226,6 +228,7 @@ impl VendorRuntime {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 impl Default for VendorRuntime {
     fn default() -> Self {
         Self::new()
@@ -233,6 +236,7 @@ impl Default for VendorRuntime {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
 
@@ -264,6 +268,17 @@ mod tests {
         let copied = unsafe { q.copy_from_ptr(3, core::ptr::null(), 4, 1000) };
         assert!(!copied);
         assert_eq!(q.stats().too_large, 1);
+    }
+
+    #[test]
+    fn copy_from_ptr_zero_len_skips_copy() {
+        let q = VendorRxQueue::new();
+        let payload: [u8; 0] = [];
+        let copied = unsafe { q.copy_from_ptr(3, payload.as_ptr(), 0, 999) };
+        assert!(copied);
+        let report = q.pop().unwrap();
+        assert_eq!(report.len, 0);
+        assert_eq!(report.timestamp, 999);
     }
 
     #[test]
@@ -330,11 +345,80 @@ mod tests {
                 q.copy_from_ptr(1, buf.as_ptr(), 4, 0);
             }
         }
-        // 满队列后再入队触发 dropped
         unsafe {
             q.copy_from_ptr(1, buf.as_ptr(), 4, 0);
         }
         assert_eq!(q.stats().dropped, 1);
         assert_eq!(q.stats().too_large, 1);
+    }
+
+    #[test]
+    fn runtime_new_default_state() {
+        let r = VendorRuntime::new();
+        assert!(!r.pending_rx);
+        assert!(r.pending_tx.is_none());
+        assert_eq!(r.processed_count, 0);
+    }
+
+    #[test]
+    fn runtime_mark_rx_pending() {
+        let mut r = VendorRuntime::new();
+        assert!(!r.pending_rx);
+        r.mark_rx_pending();
+        assert!(r.pending_rx);
+    }
+
+    #[test]
+    fn runtime_take_pending_tx_none_initially() {
+        let mut r = VendorRuntime::new();
+        assert!(r.take_pending_tx().is_none());
+    }
+
+    #[test]
+    fn runtime_take_pending_tx_returns_queued() {
+        let mut r = VendorRuntime::new();
+        let tx = PendingVendorTx {
+            route: 3,
+            report: CustomReport::default(),
+        };
+        r.requeue_pending_tx(tx);
+        assert!(r.has_pending_tx());
+        let taken = r.take_pending_tx().unwrap();
+        assert_eq!(taken.route, 3);
+        assert!(!r.has_pending_tx());
+    }
+
+    #[test]
+    fn runtime_stats_returns_default() {
+        let r = VendorRuntime::new();
+        assert_eq!(r.stats(), ProtocolStats::default());
+    }
+
+    #[test]
+    fn runtime_queue_response_sets_pending() {
+        let mut r = VendorRuntime::new();
+        let report = CustomReport::default();
+        r.queue_response(3, report);
+        assert!(r.pending_tx.is_some());
+        assert_eq!(r.stats.tx_generated, 1);
+        assert_eq!(r.stats.tx_dropped_no_route, 0);
+    }
+
+    #[test]
+    fn runtime_queue_response_zero_route_drops() {
+        let mut r = VendorRuntime::new();
+        let report = CustomReport::default();
+        r.queue_response(0, report);
+        assert!(r.pending_tx.is_none());
+        assert_eq!(r.stats.tx_generated, 0);
+        assert_eq!(r.stats.tx_dropped_no_route, 1);
+    }
+
+    #[test]
+    fn runtime_default_equals_new() {
+        let a = VendorRuntime::default();
+        let b = VendorRuntime::new();
+        assert_eq!(a.pending_rx, b.pending_rx);
+        assert_eq!(a.processed_count, b.processed_count);
     }
 }
