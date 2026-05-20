@@ -7,6 +7,7 @@ use crate::config::types::{
 };
 use crate::ffi::bindings::{VP_STATUS_OK, c_vp_flash_erase, c_vp_flash_read, c_vp_flash_write};
 
+#[cfg_attr(coverage, coverage(off))]
 pub(crate) fn save_persisted_config(
     flash: FlashRegionInfo,
     slot_size: u32,

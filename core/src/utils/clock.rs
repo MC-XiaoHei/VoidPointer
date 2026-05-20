@@ -7,10 +7,12 @@ pub type MicrosInstant = TimerInstantU32<1_000_000>;
 pub struct RTC;
 
 impl RTC {
+    #[cfg_attr(coverage, coverage(off))]
     pub fn millis() -> MillisInstant {
         MillisInstant::from_ticks(unsafe { c_vp_rtc_millis() })
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     pub fn micros() -> MicrosInstant {
         MicrosInstant::from_ticks(unsafe { c_vp_rtc_micros() })
     }

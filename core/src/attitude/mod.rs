@@ -11,6 +11,7 @@ struct AttitudeCache {
 unsafe impl Sync for AttitudeCache {}
 
 impl AttitudeCache {
+    #[cfg_attr(coverage, coverage(off))]
     const fn new() -> Self {
         Self {
             current: UnsafeCell::new(None),

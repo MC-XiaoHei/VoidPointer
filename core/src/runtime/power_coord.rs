@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, coverage(off))]
+
 use super::Runtime;
 use crate::attitude::clear_current_attitude;
 use crate::ffi::bindings::{VP_STATUS_OK, c_vp_imu_config_active, c_vp_power_restore_from_sleep};

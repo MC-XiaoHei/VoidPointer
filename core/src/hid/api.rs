@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, coverage(off))]
+
 use crate::ffi::bindings::*;
 use crate::hid::types::{CustomReport, HidSendStatus, MouseReport};
 

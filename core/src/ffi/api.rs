@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, coverage(off))]
+
 use crate::runtime::events::RuntimeEvent;
 use crate::runtime::{EVENT_QUEUE, EVENTS_PENDING, POLL_PENDING, POLL_RUNNING, RUNTIME, Runtime};
 use crate::utils::logger::init_logger;

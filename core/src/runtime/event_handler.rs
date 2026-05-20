@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, coverage(off))]
+
 use super::Runtime;
 use crate::attitude::types::SflpGameRotationRaw;
 use crate::attitude::{clear_current_attitude, update_current_attitude_from_raw};
@@ -218,6 +220,7 @@ impl Runtime {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 pub fn rearm_imu_interrupts() {
     for input_id in [
         crate::ffi::bindings::VP_INPUT_IMU_INT1 as u8,

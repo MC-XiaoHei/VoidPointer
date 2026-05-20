@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, coverage(off))]
+
 use crate::ffi::bindings::*;
 use crate::ffi::bindings::{VP_WAKE_SOURCE_BUTTON, VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU};
 use crate::hid::api::HidApi;

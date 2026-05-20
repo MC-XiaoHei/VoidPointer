@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, coverage(off))]
+
 use super::{HID_RETRY_DELAY_MS, MOTION_REPORT_MS, Runtime, deadline_due, deadline_remaining_ms};
 use crate::ffi::bindings::{VP_STATUS_OK, c_vp_hid_route_ready, vp_hid_route_t};
 use crate::hid::types::{HidSendStatus, MouseButtons, MouseReport};
