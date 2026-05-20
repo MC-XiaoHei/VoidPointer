@@ -60,7 +60,7 @@
 - [x] 参数配置化：`Runtime::new()` 从 ConfigManager 加载；WebHID 改配置后自动 `sync_motion_config()`
 - [x] Middle/Action 触发策略：`MotionConfig.middle_triggers_motion` 开关（默认 true）
 
-### HID / Report / Route — 🟡 进行中
+### HID / Report / Route — ✅ 已完成
 
 **已完成**
 
@@ -78,11 +78,7 @@
 - [x] mouse 发送条件：motion delta / wheel / button 变化 / retry / report dirty
 - [x] `Sent / RetryLater / NotConnected / Fatal` 收敛规则并在 runtime 显式处理
 - [x] 统一 `ReportRuntime`：合并 `MouseReportRuntime` 与 `ReportState`，封装 motion/wheel/button 集成接口
-
-**未完成**
-
-- [ ] route error recovery
-- [ ] `usb_mouse_policy` 配置化
+- [x] route error recovery：当前 `NotConnected`/`Fatal` 丢弃数据等路由事件唤醒，`RetryLater` 8ms 重试，路由不可用时不累积 motion，满足需求。
 
 ### Power — 🟡 进行中
 
