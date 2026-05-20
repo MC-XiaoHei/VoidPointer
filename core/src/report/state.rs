@@ -26,6 +26,7 @@ impl ReportState {
     pub fn apply_config(&mut self, cfg: ReportConfig) {
         self.cfg = cfg;
         self.reset_fractional();
+        self.clear_pending();
     }
 
     pub fn ingest_motion(&mut self, motion: MotionState) {
@@ -139,6 +140,22 @@ mod tests {
             vy,
             valid: true,
         }
+    }
+
+    #[test]
+    fn apply_config_updates_hz_and_resets_fractional() {
+        let mut r = ReportState::new(ReportConfig { report_hz: 100.0 });
+        r.ingest_motion(motion(150.0, 0.0));
+        let dx_before = r.peek_report().unwrap().dx;
+        assert!(dx_before > 0);
+
+        r.apply_config(ReportConfig { report_hz: 500.0 });
+        assert!(!r.has_pending());
+
+        r.ingest_motion(motion(1000.0, 0.0));
+        assert!(r.has_pending());
+        let report = r.peek_report().unwrap();
+        assert_eq!(report.dx, 1000 / 500);
     }
 
     #[test]

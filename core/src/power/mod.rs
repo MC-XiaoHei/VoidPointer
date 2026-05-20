@@ -220,6 +220,17 @@ mod tests {
     }
 
     #[test]
+    fn pm_apply_config_updates_timeout() {
+        let mut pm = PowerManager::new();
+        let cfg = PowerConfig {
+            suspend_timeout_ms: 9999,
+            disconnect_sleep_timeout_ms: 8888,
+        };
+        pm.apply_config(cfg);
+        assert_eq!(pm.config(), cfg);
+    }
+
+    #[test]
     fn pm_poll_config_dirty_blocks_sleep() {
         let mut pm = PowerManager::new();
         let router = crate::route::HidRouter::new();

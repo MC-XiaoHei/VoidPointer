@@ -170,10 +170,10 @@ impl Runtime {
         self.apply_motion_config(motion_cfg, RTC::millis().ticks());
     }
 
-    pub fn apply_config(&mut self, config: &DeviceConfig) {
+    pub fn apply_config(&mut self, config: &DeviceConfig, now: u32) {
         self.power.apply_config(config.power);
         self.report.apply_config(config.report);
-        self.apply_motion_config(config.motion, RTC::millis().ticks());
+        self.apply_motion_config(config.motion, now);
     }
 
     fn imu_poll_enabled(&self) -> bool {
@@ -276,7 +276,7 @@ impl Runtime {
 
             let new_config = *self.config.current_config();
             if new_config != prev_config {
-                self.apply_config(&new_config);
+                self.apply_config(&new_config, now);
             }
         }
 
@@ -355,8 +355,10 @@ pub fn clear_suspend_resume_sources() {
 mod tests {
     use super::*;
     use crate::config::flash_region::FlashRegionInfo;
+    use crate::hid::types::MouseButtons;
     use crate::input::types::InputStatus;
     use crate::motion::config::MotionConfig;
+    use crate::motion::state::MotionState;
     use crate::report::config::ReportConfig;
     use core::sync::atomic::AtomicU32;
 
@@ -526,6 +528,28 @@ mod tests {
         let cfg = rt.config.current_config().motion;
         rt.apply_motion_config(cfg, 5000);
         assert_eq!(rt.motion_report_deadline_ms, Some(5000));
+    }
+
+    #[test]
+    fn apply_config_updates_all_subsystems() {
+        let mut rt = make_runtime();
+        let mut cfg = DeviceConfig::default();
+        cfg.motion.sensitivity_x = 9999.0;
+        cfg.motion.invert_y = true;
+        cfg.power.suspend_timeout_ms = 7777;
+        cfg.report.report_hz = 500.0;
+
+        rt.apply_config(&cfg, 3000);
+
+        assert_eq!(rt.power.config().suspend_timeout_ms, 7777);
+        assert_eq!(rt.motion_report_deadline_ms, Some(3000));
+        rt.report.ingest_motion(MotionState {
+            vx: 1000.0,
+            vy: 0.0,
+            valid: true,
+        });
+        let report = rt.report.build_report(MouseButtons::default());
+        assert_eq!(report.dx, 1000 / 500);
     }
 
     #[test]

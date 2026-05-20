@@ -161,6 +161,21 @@ mod tests {
     }
 
     #[test]
+    fn apply_config_updates_report_params() {
+        let mut r = ReportRuntime::new(cfg());
+        r.ingest_motion(make_motion(1500.0, 0.0));
+        assert!(r.send_needed(0, false, false));
+
+        r.apply_config(ReportConfig { report_hz: 500.0 });
+        assert!(!r.send_needed(0, false, false));
+
+        r.ingest_motion(make_motion(1000.0, 0.0));
+        assert!(r.send_needed(0, false, false));
+        let report = r.build_report(MouseButtons::default());
+        assert_eq!(report.dx, 1000 / 500);
+    }
+
+    #[test]
     fn wheel_triggers_send_needed() {
         let mut r = ReportRuntime::new(cfg());
         r.ingest_wheel_delta(1);
