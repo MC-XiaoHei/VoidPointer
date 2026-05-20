@@ -622,8 +622,11 @@ def test_config(_: argparse.Namespace) -> None:
     run_cargo(["test", "--lib", "--target", "x86_64-pc-windows-msvc"])
 
 
-def coverage(_: argparse.Namespace) -> None:
-    run_cargo(["+nightly", "llvm-cov", "--target", "x86_64-pc-windows-msvc"])
+def coverage(args: argparse.Namespace) -> None:
+    cmd = ["+nightly", "llvm-cov", "--html", "--target", "x86_64-pc-windows-msvc"]
+    if args.open_html:
+        cmd.append("--open")
+    run_cargo(cmd)
 
 
 def main() -> None:
@@ -646,6 +649,14 @@ def main() -> None:
         "-f",
         "--firmware",
         help="Firmware ELF to download. Defaults to cmake-build-debug-mrs-risc-v-gcc12/VoidPointer.elf.",
+    )
+
+    parser.add_argument(
+        "--open",
+        "-o",
+        action="store_true",
+        dest="open_html",
+        help="Open HTML coverage report in browser.",
     )
 
     args = parser.parse_args()
