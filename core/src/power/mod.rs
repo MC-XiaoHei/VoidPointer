@@ -133,6 +133,10 @@ impl PowerManager {
         }
     }
 
+    pub fn apply_config(&mut self, config: PowerConfig) {
+        self.config = config;
+    }
+
     pub fn apply_request_result(&mut self, target: PowerState, accepted: bool) {
         if accepted {
             self.state = target;

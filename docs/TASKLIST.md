@@ -107,9 +107,7 @@
 - [ ] 低功耗与 IMU profile、RF、route 状态联动
 - [ ] 完整 sleep 电流优化：接口与状态路径已落地，电流目标与阈值调优后续进行。
 
-### Config / Storage — 🟡 进行中
-
-**已完成**
+### Config / Storage — ✅ 已完成
 
 - [x] `DeviceConfig` 结构（power / motion / report 子配置）
 - [x] 默认配置与业务校验
@@ -121,10 +119,7 @@
 - [x] 自动生成 C stubs 的测试框架
 - [x] 纯逻辑模块 100% 覆盖率
 - [x] 版本迁移（migration）
-
-**未完成**
-
-- [ ] 配置写入运行时通用 `apply_to` 机制
+- [x] 配置写入运行时通用 `apply_to` 机制
 
 ### LED / PWM — ✅ 已完成
 

@@ -23,6 +23,11 @@ impl ReportState {
         }
     }
 
+    pub fn apply_config(&mut self, cfg: ReportConfig) {
+        self.cfg = cfg;
+        self.reset_fractional();
+    }
+
     pub fn ingest_motion(&mut self, motion: MotionState) {
         if !motion.valid || self.cfg.report_hz <= 0.0 {
             self.reset_fractional();

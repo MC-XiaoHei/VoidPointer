@@ -115,7 +115,10 @@ impl ReportRuntime {
         self.state.reset_all();
     }
 
-    /// 清除 route sync 基线（断连后重置 button sync）
+    pub fn apply_config(&mut self, cfg: ReportConfig) {
+        self.state.apply_config(cfg);
+    }
+
     pub fn reset_route_sync(&mut self) {
         self.mouse.reset_route_sync();
     }

@@ -7,7 +7,7 @@ pub mod report_runtime;
 
 use crate::attitude::clear_current_attitude;
 use crate::attitude::types::SflpGameRotationRaw;
-use crate::config::ConfigManager;
+use crate::config::{ConfigManager, DeviceConfig};
 use crate::ffi::bindings::{
     VP_WAKE_SOURCE_BUTTON, VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU, c_vp_request_core_poll,
     c_vp_request_core_poll_after, c_vp_wake_source_enable,
@@ -170,6 +170,12 @@ impl Runtime {
         self.apply_motion_config(motion_cfg, RTC::millis().ticks());
     }
 
+    pub fn apply_config(&mut self, config: &DeviceConfig) {
+        self.power.apply_config(config.power);
+        self.report.apply_config(config.report);
+        self.apply_motion_config(config.motion, RTC::millis().ticks());
+    }
+
     fn imu_poll_enabled(&self) -> bool {
         self.power.state() == crate::power::PowerState::Active
     }
@@ -263,13 +269,14 @@ impl Runtime {
         }
 
         if self.pending.vendor_rx {
-            let prev_motion = self.config.current_config().motion;
+            let prev_config = *self.config.current_config();
             self.vendor
                 .poll(&self.router, &mut self.config, &self.power);
             self.pending.vendor_rx = false;
 
-            if self.config.current_config().motion != prev_motion {
-                self.sync_motion_config();
+            let new_config = *self.config.current_config();
+            if new_config != prev_config {
+                self.apply_config(&new_config);
             }
         }
 
