@@ -172,7 +172,7 @@ mod tests {
         r.ingest_motion(make_motion(1000.0, 0.0));
         assert!(r.send_needed(0, false, false));
         let report = r.build_report(MouseButtons::default());
-        assert_eq!(report.dx, 1000 / 500);
+        assert_eq!(report.dx, (1000 / 500) as i8);
     }
 
     #[test]

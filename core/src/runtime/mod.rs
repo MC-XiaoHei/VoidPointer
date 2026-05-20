@@ -549,7 +549,7 @@ mod tests {
             valid: true,
         });
         let report = rt.report.build_report(MouseButtons::default());
-        assert_eq!(report.dx, 1000 / 500);
+        assert_eq!(report.dx, (1000 / 500) as i8);
     }
 
     #[test]

@@ -155,7 +155,7 @@ mod tests {
         r.ingest_motion(motion(1000.0, 0.0));
         assert!(r.has_pending());
         let report = r.peek_report().unwrap();
-        assert_eq!(report.dx, 1000 / 500);
+        assert_eq!(report.dx, (1000 / 500) as i8);
     }
 
     #[test]
