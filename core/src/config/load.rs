@@ -45,6 +45,7 @@ struct ValidSlot {
     config: DeviceConfig,
 }
 
+#[cfg_attr(coverage, coverage(off))]
 pub(crate) fn load_persisted_config(
     flash: FlashRegionInfo,
     slot_size: u32,
@@ -52,8 +53,14 @@ pub(crate) fn load_persisted_config(
 ) -> Result<PersistedConfig, ConfigError> {
     let slot_a = read_and_validate_slot(flash, slot_size, slot_buf, SLOT_A_INDEX).ok();
     let slot_b = read_and_validate_slot(flash, slot_size, slot_buf, SLOT_B_INDEX).ok();
-    let selected = pick_active_slot(slot_a, slot_b).ok_or(ConfigError::StorageEmpty)?;
+    select_persisted_config(slot_a, slot_b)
+}
 
+fn select_persisted_config(
+    slot_a: Option<ValidSlot>,
+    slot_b: Option<ValidSlot>,
+) -> Result<PersistedConfig, ConfigError> {
+    let selected = pick_active_slot(slot_a, slot_b).ok_or(ConfigError::StorageEmpty)?;
     Ok(PersistedConfig {
         active_slot: ActiveSlot::from_index(selected.index)
             .ok_or(ConfigError::InvalidFlashRegion)?,
@@ -62,6 +69,7 @@ pub(crate) fn load_persisted_config(
     })
 }
 
+#[cfg_attr(coverage, coverage(off))]
 fn read_and_validate_slot(
     flash: FlashRegionInfo,
     slot_size: u32,
@@ -69,10 +77,23 @@ fn read_and_validate_slot(
     slot_index: usize,
 ) -> Result<ValidSlot, ConfigError> {
     let offset = flash.slot_offset(slot_size, slot_index)?;
-    if unsafe { c_vp_flash_read(offset, slot_buf.as_mut_ptr(), slot_size) } != VP_STATUS_OK as u8 {
+    if !flash_read(offset, slot_size, slot_buf) {
         return Err(ConfigError::ReadbackVerifyFailed);
     }
+    validate_slot_data(slot_buf, slot_size, slot_index)
+}
 
+#[cfg_attr(coverage, coverage(off))]
+fn flash_read(offset: u32, slot_size: u32, slot_buf: &mut [u8; SLOT_BUF_SIZE]) -> bool {
+    let status = unsafe { c_vp_flash_read(offset, slot_buf.as_mut_ptr(), slot_size) };
+    status == VP_STATUS_OK as u8
+}
+
+fn validate_slot_data(
+    slot_buf: &[u8; SLOT_BUF_SIZE],
+    slot_size: u32,
+    slot_index: usize,
+) -> Result<ValidSlot, ConfigError> {
     let slot = &slot_buf[..slot_size as usize];
     let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
     header_bytes.copy_from_slice(&slot[..SlotHeader::ENCODED_LEN]);
@@ -146,7 +167,7 @@ fn pick_active_slot(slot_a: Option<ValidSlot>, slot_b: Option<ValidSlot>) -> Opt
 mod tests {
     use super::*;
 
-    fn make_slot(index: usize, sequence: u32) -> ValidSlot {
+    fn make_valid_slot(index: usize, sequence: u32) -> ValidSlot {
         ValidSlot {
             index,
             header: SlotHeader {
@@ -171,37 +192,41 @@ mod tests {
     #[test]
     fn pick_only_a() {
         assert_eq!(
-            pick_active_slot(Some(make_slot(0, 1)), None).unwrap().index,
+            pick_active_slot(Some(make_valid_slot(0, 1)), None)
+                .unwrap()
+                .index,
             0
         );
     }
 
     #[test]
     fn pick_b_wins_by_higher_sequence() {
-        let a = make_slot(0, 10);
-        let b = make_slot(1, 20);
+        let a = make_valid_slot(0, 10);
+        let b = make_valid_slot(1, 20);
         assert_eq!(pick_active_slot(Some(a), Some(b)).unwrap().index, 1);
     }
 
     #[test]
     fn pick_a_wins_by_higher_sequence() {
-        let a = make_slot(0, 30);
-        let b = make_slot(1, 20);
+        let a = make_valid_slot(0, 30);
+        let b = make_valid_slot(1, 20);
         assert_eq!(pick_active_slot(Some(a), Some(b)).unwrap().index, 0);
     }
 
     #[test]
     fn pick_only_b() {
         assert_eq!(
-            pick_active_slot(None, Some(make_slot(1, 5))).unwrap().index,
+            pick_active_slot(None, Some(make_valid_slot(1, 5)))
+                .unwrap()
+                .index,
             1
         );
     }
 
     #[test]
     fn pick_equal_sequence_prefers_a() {
-        let a = make_slot(0, 42);
-        let b = make_slot(1, 42);
+        let a = make_valid_slot(0, 42);
+        let b = make_valid_slot(1, 42);
         assert_eq!(pick_active_slot(Some(a), Some(b)).unwrap().index, 0);
     }
 
@@ -290,6 +315,254 @@ mod tests {
         assert_eq!(
             validate_slot_header(h, 4096),
             Err(ConfigError::UnsupportedStorageVersion)
+        );
+    }
+
+    #[test]
+    fn validate_header_crc_mismatch() {
+        let h = SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: 10,
+            sequence: 1,
+            payload_crc32: 0,
+            header_crc32: 0xDEAD_BEEF,
+            flags: 0,
+        };
+        assert_eq!(
+            validate_slot_header(h, 4096),
+            Err(ConfigError::HeaderCrcMismatch)
+        );
+    }
+
+    #[test]
+    fn active_slot_from_index_a() {
+        assert_eq!(ActiveSlot::from_index(SLOT_A_INDEX), Some(ActiveSlot::A));
+    }
+
+    #[test]
+    fn active_slot_from_index_b() {
+        assert_eq!(ActiveSlot::from_index(SLOT_B_INDEX), Some(ActiveSlot::B));
+    }
+
+    #[test]
+    fn active_slot_from_index_out_of_range() {
+        assert_eq!(ActiveSlot::from_index(99), None);
+    }
+
+    #[test]
+    fn active_slot_inactive_a_returns_b() {
+        assert_eq!(ActiveSlot::A.inactive_index(), SLOT_B_INDEX);
+    }
+
+    #[test]
+    fn active_slot_inactive_b_returns_a() {
+        assert_eq!(ActiveSlot::B.inactive_index(), SLOT_A_INDEX);
+    }
+
+    #[test]
+    fn validate_slot_data_bad_magic() {
+        let mut slot_buf = [0u8; SLOT_BUF_SIZE];
+        let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
+        let h = SlotHeader {
+            magic: 0xDEAD_BEEF,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: 10,
+            sequence: 1,
+            payload_crc32: 0,
+            header_crc32: 0,
+            flags: 0,
+        };
+        let sealed = crate::config::storage::seal_header(h);
+        crate::config::storage::slot_header_encode(sealed, &mut header_bytes);
+        slot_buf[..SlotHeader::ENCODED_LEN].copy_from_slice(&header_bytes);
+        assert_eq!(
+            validate_slot_data(&slot_buf, 4096, 0),
+            Err(ConfigError::InvalidMagic)
+        );
+    }
+
+    #[test]
+    fn validate_slot_data_empty_returns_storage_empty() {
+        let slot_buf = [0xFFu8; SLOT_BUF_SIZE];
+        assert_eq!(
+            validate_slot_data(&slot_buf, 4096, 0),
+            Err(ConfigError::StorageEmpty)
+        );
+    }
+
+    #[test]
+    fn validate_slot_data_valid_slot() {
+        let mut slot_buf = [0u8; SLOT_BUF_SIZE];
+        let config = DeviceConfig::default();
+        let mut payload_buf = [0u8; 256];
+        let payload = postcard::to_slice(&config, &mut payload_buf).unwrap();
+        let payload_crc = crc32(payload);
+        let header = crate::config::storage::seal_header(SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: payload.len() as u32,
+            sequence: 1,
+            payload_crc32: payload_crc,
+            header_crc32: 0,
+            flags: 0,
+        });
+        let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
+        crate::config::storage::slot_header_encode(header, &mut header_bytes);
+        slot_buf[..SlotHeader::ENCODED_LEN].copy_from_slice(&header_bytes);
+        slot_buf[SlotHeader::ENCODED_LEN..SlotHeader::ENCODED_LEN + payload.len()]
+            .copy_from_slice(payload);
+        let result = validate_slot_data(&slot_buf, 4096, 0).unwrap();
+        assert_eq!(result.index, 0);
+        assert_eq!(result.header, header);
+        assert_eq!(result.config, DeviceConfig::default());
+    }
+
+    #[test]
+    fn validate_slot_data_crc_mismatch() {
+        let mut slot_buf = [0u8; SLOT_BUF_SIZE];
+        let config = DeviceConfig::default();
+        let mut payload_buf = [0u8; 256];
+        let payload = postcard::to_slice(&config, &mut payload_buf).unwrap();
+        let payload_crc = crc32(payload);
+        let header = crate::config::storage::seal_header(SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: payload.len() as u32,
+            sequence: 1,
+            payload_crc32: payload_crc,
+            header_crc32: 0,
+            flags: 0,
+        });
+        let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
+        crate::config::storage::slot_header_encode(header, &mut header_bytes);
+        slot_buf[..SlotHeader::ENCODED_LEN].copy_from_slice(&header_bytes);
+        slot_buf[SlotHeader::ENCODED_LEN..SlotHeader::ENCODED_LEN + payload.len()]
+            .copy_from_slice(payload);
+        slot_buf[SlotHeader::ENCODED_LEN] ^= 0xFF;
+        assert_eq!(
+            validate_slot_data(&slot_buf, 4096, 0),
+            Err(ConfigError::PayloadCrcMismatch)
+        );
+    }
+
+    #[test]
+    fn validate_slot_data_unsupported_config_version() {
+        let mut slot_buf = [0u8; SLOT_BUF_SIZE];
+        let config = DeviceConfig::default();
+        let mut payload_buf = [0u8; 256];
+        let payload = postcard::to_slice(&config, &mut payload_buf).unwrap();
+        let payload_crc = crc32(payload);
+        let header = crate::config::storage::seal_header(SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION + 1,
+            payload_len: payload.len() as u32,
+            sequence: 1,
+            payload_crc32: payload_crc,
+            header_crc32: 0,
+            flags: 0,
+        });
+        let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
+        crate::config::storage::slot_header_encode(header, &mut header_bytes);
+        slot_buf[..SlotHeader::ENCODED_LEN].copy_from_slice(&header_bytes);
+        slot_buf[SlotHeader::ENCODED_LEN..SlotHeader::ENCODED_LEN + payload.len()]
+            .copy_from_slice(payload);
+        assert_eq!(
+            validate_slot_data(&slot_buf, 4096, 0),
+            Err(ConfigError::UnsupportedConfigVersion)
+        );
+    }
+
+    #[test]
+    fn validate_slot_data_deserialize_failed() {
+        let mut slot_buf = [0u8; SLOT_BUF_SIZE];
+        let garbage = [0xDEu8; 10];
+        let crc = crc32(&garbage);
+        let header = crate::config::storage::seal_header(SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: garbage.len() as u32,
+            sequence: 1,
+            payload_crc32: crc,
+            header_crc32: 0,
+            flags: 0,
+        });
+        let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
+        crate::config::storage::slot_header_encode(header, &mut header_bytes);
+        slot_buf[..SlotHeader::ENCODED_LEN].copy_from_slice(&header_bytes);
+        slot_buf[SlotHeader::ENCODED_LEN..SlotHeader::ENCODED_LEN + garbage.len()]
+            .copy_from_slice(&garbage);
+        assert_eq!(
+            validate_slot_data(&slot_buf, 4096, 0),
+            Err(ConfigError::DeserializeFailed)
+        );
+    }
+
+    #[test]
+    fn validate_slot_data_validation_failed() {
+        let mut slot_buf = [0u8; SLOT_BUF_SIZE];
+        let mut invalid = DeviceConfig::default();
+        invalid.report.report_hz = 0.0;
+        let mut payload_buf = [0u8; 256];
+        let payload = postcard::to_slice(&invalid, &mut payload_buf).unwrap();
+        let crc = crc32(payload);
+        let header = crate::config::storage::seal_header(SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: payload.len() as u32,
+            sequence: 1,
+            payload_crc32: crc,
+            header_crc32: 0,
+            flags: 0,
+        });
+        let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
+        crate::config::storage::slot_header_encode(header, &mut header_bytes);
+        slot_buf[..SlotHeader::ENCODED_LEN].copy_from_slice(&header_bytes);
+        slot_buf[SlotHeader::ENCODED_LEN..SlotHeader::ENCODED_LEN + payload.len()]
+            .copy_from_slice(payload);
+        assert_eq!(
+            validate_slot_data(&slot_buf, 4096, 0),
+            Err(ConfigError::ValidationFailed)
+        );
+    }
+
+    #[test]
+    fn select_persisted_config_both_none() {
+        assert_eq!(
+            select_persisted_config(None, None),
+            Err(ConfigError::StorageEmpty)
+        );
+    }
+
+    #[test]
+    fn select_persisted_config_chooses_a() {
+        let a = make_valid_slot(0, 10);
+        let result = select_persisted_config(Some(a), None).unwrap();
+        assert_eq!(result.active_slot, ActiveSlot::A);
+        assert_eq!(result.next_sequence, 11);
+    }
+
+    #[test]
+    fn select_persisted_config_chooses_b() {
+        let b = make_valid_slot(1, 20);
+        let result = select_persisted_config(None, Some(b)).unwrap();
+        assert_eq!(result.active_slot, ActiveSlot::B);
+        assert_eq!(result.next_sequence, 21);
+    }
+
+    #[test]
+    fn select_persisted_config_invalid_index() {
+        let bad = make_valid_slot(99, 1);
+        assert_eq!(
+            select_persisted_config(Some(bad), None),
+            Err(ConfigError::InvalidFlashRegion)
         );
     }
 }
