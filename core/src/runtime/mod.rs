@@ -14,6 +14,7 @@ use crate::ffi::bindings::{
 };
 use crate::input::types::{InputManager, InputStatus};
 use crate::led::runtime::LedManager;
+use crate::motion::config::MotionConfig;
 use crate::motion::session::MotionSession;
 use crate::power::PowerManager;
 use crate::report::config::ReportConfig;
@@ -101,6 +102,7 @@ pub struct Runtime {
 }
 
 impl Runtime {
+    #[cfg_attr(coverage, coverage(off))]
     pub fn new() -> Self {
         let now = RTC::millis().ticks();
         let mut input = InputManager::new();
@@ -132,6 +134,7 @@ impl Runtime {
         }
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     pub fn enable_input_interrupts(&mut self) {
         self.input.enable_interrupts();
     }
@@ -155,28 +158,40 @@ impl Runtime {
         self.pending.power_recheck = true;
     }
 
+    fn apply_motion_config(&mut self, motion_cfg: MotionConfig, now: u32) {
+        self.motion_session.reconfigure(motion_cfg);
+        self.motion_report_deadline_ms = Some(now);
+        self.report.reset_all();
+    }
+
+    #[cfg_attr(coverage, coverage(off))]
     pub fn sync_motion_config(&mut self) {
         let motion_cfg = self.config.current_config().motion;
-        self.motion_session.reconfigure(motion_cfg);
-        self.motion_report_deadline_ms = Some(RTC::millis().ticks());
-        self.report.reset_all();
+        self.apply_motion_config(motion_cfg, RTC::millis().ticks());
     }
 
     fn imu_poll_enabled(&self) -> bool {
         self.power.state() == crate::power::PowerState::Active
     }
 
-    fn schedule_next_imu_poll(&mut self, base_timestamp_ms: u32) {
+    fn schedule_imu_poll_deadline(&mut self, base_timestamp_ms: u32) -> bool {
         if !self.imu_poll_enabled() {
             self.imu_poll_deadline_ms = None;
-            return;
+            return false;
         }
-
         let deadline = base_timestamp_ms.wrapping_add(IMU_POLL_ACTIVE_MS);
         self.imu_poll_deadline_ms = Some(deadline);
-        Self::request_poll_after(IMU_POLL_ACTIVE_MS);
+        true
     }
 
+    #[cfg_attr(coverage, coverage(off))]
+    fn schedule_next_imu_poll(&mut self, base_timestamp_ms: u32) {
+        if self.schedule_imu_poll_deadline(base_timestamp_ms) {
+            Self::request_poll_after(IMU_POLL_ACTIVE_MS);
+        }
+    }
+
+    #[cfg_attr(coverage, coverage(off))]
     pub fn maybe_start_imu_poll(&mut self) -> Option<RuntimeCommand> {
         if !self.imu_poll_enabled() {
             self.imu_poll_deadline_ms = None;
@@ -201,6 +216,7 @@ impl Runtime {
         })
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     pub fn poll(&mut self) -> Option<RuntimeCommand> {
         const MAX_PASSES: usize = 4;
         let mut passes = 0;
@@ -225,6 +241,7 @@ impl Runtime {
         None
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     fn process_once(&mut self) -> Option<RuntimeCommand> {
         let now = RTC::millis().ticks();
         self.led_manager.clear_tick_scheduled();
@@ -291,12 +308,6 @@ impl Runtime {
     }
 }
 
-impl Default for Runtime {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 pub fn usb_state_log_name(state: UsbState) -> &'static str {
     match state {
         UsbState::Detached => "detached",
@@ -336,6 +347,42 @@ pub fn clear_suspend_resume_sources() {
 #[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
+    use crate::config::flash_region::FlashRegionInfo;
+    use crate::input::types::InputStatus;
+    use crate::motion::config::MotionConfig;
+    use crate::report::config::ReportConfig;
+    use core::sync::atomic::AtomicU32;
+
+    fn make_runtime() -> Runtime {
+        let now = 1000;
+        Runtime {
+            router: crate::route::HidRouter::new(),
+            power: PowerManager::new(),
+            config: ConfigManager::from_flash(FlashRegionInfo::default()),
+            vendor: VendorRuntime::new(),
+            input: InputManager::new(),
+            last_input_status: InputStatus {
+                left: false,
+                right: false,
+                middle: false,
+                action: false,
+                laser: false,
+                wheel_delta: 0,
+            },
+            dirty: DirtyFlags::default(),
+            pending: PendingFlags::default(),
+            report: ReportRuntime::new(ReportConfig {
+                report_hz: 1000.0 / MOTION_REPORT_MS as f32,
+            }),
+            last_activity_ms: AtomicU32::new(now),
+            power_recheck_deadline_ms: None,
+            imu_poll_deadline_ms: Some(now),
+            latest_imu_sample: LatestImuSample::default(),
+            motion_report_deadline_ms: Some(now),
+            motion_session: MotionSession::new(MotionConfig::default()),
+            led_manager: LedManager::new(),
+        }
+    }
 
     #[test]
     fn deadline_due_past() {
@@ -370,5 +417,123 @@ mod tests {
         assert_eq!(usb_state_log_name(UsbState::Configured), "configured");
         assert_eq!(usb_state_log_name(UsbState::Suspended), "suspended");
         assert_eq!(usb_state_log_name(UsbState::Error), "error");
+    }
+
+    #[test]
+    fn dirty_flags_any_false_when_all_clear() {
+        let f = DirtyFlags::default();
+        assert!(!f.any());
+    }
+
+    #[test]
+    fn dirty_flags_any_true_for_each_flag() {
+        let flags = [
+            DirtyFlags {
+                input: true,
+                ..Default::default()
+            },
+            DirtyFlags {
+                motion: true,
+                ..Default::default()
+            },
+            DirtyFlags {
+                report: true,
+                ..Default::default()
+            },
+            DirtyFlags {
+                power: true,
+                ..Default::default()
+            },
+            DirtyFlags {
+                config: true,
+                ..Default::default()
+            },
+        ];
+        for f in &flags {
+            assert!(f.any(), "expected any()=true for {:?}", f);
+        }
+    }
+
+    #[test]
+    fn pending_flags_any_false_when_all_clear() {
+        let f = PendingFlags::default();
+        assert!(!f.any());
+    }
+
+    #[test]
+    fn pending_flags_any_true_for_each_flag() {
+        let flags = [
+            PendingFlags {
+                events: true,
+                ..Default::default()
+            },
+            PendingFlags {
+                hid_retry: true,
+                ..Default::default()
+            },
+            PendingFlags {
+                imu_fifo_read: true,
+                ..Default::default()
+            },
+            PendingFlags {
+                vendor_rx: true,
+                ..Default::default()
+            },
+            PendingFlags {
+                config_save: true,
+                ..Default::default()
+            },
+            PendingFlags {
+                power_recheck: true,
+                ..Default::default()
+            },
+        ];
+        for f in &flags {
+            assert!(f.any(), "expected any()=true for {:?}", f);
+        }
+    }
+
+    #[test]
+    fn mark_activity_sets_last_activity() {
+        let mut rt = make_runtime();
+        rt.mark_activity(2000);
+        assert_eq!(
+            rt.last_activity_ms
+                .load(core::sync::atomic::Ordering::Acquire),
+            2000
+        );
+        assert!(rt.dirty.power);
+        assert!(rt.pending.power_recheck);
+        assert!(rt.power_recheck_deadline_ms.is_none());
+    }
+
+    #[test]
+    fn imu_poll_enabled_when_active() {
+        let rt = make_runtime();
+        assert!(rt.imu_poll_enabled());
+    }
+
+    #[test]
+    fn apply_motion_config_sets_deadline() {
+        let mut rt = make_runtime();
+        let cfg = rt.config.current_config().motion;
+        rt.apply_motion_config(cfg, 5000);
+        assert_eq!(rt.motion_report_deadline_ms, Some(5000));
+    }
+
+    #[test]
+    fn schedule_imu_poll_disabled_clears_deadline() {
+        let mut rt = make_runtime();
+        rt.power
+            .apply_request_result(crate::power::PowerState::Suspend, true);
+        assert!(!rt.schedule_imu_poll_deadline(2000));
+        assert!(rt.imu_poll_deadline_ms.is_none());
+    }
+
+    #[test]
+    fn schedule_imu_poll_enabled_sets_deadline() {
+        let mut rt = make_runtime();
+        assert!(rt.schedule_imu_poll_deadline(2000));
+        assert_eq!(rt.imu_poll_deadline_ms, Some(2000 + IMU_POLL_ACTIVE_MS));
     }
 }

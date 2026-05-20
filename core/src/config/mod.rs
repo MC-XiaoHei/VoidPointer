@@ -1,4 +1,4 @@
-mod flash_region;
+pub(crate) mod flash_region;
 mod load;
 mod manager;
 pub mod storage;
