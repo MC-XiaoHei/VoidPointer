@@ -10,11 +10,7 @@ pub const SLOT_A_INDEX: usize = 0;
 pub const SLOT_B_INDEX: usize = 1;
 pub const SLOT_MAGIC: u32 = 0x4746_4356;
 pub const SLOT_FLAGS_NONE: u32 = 0;
-
-/// 编译期最大 slot buffer，平台层可能报告更小的 slot_size
 pub const SLOT_BUF_SIZE: usize = 4096;
-
-/// 编译期最大 payload = SLOT_BUF_SIZE 减去固定 header 开销
 pub const MAX_PAYLOAD_SIZE: usize = SLOT_BUF_SIZE - SlotHeader::ENCODED_LEN;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -84,6 +80,7 @@ pub enum SaveOutcome {
 #[cfg_attr(coverage, coverage(off))]
 mod tests {
     use super::*;
+    use crate::config::load::parse_bytes;
 
     #[test]
     fn slot_header_encoded_len() {
@@ -102,7 +99,7 @@ mod tests {
         let c = DeviceConfig::default();
         let mut buf = [0u8; 256];
         let encoded = postcard::to_slice(&c, &mut buf).unwrap();
-        let decoded: DeviceConfig = postcard::from_bytes(encoded).unwrap();
+        let decoded: DeviceConfig = parse_bytes(encoded).unwrap();
         assert_eq!(c, decoded);
     }
 
@@ -115,7 +112,7 @@ mod tests {
 
         let mut buf = [0u8; 256];
         let encoded = postcard::to_slice(&c, &mut buf).unwrap();
-        let decoded: DeviceConfig = postcard::from_bytes(encoded).unwrap();
+        let decoded: DeviceConfig = parse_bytes(encoded).unwrap();
         assert_eq!(c, decoded);
     }
 

@@ -120,10 +120,10 @@
 - [x] WebHID 配置命令：GetConfigInfo / ReadConfig / WriteConfig / SaveConfig / RestoreDefaults
 - [x] 自动生成 C stubs 的测试框架
 - [x] 纯逻辑模块 100% 覆盖率
+- [x] 版本迁移（migration）
 
 **未完成**
 
-- [ ] 版本迁移（migration）
 - [ ] 配置写入运行时通用 `apply_to` 机制
 
 ### LED / PWM — ✅ 已完成

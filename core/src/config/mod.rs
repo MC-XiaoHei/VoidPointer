@@ -1,6 +1,7 @@
 pub(crate) mod flash_region;
 mod load;
 mod manager;
+pub(crate) mod migration;
 pub mod storage;
 mod store;
 pub mod types;

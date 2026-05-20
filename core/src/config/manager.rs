@@ -89,7 +89,11 @@ impl ConfigManager {
         self.reencode_payload();
         self.active_slot = Some(persisted.active_slot);
         self.next_sequence = persisted.next_sequence;
-        self.clear_dirty();
+        if persisted.was_migrated {
+            self.mark_dirty();
+        } else {
+            self.clear_dirty();
+        }
     }
 
     #[cfg_attr(coverage, coverage(off))]
@@ -271,7 +275,7 @@ impl Default for ConfigManager {
 mod tests {
     use super::*;
     use crate::config::flash_region::FlashRegionInfo;
-    use crate::config::load::PersistedConfig;
+    use crate::config::load::{PersistedConfig, parse_bytes};
     use crate::config::types::DeviceConfig;
 
     fn make_manager() -> ConfigManager {
@@ -292,7 +296,7 @@ mod tests {
         let config = DeviceConfig::default();
         let mut buf = [0u8; MAX_PAYLOAD_SIZE];
         let (len, _crc) = encode_config(&config, &mut buf).unwrap();
-        let decoded: DeviceConfig = postcard::from_bytes(&buf[..len as usize]).unwrap();
+        let decoded: DeviceConfig = parse_bytes(&buf[..len as usize]).unwrap();
         assert_eq!(config, decoded);
     }
 
@@ -304,7 +308,7 @@ mod tests {
         config.power.suspend_timeout_ms = 30000;
         let mut buf = [0u8; MAX_PAYLOAD_SIZE];
         let (len, _crc) = encode_config(&config, &mut buf).unwrap();
-        let decoded: DeviceConfig = postcard::from_bytes(&buf[..len as usize]).unwrap();
+        let decoded: DeviceConfig = parse_bytes(&buf[..len as usize]).unwrap();
         assert_eq!(config, decoded);
     }
 
@@ -454,7 +458,7 @@ mod tests {
         m.replace_config(cfg).unwrap();
 
         assert!(m.current_payload_len() > 0);
-        let decoded: DeviceConfig = postcard::from_bytes(m.current_payload()).unwrap();
+        let decoded: DeviceConfig = parse_bytes(m.current_payload()).unwrap();
         assert_eq!(decoded.motion.invert_x, true);
     }
 
@@ -513,6 +517,7 @@ mod tests {
             active_slot: ActiveSlot::B,
             next_sequence: 42,
             config: persisted_cfg,
+            was_migrated: false,
         };
 
         m.apply_persisted(persisted);
@@ -521,5 +526,23 @@ mod tests {
         assert_eq!(m.current.motion.invert_y, true);
         assert!(!m.is_dirty());
         assert!(m.current_payload_len() > 0);
+    }
+
+    #[test]
+    fn apply_persisted_migrated_marks_dirty() {
+        let mut m = make_manager();
+        let mut persisted_cfg = DeviceConfig::default();
+        persisted_cfg.motion.invert_x = true;
+
+        let persisted = PersistedConfig {
+            active_slot: ActiveSlot::A,
+            next_sequence: 10,
+            config: persisted_cfg,
+            was_migrated: true,
+        };
+
+        m.apply_persisted(persisted);
+        assert!(m.is_dirty());
+        assert_eq!(*m.current_config(), persisted_cfg);
     }
 }

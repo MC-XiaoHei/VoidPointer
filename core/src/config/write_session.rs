@@ -1,3 +1,4 @@
+use crate::config::load::parse_bytes;
 use crate::config::storage::crc32;
 use crate::config::types::{ConfigError, DeviceConfig, MAX_PAYLOAD_SIZE};
 use crate::config::validate::validate_config;
@@ -74,8 +75,7 @@ impl WriteSession {
             return Err(ConfigError::PayloadCrcMismatch);
         }
 
-        let config: DeviceConfig =
-            postcard::from_bytes(payload).map_err(|_| ConfigError::DeserializeFailed)?;
+        let config: DeviceConfig = parse_bytes(payload)?;
         validate_config(&config)?;
         *self = Self::default();
         Ok(config)

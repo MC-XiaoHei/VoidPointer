@@ -1,4 +1,7 @@
+use serde::Deserialize;
+
 use crate::config::flash_region::FlashRegionInfo;
+use crate::config::migration::migrate_payload;
 use crate::config::storage::{compute_header_crc32, crc32, slot_header_decode};
 use crate::config::types::{
     CURRENT_CONFIG_VERSION, CURRENT_STORAGE_VERSION, ConfigError, DeviceConfig, SLOT_A_INDEX,
@@ -35,14 +38,22 @@ pub(crate) struct PersistedConfig {
     pub(crate) active_slot: ActiveSlot,
     pub(crate) next_sequence: u32,
     pub(crate) config: DeviceConfig,
+    pub(crate) was_migrated: bool,
 }
 
-/// 通过完整验证链的有效 slot（验证顺序参见 CONFIG_SPEC.md §8）
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct ValidSlot {
     index: usize,
     header: SlotHeader,
     config: DeviceConfig,
+    was_migrated: bool,
+}
+
+pub(crate) fn parse_bytes<'a, T>(payload: &'a [u8]) -> Result<T, ConfigError>
+where
+    T: Deserialize<'a>,
+{
+    postcard::from_bytes(payload).map_err(|_| ConfigError::DeserializeFailed)
 }
 
 #[cfg_attr(coverage, coverage(off))]
@@ -66,6 +77,7 @@ fn select_persisted_config(
             .ok_or(ConfigError::InvalidFlashRegion)?,
         next_sequence: selected.header.sequence.wrapping_add(1),
         config: selected.config,
+        was_migrated: selected.was_migrated,
     })
 }
 
@@ -111,18 +123,21 @@ fn validate_slot_data(
         return Err(ConfigError::PayloadCrcMismatch);
     }
 
-    if header.config_version != CURRENT_CONFIG_VERSION {
-        return Err(ConfigError::UnsupportedConfigVersion);
-    }
+    let (config, was_migrated) = if header.config_version == CURRENT_CONFIG_VERSION {
+        let config: DeviceConfig = parse_bytes(payload)?;
+        (config, false)
+    } else {
+        let config = migrate_payload(payload, header.config_version)?;
+        (config, true)
+    };
 
-    let config: DeviceConfig =
-        postcard::from_bytes(payload).map_err(|_| ConfigError::DeserializeFailed)?;
     validate_config(&config)?;
 
     Ok(ValidSlot {
         index: slot_index,
         header,
         config,
+        was_migrated,
     })
 }
 
@@ -146,7 +161,6 @@ fn validate_slot_header(header: SlotHeader, slot_size: u32) -> Result<(), Config
     Ok(())
 }
 
-/// 选择活跃 slot：单有效则用，双有效取 sequence 更大者，相等选 A
 fn pick_active_slot(slot_a: Option<ValidSlot>, slot_b: Option<ValidSlot>) -> Option<ValidSlot> {
     match (slot_a, slot_b) {
         (Some(a), Some(b)) => {
@@ -181,6 +195,7 @@ mod tests {
                 flags: 0,
             },
             config: DeviceConfig::default(),
+            was_migrated: false,
         }
     }
 
@@ -564,5 +579,57 @@ mod tests {
             select_persisted_config(Some(bad), None),
             Err(ConfigError::InvalidFlashRegion)
         );
+    }
+
+    #[test]
+    fn validate_slot_data_same_version_not_migrated() {
+        let mut slot_buf = [0u8; SLOT_BUF_SIZE];
+        let config = DeviceConfig::default();
+        let mut payload_buf = [0u8; 256];
+        let payload = postcard::to_slice(&config, &mut payload_buf).unwrap();
+        let payload_crc = crc32(payload);
+        let header = crate::config::storage::seal_header(SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION,
+            payload_len: payload.len() as u32,
+            sequence: 1,
+            payload_crc32: payload_crc,
+            header_crc32: 0,
+            flags: 0,
+        });
+        let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
+        crate::config::storage::slot_header_encode(header, &mut header_bytes);
+        slot_buf[..SlotHeader::ENCODED_LEN].copy_from_slice(&header_bytes);
+        slot_buf[SlotHeader::ENCODED_LEN..SlotHeader::ENCODED_LEN + payload.len()]
+            .copy_from_slice(payload);
+        let result = validate_slot_data(&slot_buf, 4096, 0).unwrap();
+        assert!(!result.was_migrated, "同版本不应标记为 was_migrated");
+    }
+
+    #[test]
+    fn validate_slot_data_migration_fails_for_future_version() {
+        let mut slot_buf = [0u8; SLOT_BUF_SIZE];
+        let config = DeviceConfig::default();
+        let mut payload_buf = [0u8; 256];
+        let payload = postcard::to_slice(&config, &mut payload_buf).unwrap();
+        let payload_crc = crc32(payload);
+        let header = crate::config::storage::seal_header(SlotHeader {
+            magic: SLOT_MAGIC,
+            storage_version: CURRENT_STORAGE_VERSION,
+            config_version: CURRENT_CONFIG_VERSION + 1,
+            payload_len: payload.len() as u32,
+            sequence: 1,
+            payload_crc32: payload_crc,
+            header_crc32: 0,
+            flags: 0,
+        });
+        let mut header_bytes = [0u8; SlotHeader::ENCODED_LEN];
+        crate::config::storage::slot_header_encode(header, &mut header_bytes);
+        slot_buf[..SlotHeader::ENCODED_LEN].copy_from_slice(&header_bytes);
+        slot_buf[SlotHeader::ENCODED_LEN..SlotHeader::ENCODED_LEN + payload.len()]
+            .copy_from_slice(payload);
+        let err = validate_slot_data(&slot_buf, 4096, 0).unwrap_err();
+        assert_eq!(err, ConfigError::UnsupportedConfigVersion);
     }
 }
