@@ -149,7 +149,7 @@
 | `0x0001` | GetProtocolInfo   |
 | `0x0002` | GetDeviceInfo     |
 | `0x0100` | GetConfigInfo     |
-| `0x0101` | ReadConfig        |
+| `0x0101` | ReadConfigChunk   |
 | `0x0102` | WriteConfigBegin  |
 | `0x0103` | WriteConfigChunk  |
 | `0x0104` | WriteConfigCommit |
@@ -161,7 +161,7 @@
 | `0x0300` | GetDiagnostics    |
 
 - [x] 配置写会话状态机
-- [x] ReadConfig 使用显式 offset 分片（与 WriteConfigChunk 对称）
+- [x] ReadConfigChunk 显式 offset 分片读取（与 WriteConfigChunk 对称）
 - [x] C 层仅收发 raw vendor report
 
 **未完成**
