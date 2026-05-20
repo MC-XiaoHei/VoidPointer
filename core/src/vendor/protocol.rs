@@ -35,6 +35,7 @@ pub const CUSTOM_CMD_WRITE_CONFIG_CHUNK: u16 = 0x0103;
 pub const CUSTOM_CMD_WRITE_CONFIG_COMMIT: u16 = 0x0104;
 pub const CUSTOM_CMD_WRITE_CONFIG_ABORT: u16 = 0x0105;
 pub const CUSTOM_CMD_SAVE_CONFIG: u16 = 0x0106;
+pub const CUSTOM_CMD_READ_CONFIG_CHUNK: u16 = 0x0101;
 pub const CUSTOM_CMD_RESTORE_DEFAULTS: u16 = 0x0107;
 pub const CUSTOM_CMD_GET_ROUTE_STATE: u16 = 0x0201;
 pub const CUSTOM_CMD_GET_POWER_STATE: u16 = 0x0202;
@@ -244,7 +245,6 @@ fn parse_write_chunk_payload(payload: &[u8]) -> Result<(u32, &[u8]), u16> {
     if payload.len() < 4 {
         return Err(CUSTOM_STATUS_BAD_LENGTH);
     }
-
     let offset = u32::from_le_bytes([payload[0], payload[1], payload[2], payload[3]]);
     Ok((offset, &payload[4..]))
 }
@@ -355,8 +355,28 @@ pub fn handle_request(
             let p = build_config_info_payload(config);
             reply_ok(frame.command, frame.sequence, &p, out)
         }
-        CUSTOM_CMD_READ_CONFIG => {
-            reply_ok(frame.command, frame.sequence, config.current_payload(), out)
+        CUSTOM_CMD_READ_CONFIG_CHUNK => {
+            if frame.payload.len() != 4 {
+                return reply_err(frame.command, frame.sequence, CUSTOM_STATUS_BAD_LENGTH, out);
+            }
+            let offset = u32::from_le_bytes([
+                frame.payload[0],
+                frame.payload[1],
+                frame.payload[2],
+                frame.payload[3],
+            ]) as usize;
+            let max_chunk = CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN.saturating_sub(4);
+            let payload = config.current_payload();
+            let chunk = if offset < payload.len() {
+                let end = (offset + max_chunk).min(payload.len());
+                &payload[offset..end]
+            } else {
+                &[]
+            };
+            let mut resp = [0u8; CUSTOM_PROTOCOL_MAX_PAYLOAD_LEN];
+            resp[0..4].copy_from_slice(&(offset as u32).to_le_bytes());
+            resp[4..4 + chunk.len()].copy_from_slice(chunk);
+            reply_ok(frame.command, frame.sequence, &resp[..4 + chunk.len()], out)
         }
         CUSTOM_CMD_WRITE_CONFIG_BEGIN => {
             let (total_len, crc32) = parse_write_begin_payload(frame.payload)?;

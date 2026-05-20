@@ -402,7 +402,7 @@
             const CMD_GET_PROTOCOL_INFO = 0x0001;
             const CMD_GET_DEVICE_INFO = 0x0002;
             const CMD_GET_CONFIG_INFO = 0x0100;
-            const CMD_READ_CONFIG = 0x0101;
+            const CMD_READ_CONFIG_CHUNK = 0x0101;
             const CMD_WRITE_CONFIG_BEGIN = 0x0102;
             const CMD_WRITE_CONFIG_CHUNK = 0x0103;
             const CMD_WRITE_CONFIG_COMMIT = 0x0104;
@@ -431,13 +431,13 @@
                 [CMD_GET_PROTOCOL_INFO]: "GetProtocolInfo",
                 [CMD_GET_DEVICE_INFO]: "GetDeviceInfo",
                 [CMD_GET_CONFIG_INFO]: "GetConfigInfo",
-                [CMD_READ_CONFIG]: "ReadConfig",
                 [CMD_WRITE_CONFIG_BEGIN]: "WriteConfigBegin",
                 [CMD_WRITE_CONFIG_CHUNK]: "WriteConfigChunk",
                 [CMD_WRITE_CONFIG_COMMIT]: "WriteConfigCommit",
                 [CMD_WRITE_CONFIG_ABORT]: "WriteConfigAbort",
                 [CMD_SAVE_CONFIG]: "SaveConfig",
                 [CMD_RESTORE_DEFAULTS]: "RestoreDefaults",
+                [CMD_READ_CONFIG_CHUNK]: "ReadConfigChunk",
                 [CMD_GET_ROUTE_STATE]: "GetRouteState",
                 [CMD_GET_POWER_STATE]: "GetPowerState",
                 [CMD_GET_DIAGNOSTICS]: "GetDiagnostics",
@@ -888,8 +888,44 @@
                             break;
                         }
                         case "read-config": {
-                            const r = await sendCmd(CMD_READ_CONFIG, []);
-                            showConfigPayload(r);
+                            const info = await sendCmd(CMD_GET_CONFIG_INFO, []);
+                            if (!info || info.payload.length < 12) break;
+                            const totalLen = new DataView(
+                                info.payload.buffer,
+                                info.payload.byteOffset,
+                            ).getUint32(4, true);
+                            if (totalLen === 0) {
+                                log("  → 配置为空", "log-info");
+                                break;
+                            }
+
+                            const full = new Uint8Array(totalLen);
+                            let off = 0;
+                            while (off < totalLen) {
+                                const req = new Uint8Array(4);
+                                new DataView(req.buffer).setUint32(
+                                    0,
+                                    off,
+                                    true,
+                                );
+                                const r = await sendCmd(
+                                    CMD_READ_CONFIG_CHUNK,
+                                    req,
+                                    `ReadConfigChunk@${off}`,
+                                );
+                                if (!r || r.payload.length < 4) {
+                                    log("  → 读取中断", "log-error");
+                                    break;
+                                }
+                                const chunk = r.payload.slice(4);
+                                full.set(chunk, off);
+                                off += chunk.length;
+                            }
+                            log(
+                                `  → 读取完成: ${off}/${totalLen} bytes`,
+                                "log-info",
+                            );
+                            showConfigPayload({ payload: full });
                             break;
                         }
                         case "get-route-state": {
@@ -961,8 +997,33 @@
                     $id("btn-write-commit").disabled = true;
                     log("[信息] 配置已提交，读取验证中...", "log-info");
                     // 自动读回验证
-                    const readback = await sendCmd(CMD_READ_CONFIG, []);
-                    showConfigPayload(readback);
+                    const infoRb = await sendCmd(CMD_GET_CONFIG_INFO, []);
+                    if (infoRb && infoRb.payload.length >= 12) {
+                        const totalLenRb = new DataView(
+                            infoRb.payload.buffer,
+                            infoRb.payload.byteOffset,
+                        ).getUint32(4, true);
+                        const fullRb = new Uint8Array(totalLenRb);
+                        let offRb = 0;
+                        while (offRb < totalLenRb) {
+                            const reqRb = new Uint8Array(4);
+                            new DataView(reqRb.buffer).setUint32(
+                                0,
+                                offRb,
+                                true,
+                            );
+                            const rRb = await sendCmd(
+                                CMD_READ_CONFIG_CHUNK,
+                                reqRb,
+                                `ReadConfigChunkRb@${offRb}`,
+                            );
+                            if (!rRb || rRb.payload.length < 4) break;
+                            const chunkRb = rRb.payload.slice(4);
+                            fullRb.set(chunkRb, offRb);
+                            offRb += chunkRb.length;
+                        }
+                        showConfigPayload({ payload: fullRb });
+                    }
                 }
             });
 

@@ -161,11 +161,11 @@
 | `0x0300` | GetDiagnostics    |
 
 - [x] 配置写会话状态机
+- [x] ReadConfig 使用显式 offset 分片（与 WriteConfigChunk 对称）
 - [x] C 层仅收发 raw vendor report
 
 **未完成**
 
-- [ ] 多包分片：协议已预留 `CUSTOM_FLAG_FRAGMENT`、`offset`/`total_len`，但解析时返回 `FragmentNotSupported`
 - [ ] BLE Custom GATT / USB Custom HID transport backend
 
 ## 暂缓项
