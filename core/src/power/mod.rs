@@ -306,6 +306,18 @@ mod tests {
     }
 
     #[test]
+    fn pm_poll_ble_connected_stays_active_when_not_idle_enough() {
+        let mut pm = PowerManager::new();
+        let mut router = crate::route::HidRouter::new();
+        router.set_ble_connected(true);
+        router.set_ble_input_ready(true);
+        // idle_ms = 50，远小于 suspend_timeout_ms (5000)
+        let result = pm.poll(100, 50, false, &router);
+        assert!(result.is_none());
+        assert_eq!(pm.state(), PowerState::Active);
+    }
+
+    #[test]
     fn pm_request_state_same_state_returns_none() {
         let mut pm = PowerManager::new();
         let result = pm.poll(100, 50, false, &crate::route::HidRouter::new());
@@ -314,9 +326,53 @@ mod tests {
     }
 
     #[test]
+    fn pm_request_state_returns_request_for_suspend() {
+        let mut pm = PowerManager::new();
+        let mut router = crate::route::HidRouter::new();
+        router.set_ble_connected(true);
+        router.set_ble_input_ready(true);
+        let result = pm.poll(10000, 0, false, &router);
+        assert_eq!(
+            result,
+            Some(PowerRequest {
+                target: PowerState::Suspend
+            })
+        );
+    }
+
+    #[test]
+    fn pm_request_state_returns_request_for_sleep() {
+        let mut pm = PowerManager::new();
+        let result = pm.poll(120000, 0, false, &crate::route::HidRouter::new());
+        assert_eq!(
+            result,
+            Some(PowerRequest {
+                target: PowerState::Sleep
+            })
+        );
+    }
+
+    #[test]
     fn pm_apply_request_active_sets_state() {
         let mut pm = PowerManager::new();
         pm.apply_request_result(PowerState::Active, true);
+        assert_eq!(pm.state(), PowerState::Active);
+    }
+
+    #[test]
+    fn pm_request_state_transition_from_suspend_to_active() {
+        // 覆盖 request_state 中 PowerState::Active 分支：从非 Active 态切换而来
+        let mut pm = PowerManager::new();
+        pm.apply_request_result(PowerState::Suspend, true);
+        assert_eq!(pm.state(), PowerState::Suspend);
+
+        let mut router = crate::route::HidRouter::new();
+        router.set_ble_connected(true);
+        router.set_ble_input_ready(true);
+        // idle_ms=50 < suspend_timeout_ms=5000 => target = Active
+        let result = pm.poll(100, 50, false, &router);
+
+        assert!(result.is_none());
         assert_eq!(pm.state(), PowerState::Active);
     }
 }

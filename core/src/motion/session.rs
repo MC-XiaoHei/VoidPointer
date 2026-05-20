@@ -82,7 +82,9 @@ impl MotionSession {
             SessionState::Active => {
                 self.current_output = self.solver.update(*attitude);
             }
-            SessionState::Idle => {}
+            SessionState::Idle => {
+                self.current_output = MotionState::default();
+            }
         }
 
         self.current_output
@@ -359,6 +361,17 @@ mod tests {
         let att_move = attitude(0.5, 0.3, 0.0);
         let result2 = s.update_attitude(&att_move, 300);
         assert!(result2.vx.abs() > 0.0 || result2.vy.abs() > 0.0);
+    }
+
+    #[test]
+    fn idle_branch_returns_zero_when_called_directly() {
+        let mut s = MotionSession::new(MotionConfig::default());
+        // state 默认为 Idle，直接调用 update_attitude
+        let raw = crate::attitude::types::SflpGameRotationRaw { x: 0, y: 0, z: 0 };
+        let att = AttitudeData::from(raw);
+        let result = s.update_attitude(&att, 100);
+        assert_eq!(result.vx, 0.0);
+        assert_eq!(result.vy, 0.0);
     }
 
     #[test]

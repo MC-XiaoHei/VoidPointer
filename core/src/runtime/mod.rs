@@ -138,12 +138,14 @@ impl Runtime {
         self.input.enable_interrupts();
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     pub fn request_poll() {
         // POLL_PENDING 必须在唤醒主循环之前立起，否则 ISR 和主循环之间存在竞态
         POLL_PENDING.store(true, Ordering::Release);
         unsafe { c_vp_request_core_poll() };
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     pub fn request_poll_after(ms: u32) {
         unsafe { c_vp_request_core_poll_after(ms) };
     }
@@ -323,6 +325,7 @@ pub fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 pub fn clear_suspend_resume_sources() {
     for source in [
         VP_WAKE_SOURCE_BUTTON,
@@ -330,5 +333,46 @@ pub fn clear_suspend_resume_sources() {
         VP_WAKE_SOURCE_IMU,
     ] {
         let _ = unsafe { c_vp_wake_source_enable(source, 0) };
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deadline_due_past() {
+        assert!(deadline_due(200, 100));
+    }
+
+    #[test]
+    fn deadline_due_not_yet() {
+        assert!(!deadline_due(50, 100));
+    }
+
+    #[test]
+    fn deadline_due_wrap_around() {
+        // 用回绕模拟 rtc 翻转
+        assert!(deadline_due(100, u32::MAX));
+    }
+
+    #[test]
+    fn remaining_ms_returns_1_when_due() {
+        assert_eq!(deadline_remaining_ms(200, 100), 1);
+    }
+
+    #[test]
+    fn remaining_ms_returns_difference() {
+        assert_eq!(deadline_remaining_ms(50, 100), 50);
+    }
+
+    #[test]
+    fn usb_state_log_name_all_variants() {
+        assert_eq!(usb_state_log_name(UsbState::Detached), "detached");
+        assert_eq!(usb_state_log_name(UsbState::Attached), "attached");
+        assert_eq!(usb_state_log_name(UsbState::Configured), "configured");
+        assert_eq!(usb_state_log_name(UsbState::Suspended), "suspended");
+        assert_eq!(usb_state_log_name(UsbState::Error), "error");
     }
 }

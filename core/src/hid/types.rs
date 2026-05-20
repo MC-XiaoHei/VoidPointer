@@ -53,3 +53,66 @@ pub enum HidSendStatus {
     NotConnected,
     Fatal,
 }
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn custom_report_default_all_zero() {
+        let r = CustomReport::default();
+        assert_eq!(r.len, 0);
+        assert!(r.data.iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn mouse_buttons_pack_none() {
+        let b = MouseButtons {
+            left: false,
+            right: false,
+            middle: false,
+        };
+        assert_eq!(b.pack(), 0);
+    }
+
+    #[test]
+    fn mouse_buttons_pack_left() {
+        let b = MouseButtons {
+            left: true,
+            right: false,
+            middle: false,
+        };
+        assert_eq!(b.pack(), 1 << 0);
+    }
+
+    #[test]
+    fn mouse_buttons_pack_right() {
+        let b = MouseButtons {
+            left: false,
+            right: true,
+            middle: false,
+        };
+        assert_eq!(b.pack(), 1 << 1);
+    }
+
+    #[test]
+    fn mouse_buttons_pack_middle() {
+        let b = MouseButtons {
+            left: false,
+            right: false,
+            middle: true,
+        };
+        assert_eq!(b.pack(), 1 << 2);
+    }
+
+    #[test]
+    fn mouse_buttons_pack_all() {
+        let b = MouseButtons {
+            left: true,
+            right: true,
+            middle: true,
+        };
+        assert_eq!(b.pack(), (1 << 0) | (1 << 1) | (1 << 2));
+    }
+}

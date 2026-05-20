@@ -58,8 +58,7 @@ impl DebouncedTwoStateInput {
         }
     }
 
-    fn sync_from_gpio(&mut self) {
-        let active = read_active_low_input(self.input_id);
+    fn sync_from_gpio(&mut self, active: bool) {
         self.stable_active = active;
         self.candidate_active = active;
         self.stable_ticks = 0;
@@ -73,14 +72,13 @@ impl DebouncedTwoStateInput {
         self.debouncing = true;
     }
 
-    fn sample(&mut self) -> DebounceTickOutcome {
+    fn sample(&mut self, observed: bool) -> DebounceTickOutcome {
         if !self.debouncing {
             return DebounceTickOutcome::Idle;
         }
 
-        self.track_candidate(read_active_low_input(self.input_id));
+        self.track_candidate(observed);
 
-        // 只有连续稳定足够久才更新 stable 状态，避免把抖动当成真实按键变化
         if !self.candidate_is_stable() {
             return DebounceTickOutcome::StillDebouncing;
         }
@@ -149,7 +147,7 @@ impl InputManager {
 
     pub fn sync_snapshot(&mut self) -> InputStatus {
         for input in &mut self.two_state_inputs {
-            input.sync_from_gpio();
+            input.sync_from_gpio(read_active_low_input(input.input_id));
         }
 
         let enc_a = read_active_low_input(VP_INPUT_ENCODER_A as u8);
@@ -188,7 +186,8 @@ impl InputManager {
         let mut any_debouncing = false;
 
         for input in &mut self.two_state_inputs {
-            match input.sample() {
+            let level = read_active_low_input(input.input_id);
+            match input.sample(level) {
                 DebounceTickOutcome::Idle => {}
                 DebounceTickOutcome::StillDebouncing => {
                     any_debouncing = true;
@@ -273,14 +272,17 @@ fn next_edge_for_active_low_state(active: bool) -> u32 {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 fn read_active_low_input(input_id: u8) -> bool {
     unsafe { c_vp_gpio_read(input_id) != 0 }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 fn start_debounce_timer() -> bool {
     unsafe { c_vp_debounce_timer_start() == VP_STATUS_OK as u8 }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 fn stop_debounce_timer() {
     let _ = unsafe { c_vp_debounce_timer_stop() };
 }
@@ -295,4 +297,112 @@ fn log_button_change(input_id: u8, pressed: bool) {
         _ => return,
     };
     log::debug!("button state changed;button={},pressed={}", name, pressed);
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn button_id_to_input_id_valid() {
+        for id in 0..BUTTON_IDS.len() as u8 {
+            assert_eq!(button_id_to_input_id(id), Some(BUTTON_IDS[id as usize]));
+        }
+    }
+
+    #[test]
+    fn button_id_to_input_id_out_of_range() {
+        assert_eq!(button_id_to_input_id(99), None);
+    }
+
+    #[test]
+    fn next_edge_for_active_low_active_returns_rising() {
+        assert_eq!(next_edge_for_active_low_state(true), VP_EXTI_EDGE_RISING);
+    }
+
+    #[test]
+    fn next_edge_for_active_low_inactive_returns_falling() {
+        assert_eq!(next_edge_for_active_low_state(false), VP_EXTI_EDGE_FALLING);
+    }
+
+    #[test]
+    fn debounce_new_is_idle() {
+        let mut input = DebouncedTwoStateInput::new(0);
+        assert_eq!(input.sample(true), DebounceTickOutcome::Idle);
+    }
+
+    #[test]
+    fn debounce_stabilizes_after_enough_ticks() {
+        let mut input = DebouncedTwoStateInput::new(0);
+        input.begin_debounce(true);
+        for _ in 0..DEBOUNCE_STABLE_TICKS - 1 {
+            assert_eq!(input.sample(true), DebounceTickOutcome::StillDebouncing);
+        }
+        assert_eq!(
+            input.sample(true),
+            DebounceTickOutcome::Stabilized(StableTransition {
+                input_id: 0,
+                active: true,
+                changed: true,
+            })
+        );
+    }
+
+    #[test]
+    fn debounce_resets_on_transient_level_change() {
+        let mut input = DebouncedTwoStateInput::new(0);
+        input.begin_debounce(true);
+        // 2 true
+        assert!(matches!(
+            input.sample(true),
+            DebounceTickOutcome::StillDebouncing
+        ));
+        assert!(matches!(
+            input.sample(true),
+            DebounceTickOutcome::StillDebouncing
+        ));
+        // 突然变成 false → 重置计数
+        assert!(matches!(
+            input.sample(false),
+            DebounceTickOutcome::StillDebouncing
+        ));
+        // 第一个 true 把候选拉回 true（ticks=1），再来 4 个 true 后稳定
+        for _ in 0..4 {
+            assert!(matches!(
+                input.sample(true),
+                DebounceTickOutcome::StillDebouncing
+            ));
+        }
+        assert_eq!(
+            input.sample(true),
+            DebounceTickOutcome::Stabilized(StableTransition {
+                input_id: 0,
+                active: true,
+                changed: true,
+            })
+        );
+    }
+
+    #[test]
+    fn debounce_no_change_when_same_state() {
+        let mut input = DebouncedTwoStateInput::new(0);
+        input.sync_from_gpio(true);
+        input.begin_debounce(true);
+        // 前 4 个 true → StillDebouncing，第 5 个 → Stabilized
+        for _ in 0..DEBOUNCE_STABLE_TICKS - 1 {
+            assert!(matches!(
+                input.sample(true),
+                DebounceTickOutcome::StillDebouncing
+            ));
+        }
+        assert_eq!(
+            input.sample(true),
+            DebounceTickOutcome::Stabilized(StableTransition {
+                input_id: 0,
+                active: true,
+                changed: false,
+            })
+        );
+    }
 }

@@ -22,6 +22,7 @@ impl FlashRegionInfo {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 pub(crate) fn get_flash_region() -> Result<FlashRegionInfo, ConfigError> {
     let mut region = vp_flash_region_t {
         offset: 0,
@@ -48,4 +49,41 @@ pub(crate) fn get_flash_region() -> Result<FlashRegionInfo, ConfigError> {
         page_size: region.page_size,
         write_alignment: region.write_alignment,
     })
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+    use crate::config::types::{ConfigError, SLOT_COUNT};
+
+    fn make_region() -> FlashRegionInfo {
+        FlashRegionInfo {
+            offset: 0x1000,
+            length: 0x2000,
+            page_size: 256,
+            write_alignment: 4,
+        }
+    }
+
+    #[test]
+    fn slot_offset_zero() {
+        let r = make_region();
+        assert_eq!(r.slot_offset(0x1000, 0).unwrap(), 0x1000);
+    }
+
+    #[test]
+    fn slot_offset_first() {
+        let r = make_region();
+        assert_eq!(r.slot_offset(0x1000, 1).unwrap(), 0x2000);
+    }
+
+    #[test]
+    fn slot_offset_invalid_index() {
+        let r = make_region();
+        assert_eq!(
+            r.slot_offset(0x1000, SLOT_COUNT),
+            Err(ConfigError::InvalidFlashRegion)
+        );
+    }
 }

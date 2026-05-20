@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, coverage(off))]
+
 use core::cell::UnsafeCell;
 
 /// 这个容器只允许主循环访问，ISR 不能碰
@@ -31,5 +33,36 @@ impl<T> MainLoopGlobal<T> {
             let opt = &mut *self.inner.get();
             opt.as_mut().map(f)
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_is_none() {
+        let g: MainLoopGlobal<u32> = MainLoopGlobal::new();
+        assert_eq!(g.execute(|_| 42u32), None);
+    }
+
+    #[test]
+    fn init_then_execute() {
+        let g = MainLoopGlobal::new();
+        g.init(42u32);
+        assert_eq!(g.execute(|v| *v), Some(42));
+    }
+
+    #[test]
+    fn execute_mutates_inner() {
+        let g = MainLoopGlobal::new();
+        g.init(10u32);
+        let result = g.execute(|v| {
+            *v += 5;
+            *v
+        });
+        assert_eq!(result, Some(15));
+        assert_eq!(g.execute(|v| *v), Some(15));
     }
 }

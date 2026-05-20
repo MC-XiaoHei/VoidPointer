@@ -25,6 +25,7 @@ impl<const N: usize> LedProfile<N> {
         self.len as u32 * TICK_MS as u32
     }
 
+    #[cfg_attr(coverage, coverage(off))]
     pub fn play(&'static self, led_sig: BoardSignal) {
         let ptr = self.data.as_ptr();
         let len = self.len as u16;
@@ -35,11 +36,13 @@ impl<const N: usize> LedProfile<N> {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 pub fn stop_playback() {
     unsafe { c_vp_led_stop() }
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
 mod tests {
     use crate::led::builder::Segment;
     use crate::led_profile;
@@ -64,5 +67,11 @@ mod tests {
     fn profile_as_slice_length() {
         led_profile!(P, once! { Segment::Level(50, 20) });
         assert_eq!(P.as_slice().len(), P.len);
+    }
+
+    #[test]
+    fn playback_ms_computed_correctly() {
+        led_profile!(P, once! { Segment::Level(50, 30) });
+        assert_eq!(P.playback_ms(), P.len as u32 * crate::led::TICK_MS as u32);
     }
 }

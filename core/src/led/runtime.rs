@@ -92,12 +92,6 @@ impl LedManager {
     }
 }
 
-impl Default for LedManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,5 +191,20 @@ mod tests {
         m.poll(200);
         assert!(m.transient_end_ms.is_none());
         assert_eq!(m.persistent, Some(PersistentState::Charging));
+    }
+
+    #[test]
+    fn poll_expired_without_last_frame_initializes_it() {
+        let mut m = LedManager::new();
+        // 绕过 begin_transient 直接设 transient_end_ms，模拟回绕路径下的防御分支
+        let wrap_half = 1u32 << 31;
+        m.transient_end_ms = Some(0);
+        m.last_frame_ms = None;
+        m.tick_scheduled = false;
+
+        let result = m.poll(wrap_half);
+        assert!(!result);
+        assert_eq!(m.last_frame_ms, Some(wrap_half));
+        assert!(!m.tick_scheduled);
     }
 }

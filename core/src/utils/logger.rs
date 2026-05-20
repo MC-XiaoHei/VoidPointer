@@ -27,6 +27,7 @@ fn format_module_path(module_path: Option<&str>) -> &str {
     shortened.strip_suffix("::mod").unwrap_or(shortened)
 }
 
+#[cfg_attr(coverage, coverage(off))]
 pub fn print_to_uart(s: &str) {
     // SAFETY: `s` 在调用期间提供有效的 `len` 字节
     unsafe {
@@ -34,6 +35,7 @@ pub fn print_to_uart(s: &str) {
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
 impl Log for UartLogger {
     fn enabled(&self, _metadata: &Metadata) -> bool {
         true
@@ -64,10 +66,43 @@ impl Log for UartLogger {
     fn flush(&self) {}
 }
 
+#[cfg_attr(coverage, coverage(off))]
 pub fn init_logger(level: LevelFilter) -> Result<(), SetLoggerError> {
     unsafe {
         log::set_logger_racy(&UART_LOGGER)?;
         log::set_max_level_racy(level);
     }
     Ok(())
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::format_module_path;
+
+    #[test]
+    fn none_module_returns_question_mark() {
+        assert_eq!(format_module_path(None), "?");
+    }
+
+    #[test]
+    fn root_crate_module_returns_core() {
+        assert_eq!(format_module_path(Some("void_pointer_core")), "core");
+    }
+
+    #[test]
+    fn nested_module_strips_prefix() {
+        assert_eq!(
+            format_module_path(Some("void_pointer_core::config::load")),
+            "config::load"
+        );
+    }
+
+    #[test]
+    fn module_ends_with_mod() {
+        assert_eq!(
+            format_module_path(Some("void_pointer_core::config::load::mod")),
+            "config::load"
+        );
+    }
 }

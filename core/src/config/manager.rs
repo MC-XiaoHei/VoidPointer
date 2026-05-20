@@ -196,16 +196,62 @@ impl ConfigManager {
     }
 
     fn reencode_payload(&mut self) -> Result<(), ConfigError> {
-        let payload = postcard::to_slice(&self.current, self.payload_buf.as_mut_slice())
-            .map_err(|_| ConfigError::EncodeFailed)?;
-        self.payload_len = payload.len() as u32;
-        self.payload_crc32 = crc32(payload);
+        let (len, c) = encode_config(&self.current, self.payload_buf.as_mut_slice())?;
+        self.payload_len = len;
+        self.payload_crc32 = c;
         Ok(())
     }
+}
+
+pub(crate) fn encode_config(
+    config: &DeviceConfig,
+    buf: &mut [u8],
+) -> Result<(u32, u32), ConfigError> {
+    let payload = postcard::to_slice(config, buf).map_err(|_| ConfigError::EncodeFailed)?;
+    let len = payload.len() as u32;
+    let c = crc32(payload);
+    Ok((len, c))
 }
 
 impl Default for ConfigManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    use super::*;
+    use crate::config::types::DeviceConfig;
+
+    #[test]
+    fn encode_default_config() {
+        let config = DeviceConfig::default();
+        let mut buf = [0u8; MAX_PAYLOAD_SIZE];
+        let (len, _crc) = encode_config(&config, &mut buf).unwrap();
+        assert!(len > 0);
+        assert!(len as usize <= MAX_PAYLOAD_SIZE);
+    }
+
+    #[test]
+    fn encode_and_decode_roundtrip() {
+        let config = DeviceConfig::default();
+        let mut buf = [0u8; MAX_PAYLOAD_SIZE];
+        let (len, _crc) = encode_config(&config, &mut buf).unwrap();
+        let decoded: DeviceConfig = postcard::from_bytes(&buf[..len as usize]).unwrap();
+        assert_eq!(config, decoded);
+    }
+
+    #[test]
+    fn encode_non_default_config() {
+        let mut config = DeviceConfig::default();
+        config.motion.sensitivity_x = 24000.0;
+        config.motion.invert_y = true;
+        config.power.suspend_timeout_ms = 30000;
+        let mut buf = [0u8; MAX_PAYLOAD_SIZE];
+        let (len, _crc) = encode_config(&config, &mut buf).unwrap();
+        let decoded: DeviceConfig = postcard::from_bytes(&buf[..len as usize]).unwrap();
+        assert_eq!(config, decoded);
     }
 }

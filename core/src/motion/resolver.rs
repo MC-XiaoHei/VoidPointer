@@ -208,6 +208,17 @@ mod tests {
     }
 
     #[test]
+    fn solver_invert_y() {
+        let mut cfg = MotionConfig::default();
+        cfg.invert_y = true;
+        let mut s = TiltMotionSolver::new(cfg);
+        s.calibrate(attitude(0.0, 0.0, 0.0));
+        // pitch=0.3 引起正 vy，invert_y 后变为负
+        let result = s.update(attitude(0.0, 0.3, 0.0));
+        assert!(result.vy < 0.0);
+    }
+
+    #[test]
     fn solver_invert_x() {
         let mut cfg = MotionConfig::default();
         cfg.invert_x = true;
