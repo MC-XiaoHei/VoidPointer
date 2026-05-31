@@ -668,9 +668,10 @@
                 // 尝试解码 postcard 序列化的 DeviceConfig
                 // 结构: PowerConfig + MotionConfig + ReportConfig
                 // PowerConfig: suspend_timeout_ms(u32) + disconnect_sleep_timeout_ms(u32)
+                // MotionConfig (serde 字段顺序): deadzone_x_rad(f32) + deadzone_y_rad(f32) +
+                //   deadzone_speed(f32) + max_angle_rad(f32) + sensitivity_x(f32) + sensitivity_y(f32) +
+                //   invert_x(u8) + invert_y(u8) + smoothing_alpha(f32) + middle_triggers_motion(u8)
                 // ReportConfig: report_hz(f32)
-                // MotionConfig: sensitivity_x(f32) + sensitivity_y(f32) + deadzone_x_rad(f32) +
-                //   deadzone_y_rad(f32) + max_angle_rad(f32) + smoothing_alpha(f32) + invert_x(u8) + invert_y(u8) + deadzone_speed(f32)
                 try {
                     const dv = new DataView(pl.buffer, pl.byteOffset);
                     let off = 0;
@@ -700,15 +701,17 @@
                     $id("cfg-suspend-ms").textContent = suspend_ms;
                     $id("cfg-sleep-ms").textContent = sleep_ms;
 
-                    const sens_x = readF32();
-                    const sens_y = readF32();
+                    // MotionConfig (serde 字段顺序)
                     const dz_x = readF32();
                     const dz_y = readF32();
+                    const dz_speed = readF32();
                     const max_angle = readF32();
-                    const smooth = readF32();
+                    const sens_x = readF32();
+                    const sens_y = readF32();
                     const inv_x = pl[off++];
                     const inv_y = pl[off++];
-                    const dz_speed = readF32();
+                    const smooth = readF32();
+                    const mid_trig = pl[off++];
 
                     $id("cfg-sens-x").textContent = sens_x.toFixed(1);
                     $id("cfg-sens-y").textContent = sens_y.toFixed(1);
@@ -803,17 +806,19 @@
                 // PowerConfig
                 bytes.push(...varint32(fields.suspend_timeout_ms));
                 bytes.push(...varint32(fields.disconnect_sleep_timeout_ms));
-                // MotionConfig: sensitivity_x, sensitivity_y, deadzone_x_rad, deadzone_y_rad,
-                //   max_angle_rad, smoothing_alpha, invert_x, invert_y, deadzone_speed
-                bytes.push(...f32le(fields.sensitivity_x));
-                bytes.push(...f32le(fields.sensitivity_y));
+                // MotionConfig (serde 字段顺序): deadzone_x_rad, deadzone_y_rad, deadzone_speed,
+                //   max_angle_rad, sensitivity_x, sensitivity_y, invert_x, invert_y, smoothing_alpha,
+                //   middle_triggers_motion
                 bytes.push(...f32le(fields.deadzone_x_rad));
                 bytes.push(...f32le(fields.deadzone_y_rad));
+                bytes.push(...f32le(fields.deadzone_speed));
                 bytes.push(...f32le(fields.max_angle_rad));
-                bytes.push(...f32le(fields.smoothing_alpha));
+                bytes.push(...f32le(fields.sensitivity_x));
+                bytes.push(...f32le(fields.sensitivity_y));
                 bytes.push(fields.invert_x ? 1 : 0);
                 bytes.push(fields.invert_y ? 1 : 0);
-                bytes.push(...f32le(fields.deadzone_speed));
+                bytes.push(...f32le(fields.smoothing_alpha));
+                bytes.push(fields.middle_triggers_motion ? 1 : 0);
                 // ReportConfig: report_hz
                 bytes.push(...f32le(fields.report_hz));
 
@@ -848,6 +853,7 @@
                     invert_x: $id("w-inv-x").checked,
                     invert_y: $id("w-inv-y").checked,
                     deadzone_speed: 0.001,
+                    middle_triggers_motion: true,
                 };
             }
 
