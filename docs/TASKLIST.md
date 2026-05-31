@@ -19,14 +19,19 @@
 ### Input — ✅ 已完成
 
 - [x] 按键 low-active EXTI + debounce 主链路
-- [x] 编码器 EXTI + Rust lookup + wheel 事件主链路
-- [x] `vp_on_button_exti()` / `vp_on_debounce_tick()` / `vp_on_encoder_exti()` ABI
+- [x] `vp_on_button_exti()` / `vp_on_debounce_tick()` ABI
 - [x] EXTI mask / unmask / clear pending / edge API
 - [x] 共享 debounce timer 启停控制
-- [x] `InputSnapshot` 覆盖 left/right/middle/action/laser/wheel
+- [x] `InputStatus` 覆盖 left/right/middle/action/laser/wheel
 - [x] `DebouncedTwoStateInput` 可复用核心 + `InputManager` policy
-- [x] ModeSwitch：PB11 物理引脚已定义，EXTI 全链路已通，触发 `ModeSwitchExti` 事件并播放 `MODE_BLE`/`MODE_2G4` LED 动画
-- [x] Laser 按键接入：加入 debounce 管线，`input.laser` 稳定后在 `poll_input_and_hid` 中调用 `pwm::set_laser_duty()`
+- [x] 上/下跷跷板按键经映射表产生 ScrollUp/ScrollDown 滚动事件
+- [x] 按键映射表：6 物理按键 × 最多 4 功能 × 3 ADC 挡位，存储在 `InputConfig`
+- [x] 默认映射：Context→Middle, Action→Action, Up→ScrollUp, Down→ScrollDown, Primary→Left, Secondary→Right
+- [x] Laser 按键接入：映射为 Laser 功能后，在 `poll_input_and_hid` 中调用 `pwm::set_laser_duty()`
+
+**未完成**
+
+- [ ] 三挡按键映射切换（支持用物理开关切换）
 
 ### IMU / I2C — 🟡 进行中
 
