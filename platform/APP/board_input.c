@@ -197,15 +197,6 @@ vp_status_t board_input_exti_set_edge(const vp_input_id_t  input_id,
         return status;
     }
 
-    vp_button_id_t button_id = 0u;
-    if (board_input_id_to_button_id(input_id, &button_id)) {
-        if (edge == VP_EXTI_EDGE_FALLING) {
-            mode = GPIO_ITMode_LowLevel;
-        } else if (edge == VP_EXTI_EDGE_RISING) {
-            mode = GPIO_ITMode_HighLevel;
-        }
-    }
-
     *both_sim_mask &= (uint16_t)(~gpio.pin);
     vp_gpio_it_mode_cfg(gpio, mode);
     vp_gpio_irq_enable(gpio);
