@@ -1,3 +1,4 @@
+use crate::input::config::InputConfig;
 use crate::motion::config::MotionConfig;
 use crate::power::PowerConfig;
 use crate::report::config::ReportConfig;
@@ -18,6 +19,7 @@ pub struct DeviceConfig {
     pub power: PowerConfig,
     pub motion: MotionConfig,
     pub report: ReportConfig,
+    pub input: InputConfig,
 }
 
 impl Default for DeviceConfig {
@@ -26,6 +28,7 @@ impl Default for DeviceConfig {
             power: PowerConfig::default(),
             motion: MotionConfig::default(),
             report: ReportConfig::default(),
+            input: InputConfig::default(),
         }
     }
 }

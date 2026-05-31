@@ -105,12 +105,13 @@ impl Runtime {
     #[cfg_attr(coverage, coverage(off))]
     pub fn new() -> Self {
         let now = RTC::millis().ticks();
-        let mut input = InputManager::new();
-        let initial_input = input.sync_snapshot();
-        clear_current_attitude();
-
         let config = ConfigManager::new();
         let motion_cfg = config.current_config().motion;
+
+        let mut input = InputManager::new();
+        input.set_profile(&config.current_config().input.profiles[0]);
+        let initial_input = input.sync_snapshot();
+        clear_current_attitude();
 
         Self {
             router: crate::route::HidRouter::new(),
@@ -174,6 +175,7 @@ impl Runtime {
         self.power.apply_config(config.power);
         self.report.apply_config(config.report);
         self.apply_motion_config(config.motion, now);
+        self.input.set_profile(&config.input.profiles[0]);
     }
 
     fn imu_poll_enabled(&self) -> bool {
