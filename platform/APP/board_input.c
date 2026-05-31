@@ -25,7 +25,8 @@ static uint16_t* board_input_exti_both_sim_mask_ptr(
 }
 
 static vp_bool_t board_input_is_encoder(const vp_input_id_t input_id) {
-    return input_id == VP_INPUT_ENCODER_A || input_id == VP_INPUT_ENCODER_B;
+    (void)input_id;
+    return 0u;
 }
 
 static vp_bool_t board_input_is_imu_int(const vp_input_id_t input_id) {
@@ -39,20 +40,23 @@ static vp_bool_t board_input_id_to_button_id(const vp_input_id_t input_id,
     }
 
     switch (input_id) {
-        case VP_INPUT_LEFT:
-            *out_button_id = VP_BUTTON_LEFT;
-            return 1u;
-        case VP_INPUT_RIGHT:
-            *out_button_id = VP_BUTTON_RIGHT;
-            return 1u;
-        case VP_INPUT_MIDDLE:
-            *out_button_id = VP_BUTTON_MIDDLE;
+        case VP_INPUT_CONTEXT:
+            *out_button_id = VP_BUTTON_CONTEXT;
             return 1u;
         case VP_INPUT_ACTION:
             *out_button_id = VP_BUTTON_ACTION;
             return 1u;
-        case VP_INPUT_LASER:
-            *out_button_id = VP_BUTTON_LASER;
+        case VP_INPUT_UP:
+            *out_button_id = VP_BUTTON_UP;
+            return 1u;
+        case VP_INPUT_DOWN:
+            *out_button_id = VP_BUTTON_DOWN;
+            return 1u;
+        case VP_INPUT_PRIMARY:
+            *out_button_id = VP_BUTTON_PRIMARY;
+            return 1u;
+        case VP_INPUT_SECONDARY:
+            *out_button_id = VP_BUTTON_SECONDARY;
             return 1u;
         default:
             *out_button_id = 0u;
@@ -91,12 +95,9 @@ static vp_bool_t board_input_dispatch_one(const BoardGpio      gpio,
     vp_gpio_clear_it_flag(gpio);
 
     if (board_input_is_encoder(input_id)) {
-        const vp_bool_t a_level =
-            active_low_gpio_level(board_signal_get(BOARD_SIGNAL_ENC_A));
-        const vp_bool_t b_level =
-            active_low_gpio_level(board_signal_get(BOARD_SIGNAL_ENC_B));
+        // 编码器已从 voidpointer 板移除，保留 dispatch 结构避免 C API 符号缺失
         vp_gpio_config_next_edge(gpio);
-        vp_on_encoder_exti(a_level, b_level, timestamp);
+        vp_on_encoder_exti(0u, 0u, timestamp);
         return 1u;
     }
 
@@ -124,14 +125,14 @@ vp_bool_t board_input_id_to_gpio(const vp_input_id_t input_id,
     }
 
     static const BoardSignal id_map[] = {
-        [VP_INPUT_LEFT] = BOARD_SIGNAL_BTN_LEFT,
-        [VP_INPUT_RIGHT] = BOARD_SIGNAL_BTN_RIGHT,
-        [VP_INPUT_MIDDLE] = BOARD_SIGNAL_BTN_MIDDLE,
-        [VP_INPUT_ACTION] = BOARD_SIGNAL_BTN_ACTION,
-        [VP_INPUT_LASER] = BOARD_SIGNAL_BTN_LASER,
+        [VP_INPUT_CONTEXT] = BOARD_SIGNAL_CONTEXT_BUTTON,
+        [VP_INPUT_ACTION] = BOARD_SIGNAL_ACT_BUTTON,
+        [VP_INPUT_UP] = BOARD_SIGNAL_UP_BUTTON,
+        [VP_INPUT_DOWN] = BOARD_SIGNAL_DOWN_BUTTON,
+        [VP_INPUT_PRIMARY] = BOARD_SIGNAL_LEFT_BUTTON,
+        [VP_INPUT_SECONDARY] = BOARD_SIGNAL_RIGHT_BUTTON,
         [VP_INPUT_MODE_SWITCH] = BOARD_SIGNAL_MODE_SWITCH,
-        [VP_INPUT_ENCODER_A] = BOARD_SIGNAL_ENC_A,
-        [VP_INPUT_ENCODER_B] = BOARD_SIGNAL_ENC_B,
+        [VP_INPUT_PROFILE_SWITCH] = BOARD_SIGNAL_PROFILE_SWITCH,
         [VP_INPUT_IMU_INT1] = BOARD_SIGNAL_IMU_INT1,
         [VP_INPUT_IMU_INT2] = BOARD_SIGNAL_IMU_INT2,
     };
@@ -227,7 +228,7 @@ vp_bool_t board_input_service_pending_group(const BoardGpioGroup group) {
     const vp_timestamp_t timestamp = c_vp_rtc_millis();
     vp_bool_t            handled = 0u;
 
-    for (uint8_t input = VP_INPUT_LEFT; input <= VP_INPUT_IMU_INT2; input++) {
+    for (uint8_t input = 0u; input <= VP_INPUT_IMU_INT2; input++) {
         BoardGpio gpio = {0};
         if (!board_input_id_to_gpio((vp_input_id_t)input, &gpio) ||
             gpio.group != group) {
