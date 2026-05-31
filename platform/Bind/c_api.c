@@ -77,7 +77,7 @@ static void sync_platform_wake_sources(void) {
 }
 
 static vp_status_t enable_button_wake_sources(void) {
-    for (vp_input_id_t input_id = VP_INPUT_LEFT; input_id <= VP_INPUT_ACTION;
+    for (vp_input_id_t input_id = VP_INPUT_CONTEXT; input_id <= VP_INPUT_SECONDARY;
          input_id++) {
         const vp_status_t status =
             configure_input_wake_source(input_id, VP_EXTI_EDGE_FALLING);
@@ -90,16 +90,7 @@ static vp_status_t enable_button_wake_sources(void) {
 }
 
 static vp_status_t enable_encoder_wake_sources(void) {
-    const vp_input_id_t inputs[] = {VP_INPUT_ENCODER_A, VP_INPUT_ENCODER_B};
-    for (uint8_t i = 0u; i < (uint8_t)(sizeof(inputs) / sizeof(inputs[0]));
-         i++) {
-        const vp_status_t status =
-            configure_input_wake_source(inputs[i], VP_EXTI_EDGE_BOTH);
-        if (status != VP_STATUS_OK) {
-            return status;
-        }
-    }
-
+    // 编码器已从 voidpointer 板移除
     return VP_STATUS_OK;
 }
 
@@ -151,7 +142,7 @@ vp_status_t c_vp_gpio_read_inputs(uint16_t* out_snapshot) {
     const uint32_t portA_data = vp_gpio_read_port(BOARD_GPIO_GROUP_A);
     const uint32_t portB_data = vp_gpio_read_port(BOARD_GPIO_GROUP_B);
     uint16_t       snapshot = 0u;
-    for (uint8_t input = VP_INPUT_LEFT; input <= VP_INPUT_IMU_INT2; input++) {
+    for (uint8_t input = 0u; input <= VP_INPUT_IMU_INT2; input++) {
         BoardGpio gpio = {0};
         if (board_input_id_to_gpio((vp_input_id_t)input, &gpio)) {
             vp_bool_t active = 0u;
@@ -175,7 +166,7 @@ vp_status_t c_vp_gpio_write(const vp_output_id_t output_id,
                             const vp_bool_t      level) {
     switch (output_id) {
         case VP_OUTPUT_LASER: {
-            const BoardGpio gpio = board_signal_get(BOARD_SIGNAL_BTN_LASER);
+            const BoardGpio gpio = board_signal_get(BOARD_SIGNAL_LASER_LED);
             if (!vp_gpio_is_valid(gpio)) {
                 return VP_STATUS_UNSUPPORTED;
             }

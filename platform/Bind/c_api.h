@@ -27,23 +27,24 @@ enum {
 
 typedef uint8_t vp_button_id_t;
 enum {
-    VP_BUTTON_LEFT = 0,
-    VP_BUTTON_RIGHT = 1,
-    VP_BUTTON_MIDDLE = 2,
-    VP_BUTTON_ACTION = 3,
-    VP_BUTTON_LASER = 4,
+    VP_BUTTON_CONTEXT = 0,
+    VP_BUTTON_ACTION = 1,
+    VP_BUTTON_UP = 2,
+    VP_BUTTON_DOWN = 3,
+    VP_BUTTON_PRIMARY = 4,
+    VP_BUTTON_SECONDARY = 5,
 };
 
 typedef uint8_t vp_input_id_t;
 enum {
-    VP_INPUT_LEFT = 0,
-    VP_INPUT_RIGHT = 1,
-    VP_INPUT_MIDDLE = 2,
-    VP_INPUT_ACTION = 3,
-    VP_INPUT_LASER = 4,
-    VP_INPUT_MODE_SWITCH = 5,
-    VP_INPUT_ENCODER_A = 6,
-    VP_INPUT_ENCODER_B = 7,
+    VP_INPUT_CONTEXT = 0,
+    VP_INPUT_ACTION = 1,
+    VP_INPUT_UP = 2,
+    VP_INPUT_DOWN = 3,
+    VP_INPUT_PRIMARY = 4,
+    VP_INPUT_SECONDARY = 5,
+    VP_INPUT_MODE_SWITCH = 6,
+    VP_INPUT_PROFILE_SWITCH = 7,
     VP_INPUT_IMU_INT1 = 8,
     VP_INPUT_IMU_INT2 = 9,
 };

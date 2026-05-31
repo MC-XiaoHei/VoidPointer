@@ -126,14 +126,10 @@ void input_init_pins() {
 }
 
 void input_init_irq() {
-    (void)c_vp_exti_set_edge(VP_INPUT_LEFT, VP_EXTI_EDGE_FALLING);
-    (void)c_vp_exti_set_edge(VP_INPUT_RIGHT, VP_EXTI_EDGE_FALLING);
-    (void)c_vp_exti_set_edge(VP_INPUT_MIDDLE, VP_EXTI_EDGE_FALLING);
-    (void)c_vp_exti_set_edge(VP_INPUT_ACTION, VP_EXTI_EDGE_FALLING);
-    (void)c_vp_exti_set_edge(VP_INPUT_ENCODER_A, VP_EXTI_EDGE_BOTH);
-    (void)c_vp_exti_set_edge(VP_INPUT_ENCODER_B, VP_EXTI_EDGE_BOTH);
-
-    imu_init_irq();
+    // 开关类输入（mode_switch, profile_switch）由 C 直接配 EXTI
+    // 按钮类由 Rust enable_interrupts 统一配置
+    (void)c_vp_exti_set_edge(VP_INPUT_MODE_SWITCH, VP_EXTI_EDGE_FALLING);
+    (void)c_vp_exti_set_edge(VP_INPUT_PROFILE_SWITCH, VP_EXTI_EDGE_FALLING);
 }
 
 int main() {
