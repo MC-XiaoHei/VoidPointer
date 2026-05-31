@@ -79,7 +79,9 @@ impl ConfigManager {
             manager.slot_size,
             &mut manager.slot_buf.bytes,
         ) {
-            manager.apply_persisted(persisted);
+            if validate_config(&persisted.config).is_ok() {
+                manager.apply_persisted(persisted);
+            }
         }
         manager
     }
