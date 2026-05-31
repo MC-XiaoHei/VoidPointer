@@ -37,11 +37,6 @@ pub enum RuntimeEvent {
     DebounceTick {
         timestamp: u32,
     },
-    EncoderExti {
-        a_level: u8,
-        b_level: u8,
-        timestamp: u32,
-    },
     ImuInt {
         timestamp: u32,
     },

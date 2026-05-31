@@ -65,11 +65,6 @@ impl Runtime {
                 self.on_mode_switch_exti(level, timestamp)
             }
             RuntimeEvent::DebounceTick { timestamp } => self.on_debounce_tick(timestamp),
-            RuntimeEvent::EncoderExti {
-                a_level,
-                b_level,
-                timestamp,
-            } => self.on_encoder_exti(a_level, b_level, timestamp),
             RuntimeEvent::ImuInt { timestamp } => self.on_imu_int(timestamp),
             RuntimeEvent::ImuSample {
                 raw_x,
@@ -157,14 +152,6 @@ impl Runtime {
     fn on_debounce_tick(&mut self, timestamp: u32) {
         self.mark_activity(timestamp);
         if self.input.on_debounce_tick() {
-            self.dirty.input = true;
-            self.dirty.report = true;
-        }
-    }
-
-    fn on_encoder_exti(&mut self, a_level: u8, b_level: u8, timestamp: u32) {
-        self.mark_activity(timestamp);
-        if self.input.on_encoder_exti(a_level != 0, b_level != 0) {
             self.dirty.input = true;
             self.dirty.report = true;
         }

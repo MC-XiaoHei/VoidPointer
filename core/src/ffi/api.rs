@@ -120,15 +120,11 @@ pub extern "C" fn vp_on_debounce_tick(timestamp: u32) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn vp_on_encoder_exti(
-    a_level: crate::ffi::bindings::vp_bool_t,
-    b_level: crate::ffi::bindings::vp_bool_t,
-    timestamp: u32,
+    _a_level: crate::ffi::bindings::vp_bool_t,
+    _b_level: crate::ffi::bindings::vp_bool_t,
+    _timestamp: u32,
 ) {
-    enqueue_runtime_event(RuntimeEvent::EncoderExti {
-        a_level,
-        b_level,
-        timestamp,
-    });
+    // 编码器已移除，该函数保留为 C 侧占位，不做处理
 }
 
 #[unsafe(no_mangle)]

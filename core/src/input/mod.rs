@@ -1,2 +1,2 @@
-pub mod encoder;
+pub mod config;
 pub mod types;
