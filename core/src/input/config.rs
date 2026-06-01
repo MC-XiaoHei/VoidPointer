@@ -60,17 +60,13 @@ impl Default for ButtonProfile {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InputConfig {
-    pub profiles: [ButtonProfile; 3],
+    pub profiles: [ButtonProfile; 2],
 }
 
 impl Default for InputConfig {
     fn default() -> Self {
         Self {
-            profiles: [
-                ButtonProfile::default(),
-                ButtonProfile::default(),
-                ButtonProfile::default(),
-            ],
+            profiles: [ButtonProfile::default(), ButtonProfile::default()],
         }
     }
 }

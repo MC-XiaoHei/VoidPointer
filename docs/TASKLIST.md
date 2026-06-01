@@ -25,13 +25,13 @@
 - [x] `InputStatus` 覆盖 left/right/middle/action/laser/wheel
 - [x] `DebouncedTwoStateInput` 可复用核心 + `InputManager` policy
 - [x] 上/下跷跷板按键经映射表产生 ScrollUp/ScrollDown 滚动事件
-- [x] 按键映射表：6 物理按键 × 最多 4 功能 × 3 ADC 挡位，存储在 `InputConfig`
+- [x] 按键映射表：6 物理按键 × 最多 4 功能 × 2 挡位，存储在 `InputConfig`
 - [x] 默认映射：Context→Middle, Action→Action, Up→ScrollUp, Down→ScrollDown, Primary→Left, Secondary→Right
 - [x] Laser 按键接入：映射为 Laser 功能后，在 `poll_input_and_hid` 中调用 `pwm::set_laser_duty()`
 
 **未完成**
 
-- [ ] 三挡按键映射切换（支持用物理开关切换）
+- [ ] 两挡按键映射切换（支持用物理开关切换）
 
 ### IMU / I2C — 🟡 进行中
 
