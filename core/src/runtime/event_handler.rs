@@ -141,6 +141,7 @@ impl Runtime {
 
     fn on_mode_switch_exti(&mut self, level: u8, timestamp: u32) {
         self.mark_activity(timestamp);
+        log::debug!("mode_switch level={}", level);
         self.dirty.input = true;
         if level != 0 {
             self.play_transient_led(&MODE_2G4, timestamp);
@@ -151,9 +152,75 @@ impl Runtime {
 
     fn on_debounce_tick(&mut self, timestamp: u32) {
         self.mark_activity(timestamp);
+
+        // 轮询按钮
         if self.input.on_debounce_tick() {
             self.dirty.input = true;
             self.dirty.report = true;
+            let s = self.input.get_current_input();
+            log::debug!(
+                "btn C={} A={} U={} D={} L={} R={}",
+                s.middle as u8,
+                s.action as u8,
+                if s.wheel_delta > 0 { 1u8 } else { 0u8 },
+                if s.wheel_delta < 0 { 1u8 } else { 0u8 },
+                s.left as u8,
+                s.right as u8,
+            );
+        }
+
+        // 轮询 mode_switch (input_id=6)
+        {
+            let observed = unsafe { crate::ffi::bindings::c_vp_gpio_read(6) != 0 };
+            if !self.mode_switch_debouncing {
+                if observed != self.mode_switch_stable {
+                    self.mode_switch_candidate = observed;
+                    self.mode_switch_ticks = 0;
+                    self.mode_switch_debouncing = true;
+                }
+            } else if observed == self.mode_switch_candidate {
+                self.mode_switch_ticks = self.mode_switch_ticks.saturating_add(1);
+                if self.mode_switch_ticks >= 5 {
+                    self.mode_switch_debouncing = false;
+                    if self.mode_switch_stable != self.mode_switch_candidate {
+                        self.mode_switch_stable = self.mode_switch_candidate;
+                        log::debug!("mode_switch level={}", self.mode_switch_stable as u8);
+                        if self.mode_switch_stable {
+                            self.play_transient_led(&MODE_2G4, timestamp);
+                        } else {
+                            self.play_transient_led(&MODE_BLE, timestamp);
+                        }
+                    }
+                }
+            } else {
+                self.mode_switch_candidate = observed;
+                self.mode_switch_ticks = 0;
+            }
+        }
+
+        // 轮询 profile_switch (input_id=7)
+        {
+            let observed = unsafe { crate::ffi::bindings::c_vp_gpio_read(7) != 0 };
+            if !self.profile_switch_debouncing {
+                if observed != self.profile_switch_stable {
+                    self.profile_switch_candidate = observed;
+                    self.profile_switch_ticks = 0;
+                    self.profile_switch_debouncing = true;
+                }
+            } else if observed == self.profile_switch_candidate {
+                self.profile_switch_ticks = self.profile_switch_ticks.saturating_add(1);
+                if self.profile_switch_ticks >= 5 {
+                    self.profile_switch_debouncing = false;
+                    if self.profile_switch_stable != self.profile_switch_candidate {
+                        self.profile_switch_stable = self.profile_switch_candidate;
+                        log::debug!("profile_switch level={}", self.profile_switch_stable as u8);
+                        // TODO: 切换配置 profile
+                    }
+                }
+            } else {
+                self.profile_switch_candidate = observed;
+                self.profile_switch_ticks = 0;
+            }
         }
     }
 

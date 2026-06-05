@@ -38,29 +38,13 @@ __attribute__((noinline)) void main_loop() {
 
 static tmosTaskID       runtime_task_id = 0xFF;
 static volatile uint8_t runtime_poll_request_pending = 0u;
-static volatile uint8_t runtime_debounce_timer_running = 0u;
 static uint32_t         runtime_debounce_next_ms = 0u;
 
-static void service_latched_irqs(void) {
-    if (runtime_debounce_timer_running) {
-        return;
-    }
-
-    if (board_input_service_pending_all()) {
-        runtime_poll_request_pending = 1u;
-    }
-}
-
 static void service_debounce(void) {
-    if (!runtime_debounce_timer_running) {
-        return;
-    }
-
     const uint32_t now = c_vp_rtc_millis();
     if ((uint32_t)(now - runtime_debounce_next_ms) >= 0x80000000u) {
         return;
     }
-
     runtime_debounce_next_ms = now + 1u;
     vp_on_debounce_tick(now);
 }
@@ -71,7 +55,6 @@ static void core_service(void) {
         vp_core_poll();
     }
 
-    service_latched_irqs();
     service_debounce();
 }
 
@@ -104,7 +87,6 @@ void debounce_start() {
     if (runtime_task_id == 0xFF) {
         return;
     }
-    runtime_debounce_timer_running = 1u;
     runtime_debounce_next_ms = c_vp_rtc_millis() + 1u;
 }
 
@@ -117,6 +99,7 @@ void core_init() {
         return;
     }
     core_request_poll();
+    debounce_start();
 }
 
 void input_init_pins() {
@@ -126,10 +109,7 @@ void input_init_pins() {
 }
 
 void input_init_irq() {
-    // 开关类输入（mode_switch, profile_switch）由 C 直接配 EXTI
-    // 按钮类由 Rust enable_interrupts 统一配置
-    (void)c_vp_exti_set_edge(VP_INPUT_MODE_SWITCH, VP_EXTI_EDGE_FALLING);
-    (void)c_vp_exti_set_edge(VP_INPUT_PROFILE_SWITCH, VP_EXTI_EDGE_FALLING);
+    // 纯轮询模式，不配置 EXTI
 }
 
 int main() {

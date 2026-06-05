@@ -8,10 +8,6 @@
 static uint16_t board_input_exti_both_sim_mask_a = 0u;
 static uint16_t board_input_exti_both_sim_mask_b = 0u;
 
-static vp_bool_t active_low_gpio_level(const BoardGpio gpio) {
-    return vp_gpio_read_level(gpio) ? 0u : 1u;
-}
-
 static uint16_t* board_input_exti_both_sim_mask_ptr(
     const BoardGpioGroup group) {
     switch (group) {
@@ -31,37 +27,6 @@ static vp_bool_t board_input_is_encoder(const vp_input_id_t input_id) {
 
 static vp_bool_t board_input_is_imu_int(const vp_input_id_t input_id) {
     return input_id == VP_INPUT_IMU_INT1 || input_id == VP_INPUT_IMU_INT2;
-}
-
-static vp_bool_t board_input_id_to_button_id(const vp_input_id_t input_id,
-                                             vp_button_id_t* out_button_id) {
-    if (out_button_id == NULL) {
-        return 0u;
-    }
-
-    switch (input_id) {
-        case VP_INPUT_CONTEXT:
-            *out_button_id = VP_BUTTON_CONTEXT;
-            return 1u;
-        case VP_INPUT_ACTION:
-            *out_button_id = VP_BUTTON_ACTION;
-            return 1u;
-        case VP_INPUT_UP:
-            *out_button_id = VP_BUTTON_UP;
-            return 1u;
-        case VP_INPUT_DOWN:
-            *out_button_id = VP_BUTTON_DOWN;
-            return 1u;
-        case VP_INPUT_PRIMARY:
-            *out_button_id = VP_BUTTON_PRIMARY;
-            return 1u;
-        case VP_INPUT_SECONDARY:
-            *out_button_id = VP_BUTTON_SECONDARY;
-            return 1u;
-        default:
-            *out_button_id = 0u;
-            return 0u;
-    }
 }
 
 static vp_status_t board_input_map_exti_edge_to_mode(
@@ -95,7 +60,7 @@ static vp_bool_t board_input_dispatch_one(const BoardGpio      gpio,
     vp_gpio_clear_it_flag(gpio);
 
     if (board_input_is_encoder(input_id)) {
-        // 编码器已从 voidpointer 板移除，保留 dispatch 结构避免 C API 符号缺失
+        // 编码器已移除，保留避免 C API 符号缺失
         vp_gpio_config_next_edge(gpio);
         vp_on_encoder_exti(0u, 0u, timestamp);
         return 1u;
@@ -104,14 +69,6 @@ static vp_bool_t board_input_dispatch_one(const BoardGpio      gpio,
     if (board_input_is_imu_int(input_id)) {
         (void)c_vp_exti_mask(input_id);
         vp_on_imu_int(timestamp);
-        return 1u;
-    }
-
-    vp_button_id_t button_id = 0u;
-    if (board_input_id_to_button_id(input_id, &button_id)) {
-        const vp_bool_t level = active_low_gpio_level(gpio);
-        (void)c_vp_exti_mask(input_id);
-        vp_on_button_exti(button_id, level, timestamp);
         return 1u;
     }
 
@@ -147,6 +104,7 @@ vp_bool_t board_input_id_to_gpio(const vp_input_id_t input_id,
 
 vp_status_t board_input_exti_unmask(const vp_input_id_t input_id,
                                     const BoardGpio     gpio) {
+    (void)input_id;
     const uint16_t* both_sim_mask =
         board_input_exti_both_sim_mask_ptr(gpio.group);
     if (both_sim_mask == NULL) {
@@ -158,14 +116,9 @@ vp_status_t board_input_exti_unmask(const vp_input_id_t input_id,
                                    vp_gpio_read_it_flag_port(gpio.group));
         vp_gpio_config_next_edge(gpio);
     } else {
-        vp_button_id_t button_id = 0u;
-        if (board_input_id_to_button_id(input_id, &button_id)) {
-            vp_gpio_prepare_level_rearm(gpio);
-        } else {
-            vp_gpio_clear_it_flag_port(gpio.group,
-                                       vp_gpio_read_it_flag_port(gpio.group));
-            vp_gpio_clear_it_flag(gpio);
-        }
+        vp_gpio_clear_it_flag_port(gpio.group,
+                                   vp_gpio_read_it_flag_port(gpio.group));
+        vp_gpio_clear_it_flag(gpio);
     }
 
     (void)vp_gpio_int_unmask(gpio);
@@ -234,14 +187,6 @@ vp_bool_t board_input_service_pending_group(const BoardGpioGroup group) {
 
     vp_gpio_irq_clear_pending(group);
     return handled;
-}
-
-vp_bool_t board_input_service_pending_all(void) {
-    const vp_bool_t handled_a =
-        board_input_service_pending_group(BOARD_GPIO_GROUP_A);
-    const vp_bool_t handled_b =
-        board_input_service_pending_group(BOARD_GPIO_GROUP_B);
-    return handled_a || handled_b ? 1u : 0u;
 }
 
 __INTERRUPT

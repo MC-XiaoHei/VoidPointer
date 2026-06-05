@@ -2,7 +2,9 @@
 
 use super::Runtime;
 use crate::attitude::clear_current_attitude;
-use crate::ffi::bindings::{VP_STATUS_OK, c_vp_imu_config_active, c_vp_power_restore_from_sleep};
+use crate::ffi::bindings::{
+    VP_STATUS_OK, c_vp_exti_mask, c_vp_imu_config_active, c_vp_power_restore_from_sleep,
+};
 use crate::hid::types::MouseButtons;
 use crate::power::PowerState;
 use crate::runtime::commands::RuntimeCommand;
@@ -126,6 +128,12 @@ impl Runtime {
         }
 
         super::clear_suspend_resume_sources();
+
+        // 回到 Active 后关闭按钮 EXTI，使用纯轮询
+        for btn in 0..=5u8 {
+            let _ = unsafe { c_vp_exti_mask(btn) };
+        }
+
         clear_current_attitude();
         self.latest_imu_sample = super::LatestImuSample::default();
         self.report.reset_all();

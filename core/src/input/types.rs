@@ -1,6 +1,5 @@
 use crate::ffi::bindings::{
-    VP_EXTI_EDGE_FALLING, VP_EXTI_EDGE_RISING, VP_STATUS_OK, c_vp_debounce_timer_start,
-    c_vp_debounce_timer_stop, c_vp_exti_set_edge, c_vp_gpio_read,
+    VP_STATUS_OK, c_vp_debounce_timer_start, c_vp_debounce_timer_stop, c_vp_gpio_read,
 };
 use crate::input::config::{ButtonFunction, ButtonMapping, ButtonProfile, PHYSICAL_BUTTON_COUNT};
 
@@ -61,7 +60,10 @@ impl DebouncedTwoStateInput {
 
     fn sample(&mut self, observed: bool) -> DebounceTickOutcome {
         if !self.debouncing {
-            return DebounceTickOutcome::Idle;
+            if observed == self.stable_active {
+                return DebounceTickOutcome::Idle;
+            }
+            self.begin_debounce(observed);
         }
 
         self.track_candidate(observed);
@@ -157,11 +159,7 @@ impl InputManager {
     }
 
     #[cfg_attr(coverage, coverage(off))]
-    pub fn enable_interrupts(&self) {
-        for input in &self.two_state_inputs {
-            arm_next_level_interrupt(input.input_id, input.stable_active);
-        }
-    }
+    pub fn enable_interrupts(&self) {}
 
     #[cfg_attr(coverage, coverage(off))]
     pub fn on_button_exti(&mut self, button_id: u8, active: bool) -> bool {
@@ -185,7 +183,6 @@ impl InputManager {
                 }
                 DebounceTickOutcome::Stabilized(t) => {
                     changed |= t.changed;
-                    arm_next_level_interrupt(t.input_id, t.active);
                 }
             }
         }
@@ -227,20 +224,6 @@ impl InputManager {
         status.wheel_delta = self.pending_wheel;
         self.pending_wheel = 0;
         status
-    }
-}
-
-#[cfg_attr(coverage, coverage(off))]
-fn arm_next_level_interrupt(input_id: u8, active: bool) {
-    let edge = next_edge_for_active_low_state(active);
-    let _ = unsafe { c_vp_exti_set_edge(input_id, edge as u8) };
-}
-
-fn next_edge_for_active_low_state(active: bool) -> u32 {
-    if active {
-        VP_EXTI_EDGE_RISING
-    } else {
-        VP_EXTI_EDGE_FALLING
     }
 }
 

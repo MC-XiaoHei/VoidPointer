@@ -1,7 +1,7 @@
 #![cfg_attr(coverage, coverage(off))]
 
 use crate::ffi::bindings::*;
-use crate::ffi::bindings::{VP_WAKE_SOURCE_BUTTON, VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU};
+use crate::ffi::bindings::{VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU};
 use crate::hid::api::HidApi;
 use crate::hid::types::{CustomReport, HidSendStatus, MouseReport};
 use crate::power::PowerState;
@@ -111,11 +111,7 @@ fn execute_power_state_request(target: PowerState) -> bool {
 }
 
 fn enable_low_power_resume_sources(enabled: bool) -> bool {
-    for source in [
-        VP_WAKE_SOURCE_BUTTON,
-        VP_WAKE_SOURCE_ENCODER,
-        VP_WAKE_SOURCE_IMU,
-    ] {
+    for source in [VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU] {
         let status = unsafe { c_vp_wake_source_enable(source, if enabled { 1 } else { 0 }) };
         if status != VP_STATUS_OK as u8 {
             return false;

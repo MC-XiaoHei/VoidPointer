@@ -9,7 +9,7 @@ use crate::attitude::clear_current_attitude;
 use crate::attitude::types::SflpGameRotationRaw;
 use crate::config::{ConfigManager, DeviceConfig};
 use crate::ffi::bindings::{
-    VP_WAKE_SOURCE_BUTTON, VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU, c_vp_request_core_poll,
+    VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU, c_vp_request_core_poll,
     c_vp_request_core_poll_after, c_vp_wake_source_enable,
 };
 use crate::input::types::{InputManager, InputStatus};
@@ -99,6 +99,14 @@ pub struct Runtime {
     pub motion_report_deadline_ms: Option<u32>,
     pub motion_session: MotionSession,
     pub led_manager: LedManager,
+    mode_switch_stable: bool,
+    mode_switch_candidate: bool,
+    mode_switch_ticks: u8,
+    mode_switch_debouncing: bool,
+    profile_switch_stable: bool,
+    profile_switch_candidate: bool,
+    profile_switch_ticks: u8,
+    profile_switch_debouncing: bool,
 }
 
 impl Runtime {
@@ -132,6 +140,14 @@ impl Runtime {
             motion_report_deadline_ms: Some(now),
             motion_session: MotionSession::new(motion_cfg),
             led_manager: LedManager::new(),
+            mode_switch_stable: false,
+            mode_switch_candidate: false,
+            mode_switch_ticks: 0,
+            mode_switch_debouncing: false,
+            profile_switch_stable: false,
+            profile_switch_candidate: false,
+            profile_switch_ticks: 0,
+            profile_switch_debouncing: false,
         }
     }
 
@@ -343,11 +359,7 @@ pub fn deadline_remaining_ms(now: u32, deadline: u32) -> u32 {
 
 #[cfg_attr(coverage, coverage(off))]
 pub fn clear_suspend_resume_sources() {
-    for source in [
-        VP_WAKE_SOURCE_BUTTON,
-        VP_WAKE_SOURCE_ENCODER,
-        VP_WAKE_SOURCE_IMU,
-    ] {
+    for source in [VP_WAKE_SOURCE_ENCODER, VP_WAKE_SOURCE_IMU] {
         let _ = unsafe { c_vp_wake_source_enable(source, 0) };
     }
 }
